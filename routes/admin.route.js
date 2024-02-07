@@ -153,7 +153,4 @@ app.get("/api/All-Markets", Authorize(["Admin"]), async (req, res) => {
   }
 });
 
-
-
-
 }
