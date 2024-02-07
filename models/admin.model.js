@@ -5,15 +5,14 @@ export const Admin = new mongoose.model("admin", new mongoose.Schema({
     password: { type: String, required: true },
     gameList: [
         {
-          gameName: { type: String },
-          currentTime: { type: String},
+          gameName: { type: String },         
           Description : { type: String},
           markets: [
             {
               marketId: { type: mongoose.Schema.Types.ObjectId, unique: true },
               marketName: { type: String },
               participants : {type : Number},
-              spendTime: { type: String},
+              timeSpan: { type: String},
               runners: [
                 {
                   runnerId: { type: mongoose.Schema.Types.ObjectId, unique: true },
