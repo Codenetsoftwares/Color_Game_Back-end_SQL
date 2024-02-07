@@ -151,4 +151,26 @@ app.get("/api/All-Markets", async (req, res) => {
   }
 });
 
+app.get("/api/All-Runners",async(req,res)=>{
+  try {
+    const admins = await Admin.find()
+    if (!admins || admins.length === 0) {
+      throw {code: 404,  message: "Admin not found" };
+  }
+  const runnerInfo = admins.map((admin) =>
+      admin.gameList.map((game) =>
+        game.markets.map((market) =>
+        market.runners.map((runner)=>runner.runnerName)
+        )
+      )
+    );
+
+    const runnerData = [].concat(...[].concat(...[].concat(...runnerInfo)));
+    
+    res.status(200).send(runnerData)
+  } catch (error) {
+    res.status(500).send({ code: error.code, message: error.message })
+  }
+})
+
 }
