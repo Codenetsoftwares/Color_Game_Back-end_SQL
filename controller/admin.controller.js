@@ -170,7 +170,7 @@ export const AdminController = {
                   throw {code: 404,  message: "Admin not found" };
               }
       
-              const game = admin.gameList.find(game => game.gameName);
+              const game = admin.gameList.find(game => game.gameName === gameName);
       
               if (!game) {
                   throw { message: "Game not found" };
@@ -206,7 +206,7 @@ export const AdminController = {
             }
       
             const game = admin.gameList.find(
-              (game) => game.gameName
+              (game) => game.gameName === gameName
             );
       
             if (!game) {
@@ -214,7 +214,7 @@ export const AdminController = {
             }
       
             const market = game.markets.find(
-              (market) => market.marketName
+              (market) => market.marketName === marketName
             );
       
             if (!market) {
@@ -242,50 +242,45 @@ export const AdminController = {
           }
         },
 
-        createRate: async ( gameName, marketName, runnerName, back, lay) => {
+        createRate: async (gameName, marketName, runnerName, back, lay) => {
           try {
-             const admin = await Admin.findOne({roles : "Admin"});
-
-              if (!admin) {
-                  throw { code: 404, message: "Admin not found" };
-              }
-      
-              const game = admin.gameList.find(
-                  (game) => game.gameName
-              );
-      
-              if (!game) {
-                  throw { message: "Game not found" };
-              }
-      
-              const market = game.markets.find(
-                  (market) => market.marketName
-              );
-      
-              if (!market) {
-                  throw { message: "Market not found" };
-              }
-      
-              const runnerToUpdate = market.runners.find(
-                  (runner) => runner.runnerName
-              );
-      
-              if (runnerToUpdate) {                   
-                  runnerToUpdate.rate[0].Back = back;
-                  runnerToUpdate.rate[0].Lay = lay;
-      
-                  await admin.save();
-      
-                  return {
-                      gameList: admin.gameList,
-                  };
-              } else {
-                  throw { message: "Runner not found" };
-              }
+            const admin = await Admin.findOne({ roles: "Admin" });
+        
+            if (!admin) {
+              throw { code: 404, message: "Admin not found" };
+            }
+        
+            const game = admin.gameList.find((game) => game.gameName === gameName);
+        
+            if (!game) {
+              throw { message: "Game not found" };
+            }
+        
+            const market = game.markets.find((market) => market.marketName === marketName);
+        
+            if (!market) {
+              throw { message: "Market not found" };
+            }
+        
+            const runnerToUpdate = market.runners.find((runner) => runner.runnerName === runnerName);
+        
+            if (runnerToUpdate) {
+              runnerToUpdate.rate[0].Back = back;
+              runnerToUpdate.rate[0].Lay = lay;
+        
+              await runnerToUpdate.save();
+        
+              return {
+                gameList: admin.gameList,
+              };
+            } else {
+              throw { message: "Runner not found" };
+            }
           } catch (error) {
-              throw error;
+            throw error;
           }
-      },
+        },
+        
       
       
       }

@@ -75,7 +75,8 @@ app.post("/api/user-login", Authorize(["Admin"]), async (req, res) => {
 
   app.post("/api/create-markets/:gameName", Authorize(["Admin"]), async (req, res) => {
     try {
-     const { gameName, marketName , participants , timeSpan } = req.body
+      const { gameName } = req.params
+     const {  marketName , participants , timeSpan } = req.body
      const markets = await AdminController.createMarket( gameName ,marketName ,participants , timeSpan)
      res.status(200).send({ code: 200, message: "Market Create Successfully", markets })
 
@@ -87,6 +88,7 @@ app.post("/api/user-login", Authorize(["Admin"]), async (req, res) => {
 
   app.post("/api/create-runners/:gameName/:marketName", Authorize(["Admin"]), async (req, res) => {
     try {
+      const { gameName , marketName} = req.params
      const {runnerName } = req.body
      const runners = await AdminController.createRunner( gameName ,marketName, runnerName)
      res.status(200).send({ code: 200, message: "Runner Create Successfully", runners })
@@ -98,6 +100,7 @@ app.post("/api/user-login", Authorize(["Admin"]), async (req, res) => {
 
   app.post("/api/create-Rate/:gameName/:marketName/:runnerName", Authorize(["Admin"]), async (req, res) => {
     try {
+      
      const {gameName, marketName, runnerName,} = req.params;
      const {back , lay } = req.body
      const rates = await AdminController.createRate( gameName, marketName, runnerName, back, lay)
