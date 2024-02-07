@@ -63,11 +63,10 @@ app.post("/api/user-login", async (req, res) => {
 
 
 
-  app.post("/api/create-games/:adminId", async (req, res) => {
-    try {
-     const adminId = req.params.adminId
+  app.post("/api/create-games", async (req, res) => {
+    try {    
      const {gameName  ,Description} = req.body
-     const games = await AdminController.createGame(adminId, gameName  ,Description)
+     const games = await AdminController.createGame( gameName  ,Description)
      res.status(200).send({ code: 200, message: "Game Create Successfully", games })
 
     } catch (err) {
@@ -75,11 +74,10 @@ app.post("/api/user-login", async (req, res) => {
     }
   })
 
-  app.post("/api/create-markets/:adminId/:gameName", async (req, res) => {
+  app.post("/api/create-markets/:gameName", async (req, res) => {
     try {
-     const { adminId, gameName } = req.params;
      const { marketName , participants , timeSpan } = req.body
-     const markets = await AdminController.createMarket(adminId, gameName ,marketName ,participants , timeSpan)
+     const markets = await AdminController.createMarket( gameName ,marketName ,participants , timeSpan)
      res.status(200).send({ code: 200, message: "Market Create Successfully", markets })
 
     } catch (err) {
@@ -88,11 +86,10 @@ app.post("/api/user-login", async (req, res) => {
   })
 
 
-  app.post("/api/create-runners/:adminId/:gameName/:marketName", async (req, res) => {
+  app.post("/api/create-runners/:gameName/:marketName", async (req, res) => {
     try {
-     const { adminId, gameName ,marketName } = req.params;
      const {runnerName } = req.body
-     const runners = await AdminController.createRunner(adminId, gameName ,marketName, runnerName)
+     const runners = await AdminController.createRunner( gameName ,marketName, runnerName)
      res.status(200).send({ code: 200, message: "Runner Create Successfully", runners })
 
     } catch (err) {
@@ -100,11 +97,11 @@ app.post("/api/user-login", async (req, res) => {
     }
   })
 
-  app.post("/api/create-Rate/:adminId/:gameName/:marketName/:runnerName", async (req, res) => {
+  app.post("/api/create-Rate/:gameName/:marketName/:runnerName", async (req, res) => {
     try {
-     const {adminId, gameName, marketName, runnerName,} = req.params;
+     const {gameName, marketName, runnerName,} = req.params;
      const {back , lay } = req.body
-     const rates = await AdminController.createRate(adminId, gameName, marketName, runnerName, back, lay)
+     const rates = await AdminController.createRate( gameName, marketName, runnerName, back, lay)
      res.status(200).send({ code: 200, message: "Rate Create Successfully", rates })
 
     } catch (err) {
