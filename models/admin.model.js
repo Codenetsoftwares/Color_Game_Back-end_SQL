@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 export const Admin = new mongoose.model("admin", new mongoose.Schema({
     userName: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    roles: [{ type: String, required: true, default: 'Admin'}],
     gameList: [
         {
           gameName: { type: String },         

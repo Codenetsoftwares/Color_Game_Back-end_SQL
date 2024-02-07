@@ -5,4 +5,5 @@ export const User = new mongoose.model("user", new mongoose.Schema({
     userName:  { type: String, required: true },
     phoneNumber:{type:Number,required:true},
     password:   { type: String, required: true },
+    roles: [{ type: String, required: true, default: 'User'}],
 }), 'user');
