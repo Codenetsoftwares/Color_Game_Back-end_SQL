@@ -151,7 +151,4 @@ app.get("/api/All-Markets", async (req, res) => {
   }
 });
 
-
-
-
 }
