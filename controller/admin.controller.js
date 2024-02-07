@@ -136,7 +136,7 @@ export const AdminController = {
           },
   
 
-      createGame: async (adminId, gameName ,currentTime ,Description) => {
+      createGame: async (adminId, gameName  ,Description) => {
           try {
               const admin = await Admin.findById(adminId);
 
@@ -146,7 +146,6 @@ export const AdminController = {
       
               admin.gameList.push({
                   gameName: gameName,
-                  currentTime : currentTime,
                   Description : Description,
                   markets: []
               });
@@ -162,7 +161,7 @@ export const AdminController = {
       },
       
       
-      createMarket: async (adminId, gameName, marketName , participants , spendTime) => {
+      createMarket: async (adminId, gameName, marketName , participants , timeSpan) => {
           try {
               const admin = await Admin.findById(adminId);
       
@@ -180,7 +179,7 @@ export const AdminController = {
                   marketId: new mongoose.Types.ObjectId(),
                   marketName: marketName,
                   participants : participants,
-                  spendTime : spendTime,
+                  timeSpan : timeSpan,
                   runners: [],
               };
       

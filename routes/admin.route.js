@@ -66,8 +66,8 @@ app.post("/api/user-login", async (req, res) => {
   app.post("/api/create-games/:adminId", async (req, res) => {
     try {
      const adminId = req.params.adminId
-     const {gameName ,currentTime ,Description} = req.body
-     const games = await AdminController.createGame(adminId, gameName ,currentTime ,Description)
+     const {gameName  ,Description} = req.body
+     const games = await AdminController.createGame(adminId, gameName  ,Description)
      res.status(200).send({ code: 200, message: "Game Create Successfully", games })
 
     } catch (err) {
@@ -78,8 +78,8 @@ app.post("/api/user-login", async (req, res) => {
   app.post("/api/create-markets/:adminId/:gameName", async (req, res) => {
     try {
      const { adminId, gameName } = req.params;
-     const { marketName , participants , spendTime } = req.body
-     const markets = await AdminController.createMarket(adminId, gameName ,marketName ,participants , spendTime)
+     const { marketName , participants , timeSpan } = req.body
+     const markets = await AdminController.createMarket(adminId, gameName ,marketName ,participants , timeSpan)
      res.status(200).send({ code: 200, message: "Market Create Successfully", markets })
 
     } catch (err) {
@@ -111,5 +111,33 @@ app.post("/api/user-login", async (req, res) => {
       res.status(500).send({ code: err.code, message: err.message })
     }
   })
+
+
+  app.get("/api/All-Games", async (req, res) => {
+    try {
+      const admins = await Admin.find();
+      if (!admins || admins.length === 0) {
+        throw { code: 404, message: 'Admin not found' };
+      }
+      const gameNames = admins.map(admin => admin.gameList.map(game => game.gameName));
+      res.status(200).send(gameNames)
+    } catch (error) {
+      res.status(500).send({ code: error.code, message: error.message });
+    }
+  });
+  app.get("/api/marketName",async(req,res)=>{
+    try {
+      const admins = await Admin.find()
+      if (!admins) {
+        throw {code: 404,  message: "Admin not found" };
+    }
+      const data = admins.map((dataList)=> dataList.gameList.map((game)=>game.markets.map((market)=>market.marketName)))
+      res.status(200).send(data)
+    } catch (error) {
+      res.status(500).send({ code: error.code, message: error.message })
+    }
+  })
+
+
 
 }
