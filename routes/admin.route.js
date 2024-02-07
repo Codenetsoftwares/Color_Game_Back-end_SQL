@@ -125,7 +125,7 @@ app.post("/api/user-login", async (req, res) => {
       res.status(500).send({ code: error.code, message: error.message });
     }
   });
-  app.get("/api/marketName",async(req,res)=>{
+  app.get("/api/All-Markets",async(req,res)=>{
     try {
       const admins = await Admin.find()
       if (!admins) {
