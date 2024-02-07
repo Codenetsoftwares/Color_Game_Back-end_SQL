@@ -1,13 +1,12 @@
 import { AdminController } from "../controller/admin.controller.js";
 import { Admin } from "../models/admin.model.js";
 import { User } from "../models/user.model.js";
-
+import { Authorize } from "../middleware/auth.js"
 
 
 export const AdminRoute = (app) => {
 
-    app.post("/api/admin-create",
-    async (req, res) => {
+    app.post("/api/admin-create", async (req, res) => {
         try {
             const user = req.user;
             await AdminController.createAdmin(req.body, user);
@@ -35,7 +34,7 @@ export const AdminRoute = (app) => {
   })
 
 
-  app.post("/api/user-create",async(req,res)=>{
+  app.post("/api/user-create", Authorize(["Admin"]),async(req,res)=>{
     try {
       const user =req.body;
       await AdminController.createUser(req.body,user)
@@ -45,7 +44,7 @@ export const AdminRoute = (app) => {
     }
   })
 
-app.post("/api/user-login", async (req, res) => {
+app.post("/api/user-login", Authorize(["Admin"]), async (req, res) => {
   try {
     const { userName, password } = req.body;
     const user = await User.findOne({ userName: userName });
@@ -63,7 +62,7 @@ app.post("/api/user-login", async (req, res) => {
 
 
 
-  app.post("/api/create-games", async (req, res) => {
+  app.post("/api/create-games", Authorize(["Admin"]), async (req, res) => {
     try {    
      const {gameName  ,Description} = req.body
      const games = await AdminController.createGame( gameName  ,Description)
@@ -74,9 +73,9 @@ app.post("/api/user-login", async (req, res) => {
     }
   })
 
-  app.post("/api/create-markets/:gameName", async (req, res) => {
+  app.post("/api/create-markets/:gameName", Authorize(["Admin"]), async (req, res) => {
     try {
-     const { marketName , participants , timeSpan } = req.body
+     const { gameName, marketName , participants , timeSpan } = req.body
      const markets = await AdminController.createMarket( gameName ,marketName ,participants , timeSpan)
      res.status(200).send({ code: 200, message: "Market Create Successfully", markets })
 
@@ -86,7 +85,7 @@ app.post("/api/user-login", async (req, res) => {
   })
 
 
-  app.post("/api/create-runners/:gameName/:marketName", async (req, res) => {
+  app.post("/api/create-runners/:gameName/:marketName", Authorize(["Admin"]), async (req, res) => {
     try {
      const {runnerName } = req.body
      const runners = await AdminController.createRunner( gameName ,marketName, runnerName)
@@ -97,7 +96,7 @@ app.post("/api/user-login", async (req, res) => {
     }
   })
 
-  app.post("/api/create-Rate/:gameName/:marketName/:runnerName", async (req, res) => {
+  app.post("/api/create-Rate/:gameName/:marketName/:runnerName", Authorize(["Admin"]), async (req, res) => {
     try {
      const {gameName, marketName, runnerName,} = req.params;
      const {back , lay } = req.body
@@ -110,7 +109,7 @@ app.post("/api/user-login", async (req, res) => {
   })
 
 
-  app.get("/api/All-Games", async (req, res) => {
+  app.get("/api/All-Games", Authorize(["Admin"]), async (req, res) => {
     try {
       const admins = await Admin.find();
       if (!admins || admins.length === 0) {
@@ -129,7 +128,7 @@ app.post("/api/user-login", async (req, res) => {
     }
   });
 
-app.get("/api/All-Markets", async (req, res) => {
+app.get("/api/All-Markets", Authorize(["Admin"]), async (req, res) => {
   try {
     const admins = await Admin.find();
 
