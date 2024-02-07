@@ -119,24 +119,41 @@ app.post("/api/user-login", async (req, res) => {
       if (!admins || admins.length === 0) {
         throw { code: 404, message: 'Admin not found' };
       }
-      const gameNames = admins.map(admin => admin.gameList.map(game => game.gameName));
-      res.status(200).send(gameNames)
+      const gameInfo = admins.map(admin =>
+        admin.gameList.map(game => ({
+          gameName: game.gameName,
+          Description: game.Description,
+        }))
+      );
+      const gameData = [].concat(...gameInfo);
+      res.status(200).send(gameData);
     } catch (error) {
       res.status(500).send({ code: error.code, message: error.message });
     }
   });
-  app.get("/api/All-Markets",async(req,res)=>{
-    try {
-      const admins = await Admin.find()
-      if (!admins) {
-        throw {code: 404,  message: "Admin not found" };
+
+app.get("/api/All-Markets", async (req, res) => {
+  try {
+    const admins = await Admin.find();
+
+    if (!admins || admins.length === 0) {
+      throw { code: 404, message: "Admin not found" };
     }
-      const data = admins.map((dataList)=> dataList.gameList.map((game)=>game.markets.map((market)=>market.marketName)))
-      res.status(200).send(data)
-    } catch (error) {
-      res.status(500).send({ code: error.code, message: error.message })
-    }
-  })
+
+    const marketInfo = admins.map((admin) =>
+      admin.gameList.map((game) =>
+        game.markets.map((market) => market.marketName)
+      )
+    );
+
+    const marketData = [].concat(...[].concat(...marketInfo));
+
+    res.status(200).send(marketData);
+  } catch (error) {
+    res.status(500).send({ code: error.code, message: error.message });
+  }
+});
+
 
 
 
