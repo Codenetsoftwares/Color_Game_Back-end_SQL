@@ -76,6 +76,7 @@ app.post("/api/user-login", async (req, res) => {
 
   app.post("/api/create-markets/:gameName", async (req, res) => {
     try {
+      const {gameName} = req.params;
      const { marketName , participants , timeSpan } = req.body
      const markets = await AdminController.createMarket( gameName ,marketName ,participants , timeSpan)
      res.status(200).send({ code: 200, message: "Market Create Successfully", markets })
@@ -88,8 +89,9 @@ app.post("/api/user-login", async (req, res) => {
 
   app.post("/api/create-runners/:gameName/:marketName", async (req, res) => {
     try {
-     const {runnerName } = req.body
-     const runners = await AdminController.createRunner( gameName ,marketName, runnerName)
+      const {gameName, marketName} = req.params;
+     const {runnerNames } = req.body
+     const runners = await AdminController.createRunner( gameName ,marketName, runnerNames)
      res.status(200).send({ code: 200, message: "Runner Create Successfully", runners })
 
     } catch (err) {
@@ -97,11 +99,11 @@ app.post("/api/user-login", async (req, res) => {
     }
   })
 
-  app.post("/api/create-Rate/:gameName/:marketName/:runnerName", async (req, res) => {
+  app.post("/api/create-Rate/:gameName/:marketName/:runnerNames", async (req, res) => {
     try {
-     const {gameName, marketName, runnerName,} = req.params;
+     const {gameName, marketName, runnerNames,} = req.params;
      const {back , lay } = req.body
-     const rates = await AdminController.createRate( gameName, marketName, runnerName, back, lay)
+     const rates = await AdminController.createRate( gameName, marketName, runnerNames, back, lay)
      res.status(200).send({ code: 200, message: "Rate Create Successfully", rates })
 
     } catch (err) {
@@ -151,26 +153,36 @@ app.get("/api/All-Markets", async (req, res) => {
   }
 });
 
-app.get("/api/All-Runners",async(req,res)=>{
+app.get("/api/All-Runners", async (req, res) => {
   try {
-    const admins = await Admin.find()
-    if (!admins || admins.length === 0) {
-      throw {code: 404,  message: "Admin not found" };
-  }
-  const runnerInfo = admins.map((admin) =>
-      admin.gameList.map((game) =>
-        game.markets.map((market) =>
-        market.runners.map((runner)=>runner.runnerName)
-        )
-      )
-    );
+    const admins = await Admin.find();
 
-    const runnerData = [].concat(...[].concat(...[].concat(...runnerInfo)));
-    
-    res.status(200).send(runnerData)
+    if (!admins || admins.length === 0) {
+      throw { code: 404, message: "Admin not found" };
+    }
+
+    const runnerNames = admins.reduce((acc, admin) => {
+      admin.gameList.forEach((game) => {
+        game.markets.forEach((market) => {
+          market.runners.forEach((runner) => {
+            const name = runner.runnerName.name;
+            acc.push(name);
+          });
+        });
+      });
+      return acc;
+    }, []);
+
+    res.status(200).send(runnerNames);
   } catch (error) {
-    res.status(500).send({ code: error.code, message: error.message })
+    res.status(500).send({ code: error.code, message: error.message });
   }
-})
+});
+
+
+
+
+
+
 
 }
