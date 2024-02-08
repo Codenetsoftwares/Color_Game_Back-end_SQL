@@ -14,16 +14,16 @@ export const Admin = new mongoose.model("admin", new mongoose.Schema({
               marketName: { type: String },
               participants : {type : Number},
               timeSpan: { type: String},
-              runners: [
-                {
+              runners: [{
+                runnerName: {
                   runnerId: { type: mongoose.Schema.Types.ObjectId, unique: true },
-                  runnerName: { type: String },
-                  rate :[{
-                      Back: { type: Number} ,
-                      Lay : { type: Number}
-                  }]
+                  name: { type: String, unique: true },
                 },
-              ],
+                rate: [{
+                  Back: { type: Number },
+                  Lay: { type: Number }
+                }],
+              }],
             },
           ],
         },
