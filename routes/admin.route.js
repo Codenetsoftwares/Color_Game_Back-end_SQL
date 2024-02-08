@@ -168,23 +168,25 @@ app.post("/api/user-login", async (req, res) => {
   
   
   
-  app.get("/api/All-Markets", async (req, res) => {
+  app.get("/api/All-Markets/:gameName", async (req, res) => {
     try {
-      const page = req.query.page ? parseInt(req.query.page) : 1;
-      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
+      const gameName = req.params.gameName;
+      const page = parseInt(req.query.page) || 1;
+      const pageSize = parseInt(req.query.pageSize) || 10;
       const searchQuery = req.query.search || '';
   
-      const admins = await Admin.find();
+      const admins = await Admin.findOne(
+        { "gameList.gameName": gameName },
+        { _id: 0, gameList: { $elemMatch: { gameName: gameName } } }
+      ).exec();
   
-      if (!admins || admins.length === 0) {
+      if (!admins || !admins.gameList || !Array.isArray(admins.gameList)) {
         throw { code: 404, message: "Admin not found" };
       }
   
-      const marketInfo = admins.flatMap((admin) =>
-        admin.gameList.flatMap((game) =>
-          game.markets.filter((market) =>
-            market.marketName.toLowerCase().includes(searchQuery.toLowerCase())
-          )
+      const marketInfo = admins.gameList.flatMap((game) =>
+        game.markets.filter((market) =>
+          market.marketName.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
   
@@ -224,11 +226,12 @@ app.post("/api/user-login", async (req, res) => {
   
   
   
+  
 
-  app.get("/api/All-Runners", async (req, res) => {
+  app.get("/api/All-Runners/:marketName", async (req, res) => {
     try {
-      const page = req.query.page ? parseInt(req.query.page) : 1;
-      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
+      const page = parseInt(req.query.page) || 1;
+      const pageSize = parseInt(req.query.pageSize) || 10;
       const searchQuery = req.query.search || '';
   
       const admins = await Admin.find();
@@ -239,11 +242,13 @@ app.post("/api/user-login", async (req, res) => {
   
       const runnerNames = admins.flatMap((admin) =>
         admin.gameList.flatMap((game) =>
-          game.markets.flatMap((market) =>
-            market.runners.filter((runner) =>
-              runner.runnerName.name.toLowerCase().includes(searchQuery.toLowerCase())
+          game.markets
+            .filter((market) => market.marketName === req.params.marketName)
+            .flatMap((market) =>
+              market.runners.filter((runner) =>
+                runner.runnerName.name.toLowerCase().includes(searchQuery.toLowerCase())
+              )
             )
-          )
         )
       );
   
@@ -277,6 +282,7 @@ app.post("/api/user-login", async (req, res) => {
       });
     }
   });
+  
   
   
 
