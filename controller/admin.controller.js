@@ -288,8 +288,39 @@ export const AdminController = {
       },
       
 
-        
-      
+      checkMarketStatus: async (marketId, status) => {
+        try {
+            if (typeof status !== 'boolean') {
+                throw new Error("Invalid status format. It should be a boolean.");
+            }
+    
+            const admin = await Admin.findOne({ "gameList.markets.marketId": marketId });
+    
+            if (!admin) {
+                throw new Error("Market not found.");
+            }
+    
+            let currentStatus;
+    
+            admin.gameList.forEach(game => {
+                game.markets.forEach(market => {
+                    if (market.marketId.equals(marketId)) {
+                        market.status = status;
+                        currentStatus = market.status;
+                    }
+                });
+            });
+    
+            await admin.save();
+    
+            const statusMessage = currentStatus ? "Market is active." : "Market is suspended.";
+    
+            return {  currentStatus: statusMessage };
+        } catch (error) {
+            throw error;
+        }
+    }
+    
       }
 
   

@@ -14,6 +14,7 @@ export const Admin = new mongoose.model("admin", new mongoose.Schema({
               marketName: { type: String },
               participants : {type : Number},
               timeSpan: { type: String},
+              status: { type: Boolean , default: false},
               runners: [{
                 runnerName: {
                   runnerId: { type: mongoose.Schema.Types.ObjectId, unique: true },

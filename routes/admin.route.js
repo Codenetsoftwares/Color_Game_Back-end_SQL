@@ -1,4 +1,4 @@
-import { log } from "console";
+
 import { AdminController } from "../controller/admin.controller.js";
 import { Admin } from "../models/admin.model.js";
 import { User } from "../models/user.model.js";
@@ -163,10 +163,7 @@ app.post("/api/user-login", async (req, res) => {
       });
     }
   });
-  
-  
-  
-  
+
   
   app.get("/api/All-Markets/:gameName", async (req, res) => {
     try {
@@ -184,13 +181,18 @@ app.post("/api/user-login", async (req, res) => {
         throw { code: 404, message: "Admin not found" };
       }
   
-      const marketInfo = admins.gameList.flatMap((game) =>
+      const marketDetails = admins.gameList.flatMap((game) =>
         game.markets.filter((market) =>
           market.marketName.toLowerCase().includes(searchQuery.toLowerCase())
         )
+        .map(market => ({
+          marketName: market.marketName,
+          timeSpan: market.timeSpan,
+          participants: market.participants,
+        }))
       );
   
-      const marketData = [].concat(...marketInfo);
+      const marketData = [].concat(...marketDetails);
   
       let paginatedMarketData;
       let totalPages = 1;
@@ -207,10 +209,8 @@ app.post("/api/user-login", async (req, res) => {
         paginatedMarketData = marketData;
       }
   
-      const marketNames = paginatedMarketData.map((market) => market.marketName);
-  
       res.status(200).send({
-        markets: marketNames,
+        markets: paginatedMarketData,
         currentPage: page,
         totalPages: totalPages,
         totalItems: marketData.length,
@@ -221,12 +221,9 @@ app.post("/api/user-login", async (req, res) => {
         message: error.message || "Internal Server Error",
       });
     }
-  });
-  
-  
-  
-  
-  
+});
+
+
 
   app.get("/api/All-Runners/:marketName", async (req, res) => {
     try {
@@ -247,6 +244,7 @@ app.post("/api/user-login", async (req, res) => {
             .flatMap((market) =>
               market.runners.filter((runner) =>
                 runner.runnerName.name.toLowerCase().includes(searchQuery.toLowerCase())
+                
               )
             )
         )
@@ -283,13 +281,24 @@ app.post("/api/user-login", async (req, res) => {
     }
   });
   
-  
-  
 
+  app.post("/update-market-status/:marketId", async (req, res) => {
+    try {
+        const { marketId } = req.params;
+        const { status } = req.body;
 
+        const result = await AdminController.checkMarketStatus(marketId, status);
 
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
 
+        if (error.message === "Market not found." || error.message === "Invalid status format. It should be a boolean.") {
+            return res.status(400).json({ error: error.message });
+        }
 
-
+        res.status(500).json({ error: "Internal server error." });
+    }
+});
 
 }
