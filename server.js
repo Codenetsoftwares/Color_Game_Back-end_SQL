@@ -6,6 +6,7 @@ import { AdminRoute } from "./routes/admin.route.js";
 
 
 import cors from 'cors';
+import { UserRoute } from "./routes/user.route.js";
 
 
 dotenv.config()
@@ -24,6 +25,7 @@ app.use(cors({ origin: allowedOrigins }));
 mongoose.connect(process.env.MONGODB_URI, { dbName: process.env.MONGODB_NAME });
 
 AdminRoute(app);
+UserRoute(app)
 
 
 
