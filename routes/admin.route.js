@@ -292,7 +292,7 @@ app.post("/api/user-login", async (req, res) => {
   });
   
 
-  app.post("/update-market-status/:marketId", async (req, res) => {
+  app.post("/api/update-market-status/:marketId", async (req, res) => {
     try {
         const { marketId } = req.params;
         const { status } = req.body;
