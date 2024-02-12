@@ -186,9 +186,11 @@ app.post("/api/user-login", async (req, res) => {
           market.marketName.toLowerCase().includes(searchQuery.toLowerCase())
         )
         .map(market => ({
+          marketId: market.marketId,
           marketName: market.marketName,
           timeSpan: market.timeSpan,
           participants: market.participants,
+          status : market.status
         }))
       );
   
