@@ -132,7 +132,7 @@ app.post("/api/user-login", async (req, res) => {
       );
   
       const filteredGameData = gameData.filter(game =>
-        game.gameName.toLowerCase().includes(searchQuery.toLowerCase())
+       game.gameName && game.gameName.toLowerCase().includes(searchQuery.toLowerCase())
       );
   
       const totalItems = filteredGameData.length;
