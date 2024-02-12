@@ -265,7 +265,17 @@ app.post("/api/user-login", async (req, res) => {
         paginatedRunnerNames = runnerNames;
       }
   
-      const runnerNamesList = paginatedRunnerNames.map((runner) => runner.runnerName.name);
+      const runnerNamesList = paginatedRunnerNames.map((runner) =>
+      {
+        return{ 
+          runnerName : runner.runnerName.name,
+          rates: runner.rate.map((rate)=>{
+          return{ 
+            Back: rate.Back,
+            Lay: rate.Lay        
+          }
+        })}
+      });
   
       res.status(200).send({
         runners: runnerNamesList,
