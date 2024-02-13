@@ -363,7 +363,6 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
           FROM Rate
           WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
-
       const existingRate = await executeQuery(checkRateQuery, [runnerId, gameId, marketId]);
 
       if (existingRate && existingRate.length > 0) {
@@ -383,6 +382,7 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
           `;
 
           await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId]);
+
       }
 
       // Update Runner table with new back and lay values

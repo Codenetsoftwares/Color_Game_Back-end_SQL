@@ -160,7 +160,9 @@ app.post("/api/create-rate/:gameId/:marketId/:runnerId", async (req, res) => {
         AND G.gameName LIKE ?
       `;
   
+
       const games = await executeQuery(getGamesQuery, [`%${searchQuery}%`]);
+
   
       const totalItems = games.length;
   
@@ -223,6 +225,7 @@ app.post("/api/create-rate/:gameId/:marketId/:runnerId", async (req, res) => {
             totalPages: totalPages,
             totalItems: totalItems,
         });
+
     } catch (error) {
         res.status(500).send({
             code: error.code || 500,
@@ -239,7 +242,6 @@ app.get("/api/All-Runners/:marketId", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const pageSize = parseInt(req.query.pageSize) || 10;
       const searchQuery = req.query.search || '';
-
       const getRunnersQuery = `
           SELECT R.name, R.rateBack, R.rateLay
           FROM Runner R
@@ -252,6 +254,7 @@ app.get("/api/All-Runners/:marketId", async (req, res) => {
       const totalItems = runners.length;
 
       let paginatedRunners;
+
       let totalPages = 1;
 
       if (page && pageSize) {
@@ -260,6 +263,7 @@ app.get("/api/All-Runners/:marketId", async (req, res) => {
       } else {
           paginatedRunners = runners;
       }
+
 
       const runnersList = paginatedRunners.map((runner) => ({
           name: runner.name,
@@ -281,7 +285,7 @@ app.get("/api/All-Runners/:marketId", async (req, res) => {
   }
 });
 
-  
+
 app.post("/api/update-market-status/:marketId", async (req, res) => {
   try {
       const { marketId } = req.params;
@@ -300,11 +304,5 @@ app.post("/api/update-market-status/:marketId", async (req, res) => {
       res.status(500).json({ error: "Internal server error." });
   }
 });
-
-
-
-
-
-
-
+  
 }

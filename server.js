@@ -7,6 +7,7 @@ import { AdminRoute } from "./routes/admin.route.js";
 
 
 import cors from 'cors';
+import { UserRoute } from "./routes/user.route.js";
 
 dotenv.config();
 const app = express();
@@ -46,6 +47,7 @@ app.get('/', (req, res) => {
   });
   
 AdminRoute(app);
+UserRoute(app)
 
 app.listen(8080, () => {
     console.log("App is running on - http://localhost:8080");
