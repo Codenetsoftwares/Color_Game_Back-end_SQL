@@ -2,9 +2,8 @@
   import bcrypt from "bcrypt";
   import jwt from "jsonwebtoken";
   import dotenv from "dotenv";
-  import uuid from 'uuid';
+  import { v4 as uuidv4 } from 'uuid';
 
-  const uuidv4 = uuid.v4;
   
 
   dotenv.config();
@@ -255,7 +254,7 @@
   
   createMarket: async (gameId, marketName, participants, timeSpan) => {
     try {
-      // Generate a UUID for the market
+    
       const marketId = uuidv4();
   
       const insertMarketQuery = `
@@ -265,7 +264,6 @@
   
       const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan]);
   
-      // Use the generated marketId for further operations
       const selectMarketQuery = "SELECT * FROM Market WHERE marketId = ?";
       const selectedMarketRows = await executeQuery(selectMarketQuery, [marketId]);
   
@@ -357,7 +355,7 @@
 
 createRate: async (gameId, marketId, runnerId, back, lay) => {
   try {
-      // Check if a rate already exists for the given marketId
+      
       const checkRateQuery = `
           SELECT id
           FROM Rate
@@ -366,7 +364,7 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
       const existingRate = await executeQuery(checkRateQuery, [runnerId, gameId, marketId]);
 
       if (existingRate && existingRate.length > 0) {
-          // If a rate already exists, update the existing rate
+         
           const updateRateQuery = `
               UPDATE Rate
               SET Back = ?, Lay = ?
@@ -375,7 +373,7 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
 
           await executeQuery(updateRateQuery, [back, lay, runnerId, gameId, marketId]);
       } else {
-          // If no rate exists, insert a new rate
+          
           const insertRateQuery = `
               INSERT INTO Rate (runnerId, Back, Lay, marketId, gameId)
               VALUES (?, ?, ?, ?, ?)
@@ -385,7 +383,6 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
 
       }
 
-      // Update Runner table with new back and lay values
       const updateRunnerQuery = `
           UPDATE Runner
           SET rateBack = ?, rateLay = ?

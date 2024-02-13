@@ -4,9 +4,8 @@ import { Authorize } from "../middleware/auth.js";
 import mysql from "mysql2"
 import dotenv from "dotenv";
 
-import uuid from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
-  const uuidv4 = uuid.v4;
   
 
 dotenv.config();
