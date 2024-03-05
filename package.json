@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.1570.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
@@ -20,7 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.3.0",
     "mongoose": "^8.1.1",
+    "mysql2": "^3.9.2",
     "node": "^21.6.1",
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.0.3",
+    "uuid": "^9.0.1"
   }
 }
