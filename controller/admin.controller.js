@@ -24,16 +24,7 @@ function executeQuery(sql, values = []) {
       if (err) {
         reject(err);
       } else {
-        console.log("Query results:", results);
-        if (results instanceof Array) {
-          if (results.length > 0) {
-            resolve(results);
-          } else {
-            reject(new Error("Query result is an empty array"));
-          }
-        } else {
-          resolve(results);
-        }
+        resolve(results);
       }
     });
   });
@@ -41,32 +32,34 @@ function executeQuery(sql, values = []) {
 
 
 export const AdminController = {
+
   createAdmin: async (data) => {
     try {
-      if (!data.userName || !data.password || !data.roles || data.roles.length === 0) {
-        throw { code: 400, message: "Invalid input data" };
-      }
+        if (!data.userName || !data.password || !data.roles || data.roles.length === 0) {
+            throw { code: 400, message: "Invalid input data" };
+        }
 
-      const existingAdminQuery = "SELECT * FROM Admin WHERE userName = ?";
-      const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
-      if (existingAdmin.length > 0) {
-        throw { code: 409, message: "Admin Already Exists" };
-      }
+        const existingAdminQuery = "SELECT * FROM Admin WHERE userName = ?";
+        const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
+        if (existingAdmin.length > 0) {
+            throw { code: 409, message: "Admin Already Exists" };
+        }
 
-      const encryptedPassword = await bcrypt.hash(data.password, 10);
+        const encryptedPassword = await bcrypt.hash(data.password, 10);
 
-      const insertAdminQuery = `
-  INSERT INTO Admin (userName, password, roles)
-  VALUES (?, ?, ?)
-  `;
+        const adminId = uuidv4(); 
 
-      await executeQuery(insertAdminQuery, [data.userName, encryptedPassword, JSON.stringify(data.roles)]);
+        const insertAdminQuery = `
+            INSERT INTO Admin (adminId, userName, password, roles)
+            VALUES (?, ?, ?, ?)
+        `;
+
+        await executeQuery(insertAdminQuery, [adminId, data.userName, encryptedPassword, JSON.stringify(data.roles)]);
     } catch (err) {
-      console.error(err);
-      throw { code: 500, message: "Failed to save user" };
+        console.error(err);
+        throw { code: 500, message: "Failed to save user" };
     }
-  },
-
+},
 
   GenerateAdminAccessToken: async (userName, password, persist) => {
     try {
@@ -122,31 +115,32 @@ export const AdminController = {
 
 
   createUser: async (data) => {
-    try {
-      if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
-        throw { code: 400, message: "Invalid input data" };
-      }
-
-      const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
-      const existingUser = await executeQuery(existingUserQuery, [data.userName]);
-
-      if (existingUser.length > 0) {
-        throw { code: 409, message: "User Already Exists" };
-      }
-
-      const encryptedPassword = await bcrypt.hash(data.password, 10);
-
-      const insertUserQuery = `
-  INSERT INTO User (firstName, lastName, userName, phoneNumber, password)
-  VALUES (?, ?, ?, ?, ?)
-  `;
-
-      await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
-    } catch (err) {
-      console.error(err);
-      throw { code: 500, message: err.message };
+  try {
+    if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
+      throw { code: 400, message: "Invalid input data" };
     }
-  },
+
+    const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
+    const [existingUser] = await executeQuery(existingUserQuery, data.userName);
+
+    if (existingUser && existingUser.length > 0) {
+      throw { code: 409, message: "User Already Exists" };
+    }
+
+    const encryptedPassword = await bcrypt.hash(data.password, 10);
+
+    const insertUserQuery = `
+      INSERT INTO User (firstName, lastName, userName, phoneNumber, password)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
+  } catch (err) {
+    console.error(err);
+    throw { code: err.code || 500, message: err.message || "Failed to create user" };
+  }
+},
+
 
 
   loginUser: async (userName, password, persist) => {
@@ -200,9 +194,10 @@ export const AdminController = {
       throw err;
     }
   },
-  createGame: async (gameName, Description) => {
+
+  createGame: async (adminId,gameName, Description) => {
     try {
-      const adminQuery = "SELECT * FROM Admin WHERE JSON_UNQUOTE(JSON_EXTRACT(roles, '$[0]')) = 'superAdmin'";
+      const adminQuery = "SELECT * FROM Admin WHERE JSON_UNQUOTE(JSON_EXTRACT(roles, '$[0]')) = 'Admin'";
       console.log("adminQuery", adminQuery);
 
       const [adminRows] = await executeQuery(adminQuery);
@@ -214,29 +209,25 @@ export const AdminController = {
       }
 
       const gameId = uuidv4();
-
-      const insertGameQuery = "INSERT INTO Game (gameName, Description, gameId) VALUES (?, ?, ?)";
-      const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId]);
-
-      console.log("insertGameResult:", insertGameResult);
-
+  
+      const insertGameQuery = "INSERT INTO Game (gameName, Description, gameId, adminId) VALUES (?, ?, ?, ?)";
+      const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId, adminId]);
+  
       const selectGameQuery = "SELECT * FROM Game WHERE id = ?";
       const selectedGameRows = await executeQuery(selectGameQuery, [insertGameResult.insertId]);
-
-      console.log("selectedGameRows:", selectedGameRows);
-
+  
       if (!selectedGameRows || selectedGameRows.length === 0) {
         console.error("Game Not Found");
         throw { code: 404, message: "Game Not Found" };
       }
-
+  
       const selectedGame = selectedGameRows[0];
-
+  
       if (!selectedGame || typeof selectedGame !== 'object') {
         console.error("Invalid game data");
         throw { code: 500, message: "Invalid game data" };
       }
-
+  
       return {
         gameList: [{
           id: selectedGame.id || null,
@@ -251,34 +242,35 @@ export const AdminController = {
       throw error;
     }
   },
-
-  createMarket: async (gameId, marketName, participants, timeSpan) => {
+  
+  createMarket: async (adminId, gameId, marketName, participants, timeSpan) => {
     try {
-
+      console.log("Admin ID:", adminId);
+    console.log("Game ID:", gameId);
       const marketId = uuidv4();
-
+  
       const insertMarketQuery = `
-        INSERT INTO Market (marketId, gameId, marketName, participants, timeSpan)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO Market (marketId, gameId, marketName, participants, timeSpan, adminId)
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
-
-      const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan]);
-
+  
+      const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan, adminId]);
+  
       const selectMarketQuery = "SELECT * FROM Market WHERE marketId = ?";
       const selectedMarketRows = await executeQuery(selectMarketQuery, [marketId]);
-
+  
       if (!selectedMarketRows || selectedMarketRows.length === 0) {
         console.error("Market not found");
         throw { code: 404, message: "Market not found" };
       }
-
+  
       const selectedMarket = selectedMarketRows[0];
-
+  
       if (!selectedMarket || typeof selectedMarket !== 'object') {
         console.error("Invalid market data");
         throw { code: 500, message: "Invalid market data" };
       }
-
+  
       return {
         marketList: [{
           id: selectedMarket.id || null,
@@ -295,6 +287,8 @@ export const AdminController = {
       throw error;
     }
   },
+  
+  
 
 
   createRunner: async (gameId, marketId, runnerNames) => {
@@ -423,10 +417,66 @@ export const AdminController = {
     }
   },
 
+  updateGame: async (adminId, gameId, gameName, description) => {
+   const updateGameQuery = `
+  UPDATE game
+  SET gameName = COALESCE(?, gameName),
+      description = COALESCE(?, description)
+  WHERE gameId = ? AND adminId = ?;
+`;
+
+const updateGameValues = [gameName, description, gameId, adminId];
+
+  
+    await executeQuery(updateGameQuery, updateGameValues);
+  },
+
+  updateMarket: async (adminId, gameId, marketId, marketName, participants, timeSpan) => {
+    const updateMarketQuery = `
+      UPDATE market
+      SET marketName = COALESCE(?, marketName),
+          participants = COALESCE(?, participants),
+          timeSpan = COALESCE(?, timeSpan)
+      WHERE marketId = ? AND gameId = ? AND adminId = ?;
+    `;
+  
+    const updateMarketValues = [marketName, participants, timeSpan, marketId, gameId, adminId];
+  
+    await executeQuery(updateMarketQuery, updateMarketValues);
+  },
+
+  updateRunner: async (adminId, gameId, marketId, runnerId, runnerName) => {
+    const updateRunnerQuery = `
+      UPDATE runner
+      SET runnerName = COALESCE(?, runnerName)
+      WHERE runnerId = ? AND marketId = (
+        SELECT marketId FROM Market WHERE marketId = ? AND gameId = ? AND adminId = ?
+      );
+    `;
+  
+    const updateRunnerValues = [runnerName, runnerId, marketId, gameId, adminId];
+  
+    await executeQuery(updateRunnerQuery, updateRunnerValues);
+  },
+
+  updateRate: async (adminId, gameId, marketId, runnerId, back, lay) => {
+    const updateRateQuery = `
+      UPDATE rate
+      SET Back = COALESCE(?, Back),
+          Lay = COALESCE(?, Lay)
+      WHERE runnerId = ? AND marketId = (
+        SELECT marketId FROM Market WHERE marketId = ? AND gameId = ? AND adminId = ?
+      );
+    `;
+  
+    const updateRateValues = [back, lay, runnerId, marketId, gameId, adminId];
+  
+    await executeQuery(updateRateQuery, updateRateValues);
+  },
+  
 
   CreateSlider: async (sliderCount, data, user) => {
     try {
-      // Check if data is an array
       if (!Array.isArray(data)) {
         throw { code: 400, message: "Data must be an array" };
       }

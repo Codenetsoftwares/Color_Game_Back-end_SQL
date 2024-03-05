@@ -66,15 +66,15 @@ export const AdminRoute = (app) => {
 
 
 
-  app.post("/api/user-create", async (req, res) => {
+  app.post("/api/user-create", Authorize(["Admin"]), async (req, res) => {
     try {
-      const user = req.body;
-      await AdminController.createUser(req.body, user)
-      res.status(200).send({ code: 200, message: 'User registered successfully!' })
+      await AdminController.createUser(req.body);
+      res.status(200).send({ code: 200, message: 'User registered successfully!' });
     } catch (error) {
-      res.status(500).send({ code: error.code, message: error.message })
+      res.status(error.code || 500).send({ code: error.code || 500, message: error.message || "Internal Server Error" });
     }
-  })
+  });
+  
 
   app.post("/api/user-login", async (req, res) => {
     try {
@@ -90,25 +90,27 @@ export const AdminRoute = (app) => {
   });
 
 
-  app.post("/api/create-games",
-    Authorize(["superAdmin"]),
-    async (req, res) => {
-      try {
-        const { gameName, Description } = req.body;
-        const result = await AdminController.createGame(gameName, Description);
-        const games = result.gameList;
-        res.status(200).send({ code: 200, message: "Game Create Successfully", games });
-      } catch (err) {
-        res.status(500).send({ code: err.code, message: err.message });
-      }
-    });
+  app.post("/api/create-games", Authorize(["Admin"]), async (req, res) => {
+    try {
+      const { gameName, Description } = req.body;
+      const adminId = req.user.adminId; 
+      const result = await AdminController.createGame(adminId, gameName, Description);
+      const games = result.gameList;
+      res.status(200).send({ code: 200, message: "Game Create Successfully", games });
+    } catch (err) {
+      res.status(Number.isInteger(err.code) ? err.code : 500).send({ code: err.code, message: err.message });
+    }
+  });
+  
 
-  app.post("/api/create-markets/:gameId", async (req, res) => {
+  app.post("/api/create-markets/:gameId",Authorize(["Admin"]), async (req, res) => {
     try {
       const { gameId } = req.params;
       const { marketName, participants, timeSpan } = req.body;
+      const adminId = req.user.adminId; 
+      console.log("adminId: " + adminId);
+      const markets = await AdminController.createMarket(adminId, gameId, marketName, participants, timeSpan);
 
-      const markets = await AdminController.createMarket(gameId, marketName, participants, timeSpan);
 
       res.status(200).send({ code: 200, message: "Market created successfully", markets });
     } catch (err) {
@@ -118,18 +120,21 @@ export const AdminRoute = (app) => {
 
 
 
-  app.post("/api/create-runners/:gameId/:marketId", async (req, res) => {
+  app.post("/api/create-runners/:gameId/:marketId",Authorize(["Admin"]), async (req, res) => {
     try {
+      console.log("User:", req.user);
       const { gameId, marketId } = req.params;
       const { runnerNames } = req.body;
-      const runners = await AdminController.createRunner(gameId, marketId, runnerNames);
+      const adminId = req.user.adminId;
+      console.log("adminId: " + adminId);
+      const runners = await AdminController.createRunner(adminId,gameId, marketId, runnerNames);
       res.status(200).send({ code: 200, message: "Runner Create Successfully", runners });
     } catch (err) {
       res.status(500).send({ code: err.code, message: err.message });
     }
   });
 
-  app.post("/api/create-rate/:gameId/:marketId/:runnerId", async (req, res) => {
+  app.post("/api/create-rate/:gameId/:marketId/:runnerId",Authorize(["Admin"]), async (req, res) => {
     try {
       const { gameId, marketId, runnerId } = req.params;
       const { back, lay } = req.body;
@@ -142,7 +147,7 @@ export const AdminRoute = (app) => {
     }
   });
 
-  app.get("/api/All-Games", async (req, res) => {
+  app.get("/api/All-Games",Authorize(["Admin"]), async (req, res) => {
     try {
       const page = req.query.page ? parseInt(req.query.page) : 1;
       const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
@@ -154,7 +159,7 @@ export const AdminRoute = (app) => {
         WHERE EXISTS (
           SELECT 1
           FROM Admin A
-          WHERE JSON_UNQUOTE(JSON_EXTRACT(A.roles, '$[0]')) = 'superAdmin'
+          WHERE JSON_UNQUOTE(JSON_EXTRACT(A.roles, '$[0]')) = 'Admin'
         )
         AND G.gameName LIKE ?
       `;
@@ -190,7 +195,7 @@ export const AdminRoute = (app) => {
   });
 
 
-  app.get("/api/All-Markets/:gameId", async (req, res) => {
+  app.get("/api/All-Markets/:gameId",Authorize(["Admin"]), async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const page = parseInt(req.query.page) || 1;
@@ -234,45 +239,49 @@ export const AdminRoute = (app) => {
   });
 
 
-  app.get("/api/All-Runners/:marketId", async (req, res) => {
+  app.get("/api/All-Runners/:gameId/:marketId", Authorize(["Admin"]), async (req, res) => {
     try {
+      const gameId = req.params.gameId;
+      const marketId = req.params.marketId;
       const page = parseInt(req.query.page) || 1;
       const pageSize = parseInt(req.query.pageSize) || 10;
       const searchQuery = req.query.search || '';
+  
       const getRunnersQuery = `
-          SELECT R.name, R.rateBack, R.rateLay
-          FROM Runner R
-          JOIN Market M ON R.marketId = M.marketId
-          WHERE M.marketId = ? AND R.name LIKE ?
+        SELECT R.name, R.rateBack, R.rateLay
+        FROM Runner R
+        JOIN Market M ON R.marketId = M.marketId
+        WHERE M.marketId = ? AND R.name LIKE ?
       `;
-
-      const runners = await executeQuery(getRunnersQuery, [req.params.marketId, `%${searchQuery}%`]);
-
+  
+      const runners = await executeQuery(getRunnersQuery, [marketId, `%${searchQuery}%`]);
+  
       const totalItems = runners.length;
-
+  
       let paginatedRunners;
-
+  
       let totalPages = 1;
-
+  
       if (page && pageSize) {
         totalPages = Math.ceil(totalItems / pageSize);
         paginatedRunners = runners.slice((page - 1) * pageSize, page * pageSize);
       } else {
         paginatedRunners = runners;
       }
-
-
+  
       const runnersList = paginatedRunners.map((runner) => ({
         name: runner.name,
         rateBack: runner.rateBack,
         rateLay: runner.rateLay,
       }));
-
+  
       res.status(200).send({
         runners: runnersList,
         currentPage: page,
         totalPages: totalPages,
         totalItems: totalItems,
+        gameId: gameId,
+        marketId: marketId,
       });
     } catch (error) {
       res.status(500).send({
@@ -281,9 +290,8 @@ export const AdminRoute = (app) => {
       });
     }
   });
-
-
-  app.post("/api/update-market-status/:marketId", async (req, res) => {
+  
+  app.post("/api/update-market-status/:marketId",Authorize(["Admin"]), async (req, res) => {
     try {
       const { marketId } = req.params;
       const { status } = req.body;
@@ -302,6 +310,47 @@ export const AdminRoute = (app) => {
     }
   });
 
+  app.put("/api/update", Authorize(["Admin"]), async (req, res) => {
+    try {
+      const { gameId, marketId, runnerId } = req.query;
+      const { gameName, description, marketName, participants, timeSpan, RunnerName, back, lay } = req.body;
+  
+      const admin = await executeQuery("SELECT * FROM Admin WHERE roles = 'Admin' LIMIT 1");
+  
+      if (!admin || admin.length === 0) {
+        throw { code: 404, message: "Admin not found" };
+      }
+  
+      if (gameId) {
+        await AdminController.updateGame(admin[0].adminId, gameId, gameName, description);
+      }
+  
+      if (marketId) {
+        await AdminController.updateMarket(admin[0].adminId, gameId, marketId, marketName, participants, timeSpan);
+      }
+  
+      if (runnerId) {
+        await AdminController.updateRunner(admin[0].adminId, gameId, marketId, runnerId, RunnerName);
+        await AdminController.updateRate(admin[0].adminId, gameId, marketId, runnerId, back, lay);
+      }
+  
+      // Assuming `admin.save()` is not necessary in a SQL context
+  
+      res.json({
+        success: true,
+        message: "Edit successful",
+        gameList: admin[0].gameList,
+      });
+    } catch (error) {
+      res.status(error.code || 500).json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
+    }
+  });
+  
+
+  
   app.post("/api/admin/slider-text-img/dynamic", Authorize(["Admin"]), async (req, res) => {
     try {
       const { sliderCount, data } = req.body; 
@@ -312,6 +361,26 @@ export const AdminRoute = (app) => {
     } catch (e) {
       console.error(e);
       res.status(e.code || 500).send({ message: e.message || "Internal Server Error" }); 
+    }
+  });
+
+  app.get("/api/All-User", async (req, res) => {
+    try {
+
+      const getUsersQuery = "SELECT * FROM user";
+      const users = await executeQuery(getUsersQuery);
+  
+      if (!users || users.length === 0) {
+        throw { code: 404, message: "User not found" };
+      }
+  
+      res.status(200).send({ code: 200, message: users });
+
+    } catch (error) {
+      res.status(error.code || 500).send({
+        code: error.code || 500,
+        message: error.message || "Internal Server Error",
+      });
     }
   });
 
