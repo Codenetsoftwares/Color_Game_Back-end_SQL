@@ -154,7 +154,7 @@ export const AdminRoute = (app) => {
       const searchQuery = req.query.search || '';
 
       const getGamesQuery = `
-        SELECT G.id, G.gameName, G.Description
+        SELECT G.id, G.gameName, G.Description , G.gameId
         FROM Game G
         WHERE EXISTS (
           SELECT 1
@@ -203,7 +203,7 @@ export const AdminRoute = (app) => {
       const searchQuery = req.query.search || '';
 
       const getMarketsQuery = `
-            SELECT M.marketName, M.participants, M.timeSpan, M.status
+            SELECT M.marketName, M.participants, M.timeSpan, M.status , M.marketId
             FROM Game G
             JOIN Market M ON G.gameId = M.gameId
             WHERE G.gameId = ? AND M.marketName LIKE ?
@@ -248,10 +248,10 @@ export const AdminRoute = (app) => {
       const searchQuery = req.query.search || '';
   
       const getRunnersQuery = `
-        SELECT R.name, R.rateBack, R.rateLay
+        SELECT R.runnerName, R.rateBack, R.rateLay , R.runnerId 
         FROM Runner R
         JOIN Market M ON R.marketId = M.marketId
-        WHERE M.marketId = ? AND R.name LIKE ?
+        WHERE M.marketId = ? AND R.runnerName LIKE ?
       `;
   
       const runners = await executeQuery(getRunnersQuery, [marketId, `%${searchQuery}%`]);
@@ -270,9 +270,10 @@ export const AdminRoute = (app) => {
       }
   
       const runnersList = paginatedRunners.map((runner) => ({
-        name: runner.name,
+        runnerName: runner.runnerName,
         rateBack: runner.rateBack,
         rateLay: runner.rateLay,
+        runnerId: runner.runnerId,
       }));
   
       res.status(200).send({

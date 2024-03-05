@@ -321,20 +321,20 @@ export const AdminController = {
         const name = runnerName;
         return {
           runnerId: runnerId,
-          name: name,
+          runnerName: runnerName,
           gameId: gameId,
           marketId: marketId,
         };
       });
 
       const insertRunnersQuery = `
-            INSERT INTO Runner (runnerId, name, gameId, marketId)
+            INSERT INTO Runner (runnerId, runnerName, gameId, marketId)
             VALUES ?
         `;
 
       await executeQuery(insertRunnersQuery, [newRunners.map(runner => [
         runner.runnerId,
-        runner.name,
+        runner.runnerName,
         runner.gameId,
         runner.marketId
       ])]);
@@ -349,49 +349,47 @@ export const AdminController = {
 
   createRate: async (gameId, marketId, runnerId, back, lay) => {
     try {
-
       const checkRateQuery = `
-          SELECT id
-          FROM Rate
-          WHERE runnerId = ? AND gameId = ? AND marketId = ?
+        SELECT id
+        FROM Rate
+        WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
       const existingRate = await executeQuery(checkRateQuery, [runnerId, gameId, marketId]);
-
+  
       if (existingRate && existingRate.length > 0) {
-
         const updateRateQuery = `
-              UPDATE Rate
-              SET Back = ?, Lay = ?
-              WHERE runnerId = ? AND gameId = ? AND marketId = ?
-          `;
-
+          UPDATE Rate
+          SET Back = ?, Lay = ?
+          WHERE runnerId = ? AND gameId = ? AND marketId = ?
+        `;
         await executeQuery(updateRateQuery, [back, lay, runnerId, gameId, marketId]);
       } else {
-
         const insertRateQuery = `
-              INSERT INTO Rate (runnerId, Back, Lay, marketId, gameId)
-              VALUES (?, ?, ?, ?, ?)
-          `;
-
-        await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId]);
-
+          INSERT INTO Rate (runnerId, Back, Lay, marketId, gameId)
+          SELECT ?, ?, ?, ?, ? 
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM Rate
+            WHERE marketId = ? AND gameId = ?
+          )
+        `;
+        await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId, marketId, gameId]);
       }
-
+  
       const updateRunnerQuery = `
-          UPDATE Runner
-          SET rateBack = ?, rateLay = ?
-          WHERE runnerId = ? AND gameId = ? AND marketId = ?
+        UPDATE Runner
+        SET rateBack = ?, rateLay = ?
+        WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
-
       await executeQuery(updateRunnerQuery, [back, lay, runnerId, gameId, marketId]);
-
+  
       return { success: true };
     } catch (error) {
       console.error(error);
       throw error;
     }
   },
-
+  
 
   checkMarketStatus: async (marketId, status) => {
     try {
