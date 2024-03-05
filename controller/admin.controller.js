@@ -1,14 +1,14 @@
-  import mysql from "mysql2";
-  import bcrypt from "bcrypt";
-  import jwt from "jsonwebtoken";
-  import dotenv from "dotenv";
-  import { v4 as uuidv4 } from 'uuid';
+import mysql from "mysql2";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import { v4 as uuidv4 } from 'uuid';
 
-  
+import awsS3Obj from "../helper/awsS3.js"
 
-  dotenv.config();
+dotenv.config();
 
-  const pool = mysql.createPool({
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -16,227 +16,227 @@
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  });
-  
-  function executeQuery(sql, values = []) {
-    return new Promise((resolve, reject) => {
-      pool.query(sql, values, (err, results) => {
-        if (err) {
-          reject(err);
-        } else {
-          console.log("Query results:", results);
-          if (results instanceof Array) {
-            if (results.length > 0) {
-              resolve(results);
-            } else {
-              reject(new Error("Query result is an empty array"));
-            }
-          } else {                 
+});
+
+function executeQuery(sql, values = []) {
+  return new Promise((resolve, reject) => {
+    pool.query(sql, values, (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        console.log("Query results:", results);
+        if (results instanceof Array) {
+          if (results.length > 0) {
             resolve(results);
+          } else {
+            reject(new Error("Query result is an empty array"));
           }
+        } else {
+          resolve(results);
         }
-      });
+      }
     });
-  }
+  });
+}
 
 
-  export const AdminController = {
-      createAdmin: async (data) => {
-  try {
-  if (!data.userName || !data.password || !data.roles || data.roles.length === 0) {
-  throw { code: 400, message: "Invalid input data" };
-  }
+export const AdminController = {
+  createAdmin: async (data) => {
+    try {
+      if (!data.userName || !data.password || !data.roles || data.roles.length === 0) {
+        throw { code: 400, message: "Invalid input data" };
+      }
 
-  const existingAdminQuery = "SELECT * FROM Admin WHERE userName = ?";
-  const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
-  if (existingAdmin.length > 0) {
-  throw { code: 409, message: "Admin Already Exists" };
-  }
+      const existingAdminQuery = "SELECT * FROM Admin WHERE userName = ?";
+      const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
+      if (existingAdmin.length > 0) {
+        throw { code: 409, message: "Admin Already Exists" };
+      }
 
-  const encryptedPassword = await bcrypt.hash(data.password, 10);
+      const encryptedPassword = await bcrypt.hash(data.password, 10);
 
-  const insertAdminQuery = `
+      const insertAdminQuery = `
   INSERT INTO Admin (userName, password, roles)
   VALUES (?, ?, ?)
   `;
 
-  await executeQuery(insertAdminQuery, [data.userName, encryptedPassword, JSON.stringify(data.roles)]);
-  } catch (err) {
-  console.error(err);
-  throw { code: 500, message: "Failed to save user" };
-  }
+      await executeQuery(insertAdminQuery, [data.userName, encryptedPassword, JSON.stringify(data.roles)]);
+    } catch (err) {
+      console.error(err);
+      throw { code: 500, message: "Failed to save user" };
+    }
   },
 
 
   GenerateAdminAccessToken: async (userName, password, persist) => {
-  try {
+    try {
 
-  if (!userName) {
-  throw { code: 400, message: "Invalid value for: User Name" };
-  }
-  if (!password) {
-  throw { code: 400, message: "Invalid value for: password" };
-  }
+      if (!userName) {
+        throw { code: 400, message: "Invalid value for: User Name" };
+      }
+      if (!password) {
+        throw { code: 400, message: "Invalid value for: password" };
+      }
 
-  const getUserQuery = "SELECT * FROM Admin WHERE userName = ?";
-  const [existingUser] = await executeQuery(getUserQuery, [userName]);
+      const getUserQuery = "SELECT * FROM Admin WHERE userName = ?";
+      const [existingUser] = await executeQuery(getUserQuery, [userName]);
 
-  if (!existingUser) {
-  throw { code: 401, message: "Invalid User Name or password" };
-  }
-
-
-  const passwordValid = await bcrypt.compare(password, existingUser.password);
-  if (!passwordValid) {
-  throw { code: 401, message: "Invalid User Name or Password" };
-  }
-
-  const accessTokenPayload = {
-  id: existingUser.id,
-
-  userName: existingUser.userName,
-
-  };
-
-  const accessToken = jwt.sign(
-  accessTokenPayload,
-  process.env.JWT_SECRET_KEY,
-  {
-    expiresIn: persist ? "1y" : "8h",
-  }
-  );
+      if (!existingUser) {
+        throw { code: 401, message: "Invalid User Name or password" };
+      }
 
 
-  const response = {
-  userName: existingUser.userName,
-  accessToken: accessToken,
-    roles: existingUser.roles,
+      const passwordValid = await bcrypt.compare(password, existingUser.password);
+      if (!passwordValid) {
+        throw { code: 401, message: "Invalid User Name or Password" };
+      }
 
-  };
+      const accessTokenPayload = {
+        id: existingUser.id,
 
-  return response;
-  } catch (err) {
-  throw err; 
-  }
+        userName: existingUser.userName,
+
+      };
+
+      const accessToken = jwt.sign(
+        accessTokenPayload,
+        process.env.JWT_SECRET_KEY,
+        {
+          expiresIn: persist ? "1y" : "8h",
+        }
+      );
+
+
+      const response = {
+        userName: existingUser.userName,
+        accessToken: accessToken,
+        roles: existingUser.roles,
+
+      };
+
+      return response;
+    } catch (err) {
+      throw err;
+    }
   },
 
 
   createUser: async (data) => {
-  try {
-  if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
-  throw { code: 400, message: "Invalid input data" };
-  }
+    try {
+      if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
+        throw { code: 400, message: "Invalid input data" };
+      }
 
-  const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
-  const existingUser = await executeQuery(existingUserQuery, [data.userName]);
+      const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
+      const existingUser = await executeQuery(existingUserQuery, [data.userName]);
 
-  if (existingUser.length > 0) {
-  throw { code: 409, message: "User Already Exists" };
-  }
+      if (existingUser.length > 0) {
+        throw { code: 409, message: "User Already Exists" };
+      }
 
-  const encryptedPassword = await bcrypt.hash(data.password, 10);
+      const encryptedPassword = await bcrypt.hash(data.password, 10);
 
-  const insertUserQuery = `
+      const insertUserQuery = `
   INSERT INTO User (firstName, lastName, userName, phoneNumber, password)
   VALUES (?, ?, ?, ?, ?)
   `;
 
-  await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
-  } catch (err) {
-  console.error(err);
-  throw { code: 500, message: err.message };
-  }
+      await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
+    } catch (err) {
+      console.error(err);
+      throw { code: 500, message: err.message };
+    }
   },
 
 
-  loginUser: async(userName,password, persist) => {
-  try {
+  loginUser: async (userName, password, persist) => {
+    try {
 
-  if (!userName) {
-    throw { code: 400, message: "Invalid value for: User Name" };
-  }
-  if (!password) {
-    throw { code: 400, message: "Invalid value for: password" };
-  }
+      if (!userName) {
+        throw { code: 400, message: "Invalid value for: User Name" };
+      }
+      if (!password) {
+        throw { code: 400, message: "Invalid value for: password" };
+      }
 
-  const getUserQuery = "SELECT * FROM User WHERE userName = ?";
-  const [existingUser] = await executeQuery(getUserQuery, [userName]);
+      const getUserQuery = "SELECT * FROM User WHERE userName = ?";
+      const [existingUser] = await executeQuery(getUserQuery, [userName]);
 
-  if (!existingUser) {
-    throw { code: 401, message: "Invalid User Name or password" };
-  }
+      if (!existingUser) {
+        throw { code: 401, message: "Invalid User Name or password" };
+      }
 
 
-  const passwordValid = await bcrypt.compare(password, existingUser.password);
-  if (!passwordValid) {
-    throw { code: 401, message: "Invalid User Name or Password" };
-  }
+      const passwordValid = await bcrypt.compare(password, existingUser.password);
+      if (!passwordValid) {
+        throw { code: 401, message: "Invalid User Name or Password" };
+      }
 
-  const accessTokenPayload = {
-    id: existingUser.id,
+      const accessTokenPayload = {
+        id: existingUser.id,
 
-    userName: existingUser.userName,
-    
-  };
+        userName: existingUser.userName,
 
-  const accessToken = jwt.sign(
-    accessTokenPayload,
-    process.env.JWT_SECRET_KEY,
-    {
-        expiresIn: persist ? "1y" : "8h",
+      };
+
+      const accessToken = jwt.sign(
+        accessTokenPayload,
+        process.env.JWT_SECRET_KEY,
+        {
+          expiresIn: persist ? "1y" : "8h",
+        }
+      );
+
+
+      const response = {
+        userName: existingUser.userName,
+        accessToken: accessToken,
+        roles: accessTokenPayload.roles,
+
+      };
+
+      return response;
+    } catch (err) {
+      throw err;
     }
-  );
-
-
-  const response = {
-    userName: existingUser.userName,
-    accessToken: accessToken,
-    roles: accessTokenPayload.roles,
-
-  };
-
-  return response;
-  } catch (err) {
-  throw err; 
-  }
   },
   createGame: async (gameName, Description) => {
     try {
       const adminQuery = "SELECT * FROM Admin WHERE JSON_UNQUOTE(JSON_EXTRACT(roles, '$[0]')) = 'superAdmin'";
       console.log("adminQuery", adminQuery);
-  
+
       const [adminRows] = await executeQuery(adminQuery);
       console.log("adminRows", adminRows);
-  
+
       if (!adminRows || adminRows.length === 0) {
         console.error("Admin Not Found");
         throw { code: 404, message: "Admin Not Found" };
       }
-  
+
       const gameId = uuidv4();
-  
+
       const insertGameQuery = "INSERT INTO Game (gameName, Description, gameId) VALUES (?, ?, ?)";
       const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId]);
-  
+
       console.log("insertGameResult:", insertGameResult);
-  
+
       const selectGameQuery = "SELECT * FROM Game WHERE id = ?";
       const selectedGameRows = await executeQuery(selectGameQuery, [insertGameResult.insertId]);
-  
+
       console.log("selectedGameRows:", selectedGameRows);
-  
+
       if (!selectedGameRows || selectedGameRows.length === 0) {
         console.error("Game Not Found");
         throw { code: 404, message: "Game Not Found" };
       }
-  
+
       const selectedGame = selectedGameRows[0];
-  
+
       if (!selectedGame || typeof selectedGame !== 'object') {
         console.error("Invalid game data");
         throw { code: 500, message: "Invalid game data" };
       }
-  
+
       return {
         gameList: [{
           id: selectedGame.id || null,
@@ -251,34 +251,34 @@
       throw error;
     }
   },
-  
+
   createMarket: async (gameId, marketName, participants, timeSpan) => {
     try {
-    
+
       const marketId = uuidv4();
-  
+
       const insertMarketQuery = `
         INSERT INTO Market (marketId, gameId, marketName, participants, timeSpan)
         VALUES (?, ?, ?, ?, ?)
       `;
-  
+
       const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan]);
-  
+
       const selectMarketQuery = "SELECT * FROM Market WHERE marketId = ?";
       const selectedMarketRows = await executeQuery(selectMarketQuery, [marketId]);
-  
+
       if (!selectedMarketRows || selectedMarketRows.length === 0) {
         console.error("Market not found");
         throw { code: 404, message: "Market not found" };
       }
-  
+
       const selectedMarket = selectedMarketRows[0];
-  
+
       if (!selectedMarket || typeof selectedMarket !== 'object') {
         console.error("Invalid market data");
         throw { code: 500, message: "Invalid market data" };
       }
-  
+
       return {
         marketList: [{
           id: selectedMarket.id || null,
@@ -295,8 +295,8 @@
       throw error;
     }
   },
-  
-  
+
+
   createRunner: async (gameId, marketId, runnerNames) => {
     try {
       const getMarketQuery = `
@@ -304,58 +304,58 @@
       FROM Market
       WHERE marketId = ? AND gameId = ?
   `;
-  
 
-        const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
 
-        if (!market) {
-            console.error("Market not found for gameId:", gameId, "and marketId:", marketId);
-            throw { message: "Market not found" };
-        }
+      const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
 
-        console.log("Market found:", market);
+      if (!market) {
+        console.error("Market not found for gameId:", gameId, "and marketId:", marketId);
+        throw { message: "Market not found" };
+      }
 
-        const maxParticipants = market.participants;
+      console.log("Market found:", market);
 
-        if (runnerNames.length > maxParticipants) {
-            console.error("Number of runners exceeds the maximum allowed participants.");
-            throw { message: "Number of runners exceeds the maximum allowed participants." };
-        }
+      const maxParticipants = market.participants;
 
-        const newRunners = runnerNames.map((runnerName) => {
-            const runnerId = uuidv4();
-            const name = runnerName;
-            return {
-                runnerId: runnerId,
-                name: name,
-                gameId: gameId,
-                marketId: marketId,
-            };
-        });
+      if (runnerNames.length > maxParticipants) {
+        console.error("Number of runners exceeds the maximum allowed participants.");
+        throw { message: "Number of runners exceeds the maximum allowed participants." };
+      }
 
-        const insertRunnersQuery = `
+      const newRunners = runnerNames.map((runnerName) => {
+        const runnerId = uuidv4();
+        const name = runnerName;
+        return {
+          runnerId: runnerId,
+          name: name,
+          gameId: gameId,
+          marketId: marketId,
+        };
+      });
+
+      const insertRunnersQuery = `
             INSERT INTO Runner (runnerId, name, gameId, marketId)
             VALUES ?
         `;
 
-        await executeQuery(insertRunnersQuery, [newRunners.map(runner => [
-            runner.runnerId,
-            runner.name,
-            runner.gameId,
-            runner.marketId
-        ])]);
+      await executeQuery(insertRunnersQuery, [newRunners.map(runner => [
+        runner.runnerId,
+        runner.name,
+        runner.gameId,
+        runner.marketId
+      ])]);
 
-        return { success: true };
+      return { success: true };
     } catch (error) {
-        console.error("Error in createRunner:", error);
-        throw error;
+      console.error("Error in createRunner:", error);
+      throw error;
     }
-},
+  },
 
 
-createRate: async (gameId, marketId, runnerId, back, lay) => {
-  try {
-      
+  createRate: async (gameId, marketId, runnerId, back, lay) => {
+    try {
+
       const checkRateQuery = `
           SELECT id
           FROM Rate
@@ -364,22 +364,22 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
       const existingRate = await executeQuery(checkRateQuery, [runnerId, gameId, marketId]);
 
       if (existingRate && existingRate.length > 0) {
-         
-          const updateRateQuery = `
+
+        const updateRateQuery = `
               UPDATE Rate
               SET Back = ?, Lay = ?
               WHERE runnerId = ? AND gameId = ? AND marketId = ?
           `;
 
-          await executeQuery(updateRateQuery, [back, lay, runnerId, gameId, marketId]);
+        await executeQuery(updateRateQuery, [back, lay, runnerId, gameId, marketId]);
       } else {
-          
-          const insertRateQuery = `
+
+        const insertRateQuery = `
               INSERT INTO Rate (runnerId, Back, Lay, marketId, gameId)
               VALUES (?, ?, ?, ?, ?)
           `;
 
-          await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId]);
+        await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId]);
 
       }
 
@@ -392,37 +392,78 @@ createRate: async (gameId, marketId, runnerId, back, lay) => {
       await executeQuery(updateRunnerQuery, [back, lay, runnerId, gameId, marketId]);
 
       return { success: true };
-  } catch (error) {
+    } catch (error) {
       console.error(error);
       throw error;
-  }
-},
+    }
+  },
 
 
-checkMarketStatus: async (marketId, status) => {
-  try {
-    const formattedStatus = status ? 1 : 0;
+  checkMarketStatus: async (marketId, status) => {
+    try {
+      const formattedStatus = status ? 1 : 0;
 
-    const updateMarketQuery = `
+      const updateMarketQuery = `
       UPDATE Market
       SET status = ?
       WHERE marketId = ?
     `;
 
-    const updateResult = await executeQuery(updateMarketQuery, [formattedStatus, marketId]);
+      const updateResult = await executeQuery(updateMarketQuery, [formattedStatus, marketId]);
 
-    if (updateResult.affectedRows === 0) {
-      throw new Error("Market not found.");
+      if (updateResult.affectedRows === 0) {
+        throw new Error("Market not found.");
+      }
+
+      const statusMessage = status ? "Market is active." : "Market is suspended.";
+
+      return { currentStatus: statusMessage };
+    } catch (error) {
+      throw error;
     }
-
-    const statusMessage = status ? "Market is active." : "Market is suspended.";
-
-    return { currentStatus: statusMessage };
-  } catch (error) {
-    throw error;
-  }
-},
+  },
 
 
-  }
+  CreateSlider: async (sliderCount, data, user) => {
+    try {
+      // Check if data is an array
+      if (!Array.isArray(data)) {
+        throw { code: 400, message: "Data must be an array" };
+      }
+
+      let documentArray = [];
+
+      for (const element of data) {
+        let obj = {};
+        const result = await awsS3Obj.addDocumentToS3(
+          element.docBase,
+          element.name,
+          "game-slider",
+          element.doctype
+        );
+        console.log("Result from awsS3Obj.addDocumentToS3:", result);
+        obj.image = result.Location;
+        obj.text = element.text;
+        obj.headingText = element.headingText;
+        documentArray.push(obj);
+      }
+
+      const newSlider = {
+        sliderCount: sliderCount,
+        document: JSON.stringify(documentArray),
+      };
+
+      const createSliderQuery = "INSERT INTO Slider SET ?";
+      const savedSlider = await executeQuery(createSliderQuery, [newSlider]);
+      console.log("Saved slider:", savedSlider);
+
+      return true;
+    } catch (err) {
+      console.error("Error in CreateSlider:", err);
+      throw { code: err.code || 500, message: err.message || "Failed to Create Sliders" };
+    }
+  },
+
+
+}
 
