@@ -375,7 +375,7 @@ export const AdminRoute = (app) => {
         throw { code: 404, message: "User not found" };
       }
   
-      res.status(200).send({ code: 200, message: users });
+      res.status(200).send({ code: 200, users });
 
     } catch (error) {
       res.status(error.code || 500).send({
