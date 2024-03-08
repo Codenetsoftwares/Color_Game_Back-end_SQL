@@ -4,6 +4,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import { AdminRoute } from "./routes/admin.route.js";
+import { errorHandler } from "./middleware/ErrorHandling.js";
 
 
 import cors from 'cors';
@@ -48,6 +49,7 @@ app.get('/', (req, res) => {
   
 AdminRoute(app);
 UserRoute(app)
+app.use(errorHandler);
 
 app.listen(8080, () => {
     console.log("App is running on - http://localhost:8080");

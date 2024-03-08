@@ -20,24 +20,13 @@ function executeQuery(sql, values = []) {
   return new Promise((resolve, reject) => {
     pool.query(sql, values, (err, results) => {
       if (err) {
-        console.error("SQL Error:", err); 
         reject(err);
       } else {
-        console.log("Query results:", results);
-        if (results instanceof Array) {
-          if (results.length > 0) {
-            resolve(results);
-          } else {
-            reject(new Error("Query result is an empty array"));
-          }
-        } else {
-          resolve(results);
-        }
+        resolve(results);
       }
     });
   });
 }
-
 
 
 export const UserRoute = (app) => {
@@ -55,7 +44,7 @@ export const UserRoute = (app) => {
         WHERE EXISTS (
           SELECT 1
           FROM Admin A
-          WHERE JSON_UNQUOTE(JSON_EXTRACT(A.roles, '$[0]')) = 'superAdmin'
+          WHERE JSON_UNQUOTE(JSON_EXTRACT(A.roles, '$[0]')) = 'Admin'
         )
         AND G.gameName LIKE ?
       `;
@@ -90,7 +79,7 @@ export const UserRoute = (app) => {
     }
   });
 
-  
+
   app.get("/api/user-markets/:gameId", async (req, res) => {
     try {
       const gameId = req.params.gameId;
@@ -136,19 +125,22 @@ export const UserRoute = (app) => {
 
 
 
-  app.get("/api/user-runners/:marketId", async (req, res) => {
+  app.get("/api/user-runners/:gameId/:marketId", async (req, res, next) => {
     try {
+      const gameId = req.params.gameId;
+      const marketId = req.params.marketId;
       const page = parseInt(req.query.page) || 1;
       const pageSize = parseInt(req.query.pageSize) || 10;
       const searchQuery = req.query.search || '';
+
       const getRunnersQuery = `
-          SELECT R.name, R.rateBack, R.rateLay
-          FROM Runner R
-          JOIN Market M ON R.marketId = M.marketId
-          WHERE M.marketId = ? AND R.name LIKE ?
+        SELECT R.runnerName, R.rateBack, R.rateLay , R.runnerId 
+        FROM Runner R
+        JOIN Market M ON R.marketId = M.marketId
+        WHERE M.marketId = ? AND R.runnerName LIKE ?
       `;
 
-      const runners = await executeQuery(getRunnersQuery, [req.params.marketId, `%${searchQuery}%`]);
+      const runners = await executeQuery(getRunnersQuery, [marketId, `%${searchQuery}%`]);
 
       const totalItems = runners.length;
 
@@ -163,11 +155,11 @@ export const UserRoute = (app) => {
         paginatedRunners = runners;
       }
 
-
       const runnersList = paginatedRunners.map((runner) => ({
-        name: runner.name,
+        runnerName: runner.runnerName,
         rateBack: runner.rateBack,
         rateLay: runner.rateLay,
+        runnerId: runner.runnerId,
       }));
 
       res.status(200).send({
@@ -175,21 +167,24 @@ export const UserRoute = (app) => {
         currentPage: page,
         totalPages: totalPages,
         totalItems: totalItems,
+        gameId: gameId,
+        marketId: marketId,
       });
     } catch (error) {
-      res.status(500).send({
-        code: error.code || 500,
-        message: error.message || "Internal Server Error",
-      });
+      // res.status(500).send({
+      //   code: error.code || 500,
+      //   message: error.message || "Internal Server Error",
+      // });
+      next(err)
     }
   });
-  
+
   app.post("/api/eligibilityCheck/:userId", async (req, res) => {
-    try {    
-     const { userId} = req.params
-     const {eligibilityCheck}=req.body
-     const check = await UserController.eligibilityCheck(userId,eligibilityCheck)
-     res.status(200).send({ code: 200, message: "ok", check })
+    try {
+      const { userId } = req.params
+      const { eligibilityCheck } = req.body
+      const check = await UserController.eligibilityCheck(userId, eligibilityCheck)
+      res.status(200).send({ code: 200, message: "ok", check })
 
     } catch (err) {
       res.status(500).send({ code: err.code, message: err.message })
@@ -201,11 +196,11 @@ export const UserRoute = (app) => {
 
       const getUsersQuery = "SELECT * FROM user";
       const users = await executeQuery(getUsersQuery);
-  
+
       if (!users || users.length === 0) {
         throw { code: 404, message: "User not found" };
       }
-  
+
       res.status(200).send({ code: 200, message: users });
 
     } catch (error) {
@@ -215,6 +210,21 @@ export const UserRoute = (app) => {
       });
     }
   });
-  
 
+  app.get('/api/user-All-gameData', async (req, res) => {
+    try {
+      const gameData = await UserController.getGameData();
+  
+      if (!gameData || gameData.length === 0) {
+        return res.status(404).json({ message: 'Games not found' });
+      }
+  
+      const formattedGameData = UserController.formatGameData(gameData);
+  
+      res.status(200).json(formattedGameData);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  });
 }
