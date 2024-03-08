@@ -115,33 +115,34 @@ export const AdminController = {
 
 
   createUser: async (data) => {
-  try {
-    if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
-      throw { code: 400, message: "Invalid input data" };
+    try {
+      if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
+        throw { code: 400, message: "Invalid input data" };
+      }
+  
+      const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
+      const [existingUser] = await executeQuery(existingUserQuery, [data.userName]);
+  
+      console.log("Existing User:", existingUser);
+  
+      if (existingUser) {
+        throw { code: 409, message: "User Already Exists" };
+      }
+  
+      const encryptedPassword = await bcrypt.hash(data.password, 10);
+  
+      const insertUserQuery = `
+        INSERT INTO User (firstName, lastName, userName, phoneNumber, password)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+  
+      await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
+    } catch (err) {
+      console.error(err);
+      throw { code: err.code || 500, message: err.message || "Failed to create user" };
     }
-
-    const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
-    const [existingUser] = await executeQuery(existingUserQuery, data.userName);
-
-    if (existingUser && existingUser.length > 0) {
-      throw { code: 409, message: "User Already Exists" };
-    }
-
-    const encryptedPassword = await bcrypt.hash(data.password, 10);
-
-    const insertUserQuery = `
-      INSERT INTO User (firstName, lastName, userName, phoneNumber, password)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-
-    await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
-  } catch (err) {
-    console.error(err);
-    throw { code: err.code || 500, message: err.message || "Failed to create user" };
-  }
-},
-
-
+  },
+  
 
   loginUser: async (userName, password, persist) => {
     try {
@@ -195,7 +196,7 @@ export const AdminController = {
     }
   },
 
-  createGame: async (adminId,gameName, Description) => {
+  createGame: async (gameName, Description) => {
     try {
       const adminQuery = "SELECT * FROM Admin WHERE JSON_UNQUOTE(JSON_EXTRACT(roles, '$[0]')) = 'Admin'";
       console.log("adminQuery", adminQuery);
@@ -203,15 +204,15 @@ export const AdminController = {
       const [adminRows] = await executeQuery(adminQuery);
       console.log("adminRows", adminRows);
 
-      if (!adminRows || adminRows.length === 0) {
+      if (!adminRows) {
         console.error("Admin Not Found");
         throw { code: 404, message: "Admin Not Found" };
       }
 
       const gameId = uuidv4();
   
-      const insertGameQuery = "INSERT INTO Game (gameName, Description, gameId, adminId) VALUES (?, ?, ?, ?)";
-      const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId, adminId]);
+      const insertGameQuery = "INSERT INTO Game (gameName, Description, gameId) VALUES (?, ?, ?)";
+      const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId]);
   
       const selectGameQuery = "SELECT * FROM Game WHERE id = ?";
       const selectedGameRows = await executeQuery(selectGameQuery, [insertGameResult.insertId]);
@@ -234,7 +235,8 @@ export const AdminController = {
           gameId: selectedGame.gameId || null,
           gameName: selectedGame.gameName || '',
           Description: selectedGame.Description || '',
-          markets: []
+          markets: [],
+        
         }],
       };
     } catch (error) {
@@ -243,18 +245,18 @@ export const AdminController = {
     }
   },
   
-  createMarket: async (adminId, gameId, marketName, participants, timeSpan) => {
+  createMarket: async (gameId, marketName, participants, timeSpan) => {
     try {
-      console.log("Admin ID:", adminId);
+      // console.log("Admin ID:", adminId);
     console.log("Game ID:", gameId);
       const marketId = uuidv4();
   
       const insertMarketQuery = `
-        INSERT INTO Market (marketId, gameId, marketName, participants, timeSpan, adminId)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO Market (marketId, gameId, marketName, participants, timeSpan)
+        VALUES (?, ?, ?, ?, ?)
       `;
   
-      const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan, adminId]);
+      const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan,]);
   
       const selectMarketQuery = "SELECT * FROM Market WHERE marketId = ?";
       const selectedMarketRows = await executeQuery(selectMarketQuery, [marketId]);
@@ -288,19 +290,21 @@ export const AdminController = {
     }
   },
   
-  
-
-
   createRunner: async (gameId, marketId, runnerNames) => {
     try {
       const getMarketQuery = `
       SELECT id, participants
-      FROM Market
-      WHERE marketId = ? AND gameId = ?
+FROM market
+WHERE marketId = ? AND gameId = ?
+
   `;
 
+console.log("Game ID:", gameId);
+console.log("Market ID:", marketId);
 
-      const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
+const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
+
+console.log("Market found:", market);
 
       if (!market) {
         console.error("Market not found for gameId:", gameId, "and marketId:", marketId);

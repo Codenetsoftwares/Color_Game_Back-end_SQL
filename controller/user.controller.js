@@ -19,16 +19,7 @@ function executeQuery(sql, values = []) {
       if (err) {
         reject(err);
       } else {
-        console.log("Query results:", results);
-        if (results instanceof Array) {
-          if (results.length > 0) {
-            resolve(results);
-          } else {
-            reject(new Error("Query result is an empty array"));
-          }
-        } else {
-          resolve(results);
-        }
+        resolve(results);
       }
     });
   });
@@ -61,4 +52,70 @@ export const UserController = {
       throw { code: err.code || 500, message: err.message };
     }
   },
+
+
+ 
+  getGameData: async () => {
+    try {
+      const getGamesQuery = 'SELECT * FROM game';
+      const getMarketsQuery = 'SELECT * FROM market WHERE gameId = ?';
+      const getRunnersQuery = 'SELECT * FROM runner WHERE marketId = ?';
+
+      const games = await executeQuery(getGamesQuery);
+
+      for (const game of games) {
+        game.markets = await executeQuery(getMarketsQuery, [game.gameId]);
+
+        for (const market of game.markets) {
+          market.runners = await executeQuery(getRunnersQuery, [market.marketId]);
+        }
+      }
+
+      return games;
+    } catch (error) {
+      console.error('Error fetching data from the database:', error);
+      return [];
+    }
+  },
+
+  formatGameData: (inputData) => {
+    if (!inputData || inputData.length === 0) {
+      console.log('No data found in the database.');
+      return [];
+    }
+  
+    const formattedGameData = inputData.map((game) => {
+      return {
+        gameId: game.gameId,
+        gameName: game.gameName,
+        Description: game.Description,
+        markets: game.markets.map((market) => {
+          return {
+            marketId: market.marketId,
+            marketName: market.marketName,
+            participants: market.participants,
+            timeSpan: market.timeSpan,
+            status: market.status,
+            runners: market.runners.map((runner) => {
+              return {
+                runnerId: runner.runnerId,
+                runnerName: runner.runnerName,
+                rate: [
+                  {
+                    Back: runner.rateBack,
+                    Lay: runner.rateLay,
+                  },
+                ],
+              };
+            }),
+          };
+        }),
+      };
+    });
+  
+    return formattedGameData;
+  },
+  
 };
+
+
