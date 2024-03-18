@@ -44,16 +44,12 @@ const awsS3Obj = {
       const ans = await s3
         .deleteObject({
           Bucket: bucketName,
-          Key: fileName
+          Key: fileName,
         })
         .promise();
-      console.log(
-        `Successfully deleted file ${fileName} from bucket ${bucketName}`
-      );
+      console.log(`Successfully deleted file ${fileName} from bucket ${bucketName}`);
     } catch (error) {
-      console.error(
-        `Error deleting file ${fileName} from bucket ${bucketName}: ${error}`
-      );
+      console.error(`Error deleting file ${fileName} from bucket ${bucketName}: ${error}`);
     }
   },
 };
