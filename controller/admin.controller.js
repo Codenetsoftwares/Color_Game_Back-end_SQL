@@ -1,110 +1,80 @@
-import mysql from "mysql2";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+import mysql from 'mysql2';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 
-import awsS3Obj from "../helper/awsS3.js"
+import awsS3Obj from '../helper/awsS3.js';
+
+import { executeQuery } from '../DB/db.js';
+import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../middleware/serverError.js';
 
 dotenv.config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-function executeQuery(sql, values = []) {
-  return new Promise((resolve, reject) => {
-    pool.query(sql, values, (err, results) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results);
-      }
-    });
-  });
-}
-
-
 export const AdminController = {
-
   createAdmin: async (data) => {
     try {
-        if (!data.userName || !data.password || !data.roles || data.roles.length === 0) {
-            throw { code: 400, message: "Invalid input data" };
-        }
+      if (!data.userName || !data.password || !data.roles || data.roles.length === 0) {
+        throw apiResponseErr(null, false, 409, 'Invalid input data');
+      }
 
-        const existingAdminQuery = "SELECT * FROM Admin WHERE userName = ?";
-        const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
-        if (existingAdmin.length > 0) {
-            throw { code: 409, message: "Admin Already Exists" };
-        }
+      const existingAdminQuery = 'SELECT * FROM Admin WHERE userName = ?';
+      const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
+      if (existingAdmin.length > 0) {
+        throw apiResponseErr(null, false, 409, 'Admin Already Exists');
+      }
 
-        const encryptedPassword = await bcrypt.hash(data.password, 10);
+      const encryptedPassword = await bcrypt.hash(data.password, 10);
 
-        const adminId = uuidv4(); 
+      const adminId = uuidv4();
 
-        const insertAdminQuery = `
+      const insertAdminQuery = `
             INSERT INTO Admin (adminId, userName, password, roles)
             VALUES (?, ?, ?, ?)
         `;
 
-        await executeQuery(insertAdminQuery, [adminId, data.userName, encryptedPassword, JSON.stringify(data.roles)]);
-    } catch (err) {
-        console.error(err);
-        throw { code: 500, message: "Failed to save user" };
+      await executeQuery(insertAdminQuery, [adminId, data.userName, encryptedPassword, JSON.stringify(data.roles)]);
+    } catch (error) {
+      throw error;
     }
-},
+  },
 
   GenerateAdminAccessToken: async (userName, password, persist) => {
     try {
-
       if (!userName) {
-        throw { code: 400, message: "Invalid value for: User Name" };
+        throw apiResponseErr(null, false, 400, 'Invalid userName');
       }
       if (!password) {
-        throw { code: 400, message: "Invalid value for: password" };
+        throw apiResponseErr(null, false, 400, 'Invalid password');
       }
 
-      const getUserQuery = "SELECT * FROM Admin WHERE userName = ?";
+      const getUserQuery = 'SELECT * FROM Admin WHERE userName = ?';
       const [existingUser] = await executeQuery(getUserQuery, [userName]);
 
       if (!existingUser) {
-        throw { code: 401, message: "Invalid User Name or password" };
+        throw apiResponseErr(null, false, 400, 'Invalid userName or Password');
       }
-
 
       const passwordValid = await bcrypt.compare(password, existingUser.password);
       if (!passwordValid) {
-        throw { code: 401, message: "Invalid User Name or Password" };
+        throw apiResponseErr(null, false, 400, 'Invalid userName or Password');
       }
 
       const accessTokenPayload = {
         id: existingUser.id,
-
         userName: existingUser.userName,
-
+        UserType: existingUser.userType || 'Admin',
       };
 
-      const accessToken = jwt.sign(
-        accessTokenPayload,
-        process.env.JWT_SECRET_KEY,
-        {
-          expiresIn: persist ? "1y" : "8h",
-        }
-      );
-
+      const accessToken = jwt.sign(accessTokenPayload, process.env.JWT_SECRET_KEY, {
+        expiresIn: persist ? '1y' : '8h',
+      });
 
       const response = {
         userName: existingUser.userName,
         accessToken: accessToken,
         roles: existingUser.roles,
-
+        UserType: existingUser.userType || 'Admin',
       };
 
       return response;
@@ -113,81 +83,75 @@ export const AdminController = {
     }
   },
 
-
   createUser: async (data) => {
     try {
       if (!data.firstName || !data.lastName || !data.userName || !data.phoneNumber || !data.password) {
-        throw { code: 400, message: "Invalid input data" };
+        throw apiResponseErr(null, false, 409, 'Invalid input data');
       }
-  
-      const existingUserQuery = "SELECT * FROM User WHERE userName = ?";
+
+      const existingUserQuery = 'SELECT * FROM User WHERE userName = ?';
       const [existingUser] = await executeQuery(existingUserQuery, [data.userName]);
-  
-      console.log("Existing User:", existingUser);
-  
+
+      console.log('Existing User:', existingUser);
+
       if (existingUser) {
-        throw { code: 409, message: "User Already Exists" };
+        throw apiResponseErr(null, false, 409, 'User Already Exists');
       }
-  
+
       const encryptedPassword = await bcrypt.hash(data.password, 10);
-  
+
       const insertUserQuery = `
         INSERT INTO User (firstName, lastName, userName, phoneNumber, password)
         VALUES (?, ?, ?, ?, ?)
       `;
-  
-      await executeQuery(insertUserQuery, [data.firstName, data.lastName, data.userName, data.phoneNumber, encryptedPassword]);
-    } catch (err) {
-      console.error(err);
-      throw { code: err.code || 500, message: err.message || "Failed to create user" };
+
+      await executeQuery(insertUserQuery, [
+        data.firstName,
+        data.lastName,
+        data.userName,
+        data.phoneNumber,
+        encryptedPassword,
+      ]);
+    } catch (error) {
+      throw error;
     }
   },
-  
 
   loginUser: async (userName, password, persist) => {
     try {
-
       if (!userName) {
-        throw { code: 400, message: "Invalid value for: User Name" };
+        throw apiResponseErr(null, false, 400, 'Invalid value for');
       }
       if (!password) {
-        throw { code: 400, message: "Invalid value for: password" };
+        throw apiResponseErr(null, false, 400, 'Invalid value for');
       }
 
-      const getUserQuery = "SELECT * FROM User WHERE userName = ?";
+      const getUserQuery = 'SELECT * FROM User WHERE userName = ?';
       const [existingUser] = await executeQuery(getUserQuery, [userName]);
 
       if (!existingUser) {
-        throw { code: 401, message: "Invalid User Name or password" };
+        throw apiResponseErr(null, false, 400, 'Invalid User Name or password');
       }
-
 
       const passwordValid = await bcrypt.compare(password, existingUser.password);
       if (!passwordValid) {
-        throw { code: 401, message: "Invalid User Name or Password" };
+        throw apiResponseErr(null, false, 400, 'Invalid User Name or password');
       }
 
       const accessTokenPayload = {
         id: existingUser.id,
 
         userName: existingUser.userName,
-
       };
 
-      const accessToken = jwt.sign(
-        accessTokenPayload,
-        process.env.JWT_SECRET_KEY,
-        {
-          expiresIn: persist ? "1y" : "8h",
-        }
-      );
-
+      const accessToken = jwt.sign(accessTokenPayload, process.env.JWT_SECRET_KEY, {
+        expiresIn: persist ? '1y' : '8h',
+      });
 
       const response = {
         userName: existingUser.userName,
         accessToken: accessToken,
         roles: accessTokenPayload.roles,
-
       };
 
       return response;
@@ -199,97 +163,102 @@ export const AdminController = {
   createGame: async (gameName, Description) => {
     try {
       const adminQuery = "SELECT * FROM Admin WHERE JSON_UNQUOTE(JSON_EXTRACT(roles, '$[0]')) = 'Admin'";
-      console.log("adminQuery", adminQuery);
 
       const [adminRows] = await executeQuery(adminQuery);
-      console.log("adminRows", adminRows);
 
       if (!adminRows) {
-        console.error("Admin Not Found");
-        throw { code: 404, message: "Admin Not Found" };
+        throw apiResponseErr(null, false, 400, 'Admin Not Found');
       }
 
       const gameId = uuidv4();
-  
-      const insertGameQuery = "INSERT INTO Game (gameName, Description, gameId) VALUES (?, ?, ?)";
+
+      const insertGameQuery = 'INSERT INTO Game (gameName, Description, gameId) VALUES (?, ?, ?)';
       const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId]);
-  
-      const selectGameQuery = "SELECT * FROM Game WHERE id = ?";
+
+      const selectGameQuery = 'SELECT * FROM Game WHERE id = ?';
       const selectedGameRows = await executeQuery(selectGameQuery, [insertGameResult.insertId]);
-  
+
       if (!selectedGameRows || selectedGameRows.length === 0) {
-        console.error("Game Not Found");
-        throw { code: 404, message: "Game Not Found" };
+        console.error('Game Not Found');
+        throw apiResponseErr(null, false, 400, 'Game Not Found');
       }
-  
+
       const selectedGame = selectedGameRows[0];
-  
+
       if (!selectedGame || typeof selectedGame !== 'object') {
-        console.error("Invalid game data");
-        throw { code: 500, message: "Invalid game data" };
+        console.error('Invalid game data');
+        throw apiResponseErr(null, false, 400, 'Invalid game data');
       }
-  
+
       return {
-        gameList: [{
-          id: selectedGame.id || null,
-          gameId: selectedGame.gameId || null,
-          gameName: selectedGame.gameName || '',
-          Description: selectedGame.Description || '',
-          markets: [],
-        
-        }],
+        gameList: [
+          {
+            id: selectedGame.id || null,
+            gameId: selectedGame.gameId || null,
+            gameName: selectedGame.gameName || '',
+            Description: selectedGame.Description || '',
+            markets: [],
+          },
+        ],
       };
     } catch (error) {
       console.error(error);
       throw error;
     }
   },
-  
+
   createMarket: async (gameId, marketName, participants, timeSpan) => {
     try {
       // console.log("Admin ID:", adminId);
-    console.log("Game ID:", gameId);
+      console.log('Game ID:', gameId);
       const marketId = uuidv4();
-  
+
       const insertMarketQuery = `
         INSERT INTO Market (marketId, gameId, marketName, participants, timeSpan)
         VALUES (?, ?, ?, ?, ?)
       `;
-  
-      const insertMarketResult = await executeQuery(insertMarketQuery, [marketId, gameId, marketName, participants, timeSpan,]);
-  
-      const selectMarketQuery = "SELECT * FROM Market WHERE marketId = ?";
+
+      const insertMarketResult = await executeQuery(insertMarketQuery, [
+        marketId,
+        gameId,
+        marketName,
+        participants,
+        timeSpan,
+      ]);
+
+      const selectMarketQuery = 'SELECT * FROM Market WHERE marketId = ?';
       const selectedMarketRows = await executeQuery(selectMarketQuery, [marketId]);
-  
+
       if (!selectedMarketRows || selectedMarketRows.length === 0) {
-        console.error("Market not found");
-        throw { code: 404, message: "Market not found" };
+        console.error('Market not found');
+        throw apiResponseErr(null, false, 400, 'Market Not Found');
       }
-  
+
       const selectedMarket = selectedMarketRows[0];
-  
+
       if (!selectedMarket || typeof selectedMarket !== 'object') {
-        console.error("Invalid market data");
-        throw { code: 500, message: "Invalid market data" };
+        throw apiResponseErr(null, false, 400, 'Invalid market data');
       }
-  
+
       return {
-        marketList: [{
-          id: selectedMarket.id || null,
-          gameId: selectedMarket.gameId || null,
-          marketId: selectedMarket.marketId || null,
-          marketName: selectedMarket.marketName || '',
-          participants: selectedMarket.participants || '',
-          timeSpan: selectedMarket.timeSpan || '',
-          runners: []
-        }],
+        marketList: [
+          {
+            id: selectedMarket.id || null,
+            gameId: selectedMarket.gameId || null,
+            marketId: selectedMarket.marketId || null,
+            marketName: selectedMarket.marketName || '',
+            participants: selectedMarket.participants || '',
+            timeSpan: selectedMarket.timeSpan || '',
+            runners: [],
+          },
+        ],
       };
     } catch (error) {
       console.error(error);
       throw error;
     }
   },
-  
+
   createRunner: async (gameId, marketId, runnerNames) => {
     try {
       const getMarketQuery = `
@@ -299,25 +268,24 @@ WHERE marketId = ? AND gameId = ?
 
   `;
 
-console.log("Game ID:", gameId);
-console.log("Market ID:", marketId);
+      console.log('Game ID:', gameId);
+      console.log('Market ID:', marketId);
 
-const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
+      const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
 
-console.log("Market found:", market);
+      console.log('Market found:', market);
 
       if (!market) {
-        console.error("Market not found for gameId:", gameId, "and marketId:", marketId);
-        throw { message: "Market not found" };
+        console.error('Market not found for gameId:', gameId, 'and marketId:', marketId);
+        throw { message: 'Market not found' };
       }
 
-      console.log("Market found:", market);
+      console.log('Market found:', market);
 
       const maxParticipants = market.participants;
 
-      if (runnerNames.length > maxParticipants) {
-        console.error("Number of runners exceeds the maximum allowed participants.");
-        throw { message: "Number of runners exceeds the maximum allowed participants." };
+      if (runnerNames.length !== maxParticipants) {
+        throw apiResponseErr(null, false, 400, 'Number of runners exceeds the maximum allowed participants.');
       }
 
       const newRunners = runnerNames.map((runnerName) => {
@@ -336,20 +304,15 @@ console.log("Market found:", market);
             VALUES ?
         `;
 
-      await executeQuery(insertRunnersQuery, [newRunners.map(runner => [
-        runner.runnerId,
-        runner.runnerName,
-        runner.gameId,
-        runner.marketId
-      ])]);
+      await executeQuery(insertRunnersQuery, [
+        newRunners.map((runner) => [runner.runnerId, runner.runnerName, runner.gameId, runner.marketId]),
+      ]);
 
       return { success: true };
     } catch (error) {
-      console.error("Error in createRunner:", error);
       throw error;
     }
   },
-
 
   createRate: async (gameId, marketId, runnerId, back, lay) => {
     try {
@@ -359,7 +322,7 @@ console.log("Market found:", market);
         WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
       const existingRate = await executeQuery(checkRateQuery, [runnerId, gameId, marketId]);
-  
+
       if (existingRate && existingRate.length > 0) {
         const updateRateQuery = `
           UPDATE Rate
@@ -379,21 +342,20 @@ console.log("Market found:", market);
         `;
         await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId, marketId, gameId]);
       }
-  
+
       const updateRunnerQuery = `
         UPDATE Runner
         SET rateBack = ?, rateLay = ?
         WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
       await executeQuery(updateRunnerQuery, [back, lay, runnerId, gameId, marketId]);
-  
+
       return { success: true };
     } catch (error) {
       console.error(error);
       throw error;
     }
   },
-  
 
   checkMarketStatus: async (marketId, status) => {
     try {
@@ -408,10 +370,10 @@ console.log("Market found:", market);
       const updateResult = await executeQuery(updateMarketQuery, [formattedStatus, marketId]);
 
       if (updateResult.affectedRows === 0) {
-        throw new Error("Market not found.");
+        throw new Error('Market not found.');
       }
 
-      const statusMessage = status ? "Market is active." : "Market is suspended.";
+      const statusMessage = status ? 'Market is active.' : 'Market is suspended.';
 
       return { currentStatus: statusMessage };
     } catch (error) {
@@ -420,16 +382,15 @@ console.log("Market found:", market);
   },
 
   updateGame: async (adminId, gameId, gameName, description) => {
-   const updateGameQuery = `
+    const updateGameQuery = `
   UPDATE game
   SET gameName = COALESCE(?, gameName),
       description = COALESCE(?, description)
   WHERE gameId = ? AND adminId = ?;
 `;
 
-const updateGameValues = [gameName, description, gameId, adminId];
+    const updateGameValues = [gameName, description, gameId, adminId];
 
-  
     await executeQuery(updateGameQuery, updateGameValues);
   },
 
@@ -441,9 +402,9 @@ const updateGameValues = [gameName, description, gameId, adminId];
           timeSpan = COALESCE(?, timeSpan)
       WHERE marketId = ? AND gameId = ? AND adminId = ?;
     `;
-  
+
     const updateMarketValues = [marketName, participants, timeSpan, marketId, gameId, adminId];
-  
+
     await executeQuery(updateMarketQuery, updateMarketValues);
   },
 
@@ -455,9 +416,9 @@ const updateGameValues = [gameName, description, gameId, adminId];
         SELECT marketId FROM Market WHERE marketId = ? AND gameId = ? AND adminId = ?
       );
     `;
-  
+
     const updateRunnerValues = [runnerName, runnerId, marketId, gameId, adminId];
-  
+
     await executeQuery(updateRunnerQuery, updateRunnerValues);
   },
 
@@ -470,30 +431,24 @@ const updateGameValues = [gameName, description, gameId, adminId];
         SELECT marketId FROM Market WHERE marketId = ? AND gameId = ? AND adminId = ?
       );
     `;
-  
+
     const updateRateValues = [back, lay, runnerId, marketId, gameId, adminId];
-  
+
     await executeQuery(updateRateQuery, updateRateValues);
   },
-  
 
   CreateSlider: async (sliderCount, data, user) => {
     try {
       if (!Array.isArray(data)) {
-        throw { code: 400, message: "Data must be an array" };
+        throw { code: 400, message: 'Data must be an array' };
       }
 
       let documentArray = [];
 
       for (const element of data) {
         let obj = {};
-        const result = await awsS3Obj.addDocumentToS3(
-          element.docBase,
-          element.name,
-          "game-slider",
-          element.doctype
-        );
-        console.log("Result from awsS3Obj.addDocumentToS3:", result);
+        const result = await awsS3Obj.addDocumentToS3(element.docBase, element.name, 'game-slider', element.doctype);
+        console.log('Result from awsS3Obj.addDocumentToS3:', result);
         obj.image = result.Location;
         obj.text = element.text;
         obj.headingText = element.headingText;
@@ -505,17 +460,114 @@ const updateGameValues = [gameName, description, gameId, adminId];
         document: JSON.stringify(documentArray),
       };
 
-      const createSliderQuery = "INSERT INTO Slider SET ?";
+      const createSliderQuery = 'INSERT INTO Slider SET ?';
       const savedSlider = await executeQuery(createSliderQuery, [newSlider]);
-      console.log("Saved slider:", savedSlider);
+      console.log('Saved slider:', savedSlider);
 
       return true;
-    } catch (err) {
-      console.error("Error in CreateSlider:", err);
-      throw { code: err.code || 500, message: err.message || "Failed to Create Sliders" };
+    } catch (error) {
+      throw error;
     }
   },
 
+  announcements: async (typeOfAnnouncement, announcement, user) => {
+    try {
+      if (!typeOfAnnouncement || !announcement) {
+        throw apiResponseErr(null, false, 400, 'announcement type and announcement are required');
+      }
 
-}
+      let announcementId;
 
+      const existingAnnouncementQuery = `
+            SELECT announceId
+            FROM Announcement
+            WHERE typeOfAnnouncement = ?
+            ORDER BY id DESC
+            LIMIT 1
+        `;
+      const [existingAnnouncement] = await executeQuery(existingAnnouncementQuery, [typeOfAnnouncement]);
+
+      if (existingAnnouncement) {
+        announcementId = existingAnnouncement.announceId;
+      } else {
+        announcementId = uuidv4();
+      }
+
+      const insertAnnouncementQuery = `
+            INSERT INTO Announcement (announceId, typeOfAnnouncement, announcement, createdBy)
+            VALUES (?, ?, ?, ?)
+        `;
+      await executeQuery(insertAnnouncementQuery, [announcementId, typeOfAnnouncement, announcement, user._id]);
+
+      return;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getAnnouncement: async (announceId) => {
+    try {
+      const getAnnouncementQuery = `
+          SELECT announceId, typeOfAnnouncement, announcement
+          FROM Announcement
+          WHERE announceId = ?
+      `;
+      const [announcement] = await executeQuery(getAnnouncementQuery, [announceId]);
+
+      if (!announcement) {
+        throw apiResponseErr(null, false, 400, 'Announcement not found');
+      }
+
+      const getLatestAnnouncementQuery = `
+          SELECT announceId, typeOfAnnouncement, announcement
+          FROM Announcement
+          WHERE typeOfAnnouncement = ?
+          ORDER BY id DESC
+          LIMIT 1
+      `;
+      const [latestAnnouncement] = await executeQuery(getLatestAnnouncementQuery, [announcement.typeOfAnnouncement]);
+
+      if (!latestAnnouncement) {
+        throw apiResponseErr(null, false, 400, 'Latest announcement not found');
+      }
+
+      return {
+        announcementId: latestAnnouncement.announceId,
+        typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
+        announcement: [latestAnnouncement.announcement],
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  updateAnnouncement: async (typeOfAnnouncement, announcement, announceId) => {
+    try {
+      const updateAnnouncementQuery = `
+          UPDATE Announcement
+          SET 
+              typeOfAnnouncement = COALESCE(?, typeOfAnnouncement),
+              announcement = COALESCE(?, announcement)
+          WHERE announceId = ?
+      `;
+      const updateAnnouncementValues = [typeOfAnnouncement, announcement, announceId];
+
+      await executeQuery(updateAnnouncementQuery, updateAnnouncementValues);
+
+      const getUpdatedAnnouncementQuery = `
+          SELECT *
+          FROM Announcement
+          WHERE announceId = ?
+      `;
+      const [updatedAnnouncement] = await executeQuery(getUpdatedAnnouncementQuery, [announceId]);
+
+      if (!updatedAnnouncement) {
+        throw apiResponseErr(null, false, 400, 'Announcement not found');
+      }
+
+      return updatedAnnouncement;
+    } catch (error) {
+      throw error;
+    }
+  },
+};

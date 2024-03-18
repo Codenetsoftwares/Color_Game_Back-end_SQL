@@ -1,60 +1,37 @@
-import mysql from "mysql2";
-import dotenv from "dotenv";
+import mysql from 'mysql2';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-function executeQuery(sql, values = []) {
-  return new Promise((resolve, reject) => {
-    pool.query(sql, values, (err, results) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results);
-      }
-    });
-  });
-}
+import { executeQuery } from '../DB/db.js';
+import { error } from 'console';
 
 export const UserController = {
   eligibilityCheck: async (userId, eligibilityCheck) => {
     try {
-      const userQuery = "SELECT * FROM user WHERE id = ?";
+      const userQuery = 'SELECT * FROM user WHERE id = ?';
       const user = await executeQuery(userQuery, [userId]);
 
       if (user.length === 0) {
-        throw { code: 404, message: "User not found" };
+        throw apiResponseErr(null, false, 400, 'User not found' );
       }
 
-      const updateQuery = "UPDATE user SET eligibilityCheck = ? WHERE id = ?";
-      const updatedRows = await executeQuery(updateQuery, [
-        eligibilityCheck ? 1 : 0,
-        userId,
-      ]);
+      const updateQuery = 'UPDATE user SET eligibilityCheck = ? WHERE id = ?';
+      const updatedRows = await executeQuery(updateQuery, [eligibilityCheck ? 1 : 0, userId]);
 
       if (updatedRows.affectedRows > 0) {
         return {
-          message: eligibilityCheck ? "User Eligible" : "User Not Eligible",
+          message: eligibilityCheck ? 'User Eligible' : 'User Not Eligible',
         };
       } else {
-        throw { code: 500, message: "Failed to update user eligibility" };
+        throw apiResponseErr(null, false, 400, 'Failed to update user eligibility' );
+
       }
-    } catch (err) {
-      throw { code: err.code || 500, message: err.message };
+    } catch (error) {
+      throw error
     }
   },
 
-
- 
   getGameData: async () => {
     try {
       const getGamesQuery = 'SELECT * FROM game';
@@ -83,7 +60,7 @@ export const UserController = {
       console.log('No data found in the database.');
       return [];
     }
-  
+
     const formattedGameData = inputData.map((game) => {
       return {
         gameId: game.gameId,
@@ -112,10 +89,59 @@ export const UserController = {
         }),
       };
     });
-  
+
     return formattedGameData;
   },
-  
+
+  getAnnouncementUser: async (typeOfAnnouncement) => {
+    try {
+      const getAnnouncementQuery = `
+            SELECT announceId, typeOfAnnouncement, announcement
+            FROM Announcement
+            WHERE typeOfAnnouncement = ?
+        `;
+      const [announcement] = await executeQuery(getAnnouncementQuery, [typeOfAnnouncement]);
+
+      if (!announcement) {
+        throw apiResponseErr(null, false, 400, 'Announcement not found');
+      }
+
+      const getLatestAnnouncementQuery = `
+            SELECT announceId, typeOfAnnouncement, announcement
+            FROM Announcement
+            WHERE typeOfAnnouncement = ?
+            ORDER BY id DESC
+            LIMIT 1
+        `;
+      const [latestAnnouncement] = await executeQuery(getLatestAnnouncementQuery, [announcement.typeOfAnnouncement]);
+
+      if (!latestAnnouncement) {
+        throw apiResponseErr(null, false, 400, 'Latest announcement not found');
+      }
+
+      return {
+        announcementId: latestAnnouncement.announceId,
+        typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
+        announcement: [latestAnnouncement.announcement],
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getAnnouncementTypes: async () => {
+    try {
+      const getAnnouncementTypesQuery = `
+            SELECT *
+            FROM Announcement
+        `;
+      const announcementTypes = await executeQuery(getAnnouncementTypesQuery);
+      return announcementTypes.map((row) => ({
+        announceId: row.announceId,
+        typeOfAnnouncement: row.typeOfAnnouncement,
+      }));
+    } catch (error) {
+      throw error;
+    }
+  },
 };
-
-

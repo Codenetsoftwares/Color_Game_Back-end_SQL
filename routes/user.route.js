@@ -1,45 +1,22 @@
-
-import { UserController } from "../controller/user.controller.js";
-
-import mysql from "mysql2";
-import dotenv from "dotenv";
+import { UserController } from '../controller/user.controller.js';
+import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js';
+import mysql from 'mysql2';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-function executeQuery(sql, values = []) {
-  return new Promise((resolve, reject) => {
-    pool.query(sql, values, (err, results) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results);
-      }
-    });
-  });
-}
-
+import { executeQuery } from '../DB/db.js';
+import { error } from 'console';
 
 export const UserRoute = (app) => {
-
-
-  app.get("/api/user-games", async (req, res) => {
+  app.get('/api/user-games', async (req, res) => {
     try {
       const page = req.query.page ? parseInt(req.query.page) : 1;
       const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
       const searchQuery = req.query.search || '';
 
       const getGamesQuery = `
-        SELECT G.id, G.gameName, G.Description
+        SELECT G.id, G.gameName, G.Description , G.gameId
         FROM Game G
         WHERE EXISTS (
           SELECT 1
@@ -49,9 +26,7 @@ export const UserRoute = (app) => {
         AND G.gameName LIKE ?
       `;
 
-
       const games = await executeQuery(getGamesQuery, [`%${searchQuery}%`]);
-
 
       const totalItems = games.length;
 
@@ -64,23 +39,17 @@ export const UserRoute = (app) => {
       } else {
         paginatedGames = games;
       }
+      const paginated = apiResponsePagination(page, totalPages, totalItems)
+      res.status(200).send(apiResponseSuccess(paginatedGames, true, 200, 'success', paginated));
 
-      res.status(200).send({
-        games: paginatedGames,
-        currentPage: page,
-        totalPages: totalPages,
-        totalItems: totalItems,
-      });
     } catch (error) {
-      res.status(500).send({
-        code: error.code || 500,
-        message: error.message || "Internal Server Error",
-      });
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
     }
   });
 
-
-  app.get("/api/user-markets/:gameId", async (req, res) => {
+  app.get('/api/user-markets/:gameId', async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const page = parseInt(req.query.page) || 1;
@@ -88,7 +57,7 @@ export const UserRoute = (app) => {
       const searchQuery = req.query.search || '';
 
       const getMarketsQuery = `
-            SELECT M.marketName, M.participants, M.timeSpan, M.status
+            SELECT M.marketName, M.participants, M.timeSpan, M.status , M.marketId
             FROM Game G
             JOIN Market M ON G.gameId = M.gameId
             WHERE G.gameId = ? AND M.marketName LIKE ?
@@ -107,25 +76,16 @@ export const UserRoute = (app) => {
       } else {
         paginatedMarkets = markets;
       }
-
-      res.status(200).send({
-        markets: paginatedMarkets,
-        currentPage: page,
-        totalPages: totalPages,
-        totalItems: totalItems,
-      });
-
+      const paginated = apiResponsePagination(page, totalPages, totalItems)
+      res.status(200).send(apiResponseSuccess(paginatedMarkets, true, 200, 'success', paginated));
     } catch (error) {
-      res.status(500).send({
-        code: error.code || 500,
-        message: error.message || "Internal Server Error",
-      });
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
     }
   });
 
-
-
-  app.get("/api/user-runners/:gameId/:marketId", async (req, res, next) => {
+  app.get('/api/user-runners/:gameId/:marketId', async (req, res, next) => {
     try {
       const gameId = req.params.gameId;
       const marketId = req.params.marketId;
@@ -161,70 +121,88 @@ export const UserRoute = (app) => {
         rateLay: runner.rateLay,
         runnerId: runner.runnerId,
       }));
-
-      res.status(200).send({
-        runners: runnersList,
-        currentPage: page,
-        totalPages: totalPages,
-        totalItems: totalItems,
-        gameId: gameId,
-        marketId: marketId,
-      });
-    } catch (error) {
-      // res.status(500).send({
-      //   code: error.code || 500,
-      //   message: error.message || "Internal Server Error",
+      const paginated = apiResponsePagination(page, totalPages, totalItems)
+      res.status(200).send(apiResponseSuccess(runnersList, true, 200, 'success', paginated));
+      // res.status(200).send({
+      //   runners: runnersList,
+      //   currentPage: page,
+      //   totalPages: totalPages,
+      //   totalItems: totalItems,
+      //   gameId: gameId,
+      //   marketId: marketId,
       // });
-      next(err)
+    } catch (error) {
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
     }
   });
 
-  app.post("/api/eligibilityCheck/:userId", async (req, res) => {
-    try {
-      const { userId } = req.params
-      const { eligibilityCheck } = req.body
-      const check = await UserController.eligibilityCheck(userId, eligibilityCheck)
-      res.status(200).send({ code: 200, message: "ok", check })
 
-    } catch (err) {
-      res.status(500).send({ code: err.code, message: err.message })
+  app.post('/api/eligibilityCheck/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { eligibilityCheck } = req.body;
+      const check = await UserController.eligibilityCheck(userId, eligibilityCheck);
+      res.status(200).send(apiResponseSuccess(check, true, 200, 'success'));
+    } catch (error) {
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
     }
-  })
+  });
 
-  app.get("/api/User-Details", async (req, res) => {
+  app.get('/api/User-Details', async (req, res) => {
     try {
-
-      const getUsersQuery = "SELECT * FROM user";
+      const getUsersQuery = 'SELECT * FROM user';
       const users = await executeQuery(getUsersQuery);
 
       if (!users || users.length === 0) {
-        throw { code: 404, message: "User not found" };
+        throw { code: 404, message: 'User not found' };
       }
-
-      res.status(200).send({ code: 200, message: users });
-
+      res.status(200).send(apiResponseSuccess(users, true, 200, 'success'));
     } catch (error) {
-      res.status(error.code || 500).send({
-        code: error.code || 500,
-        message: error.message || "Internal Server Error",
-      });
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
     }
   });
 
   app.get('/api/user-All-gameData', async (req, res) => {
     try {
       const gameData = await UserController.getGameData();
-  
       if (!gameData || gameData.length === 0) {
         return res.status(404).json({ message: 'Games not found' });
       }
-  
       const formattedGameData = UserController.formatGameData(gameData);
-  
-      res.status(200).json(formattedGameData);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Internal Server Error' });
+      res.status(200).send(apiResponseSuccess(formattedGameData, true, 200, 'success'));
+    } catch (error) {
+      res.status(500).json({ message: 'Internal Server Error' }); res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
     }
   });
-}
+
+  app.get('/api/user/announcements/:typeOfAnnouncement', async (req, res) => {
+    try {
+      const { typeOfAnnouncement } = req.params;
+      const latestAnnouncement = await UserController.getAnnouncementUser(typeOfAnnouncement);
+      res.status(200).send(apiResponseSuccess(latestAnnouncement, true, 200, 'Success'));
+    } catch (error) {
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+  });
+
+  app.get('/api/user/announcement-Type', async (req, res) => {
+    try {
+      const announce = await UserController.getAnnouncementTypes();
+      res.status(200).send(apiResponseSuccess(announce, true, 200, 'Success'));
+    } catch (error) {
+      res
+        .status(500)
+        .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    }
+  });
+};
