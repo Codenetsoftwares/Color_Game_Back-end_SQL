@@ -4,7 +4,6 @@ import mysql from 'mysql2';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import { errorHandler } from '../middleware/ErrorHandling.js';
-import { executeQuery } from '../DB/db.js';
 import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../middleware/serverError.js';
 import { paginate } from 'mongoose-paginate';
 
@@ -137,7 +136,7 @@ export const AdminRoute = (app) => {
         AND G.gameName LIKE ?
       `;
 
-      const games = await executeQuery(getGamesQuery, [`%${searchQuery}%`]);
+      const games = await database.execute(getGamesQuery, [`%${searchQuery}%`]);
 
       const totalItems = games.length;
 
@@ -174,7 +173,7 @@ export const AdminRoute = (app) => {
             WHERE G.gameId = ? AND M.marketName LIKE ?
         `;
 
-      const markets = await executeQuery(getMarketsQuery, [gameId, `%${searchQuery}%`]);
+      const markets = await database.execute(getMarketsQuery, [gameId, `%${searchQuery}%`]);
 
       const totalItems = markets.length;
 
@@ -211,7 +210,7 @@ export const AdminRoute = (app) => {
         WHERE M.marketId = ? AND R.runnerName LIKE ?
       `;
 
-      const runners = await executeQuery(getRunnersQuery, [marketId, `%${searchQuery}%`]);
+      const runners = await database.execute(getRunnersQuery, [marketId, `%${searchQuery}%`]);
 
       const totalItems = runners.length;
 
@@ -273,7 +272,7 @@ export const AdminRoute = (app) => {
       const { gameId, marketId, runnerId } = req.query;
       const { gameName, description, marketName, participants, timeSpan, RunnerName, back, lay } = req.body;
 
-      const admin = await executeQuery("SELECT * FROM Admin WHERE roles = 'Admin' LIMIT 1");
+      const admin = await database.execute("SELECT * FROM Admin WHERE roles = 'Admin' LIMIT 1");
 
       if (!admin || admin.length === 0) {
         throw { code: 404, message: 'Admin not found' };
@@ -316,7 +315,7 @@ export const AdminRoute = (app) => {
   app.get('/api/All-User', errorHandler, async (req, res, next) => {
     try {
       const getUsersQuery = 'SELECT * FROM user';
-      const users = await executeQuery(getUsersQuery);
+      const users = await database.execute(getUsersQuery);
 
       if (!users || users.length === 0) {
         res.status(400).send(apiResponseErr(users, true, 400, 'User not found'));

@@ -1,11 +1,8 @@
 import { UserController } from '../controller/user.controller.js';
 import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js';
-import mysql from 'mysql2';
+import { database } from '../controller/database.controller.js'
 import dotenv from 'dotenv';
-
 dotenv.config();
-
-import { executeQuery } from '../DB/db.js';
 import { error } from 'console';
 
 export const UserRoute = (app) => {
@@ -26,7 +23,7 @@ export const UserRoute = (app) => {
         AND G.gameName LIKE ?
       `;
 
-      const games = await executeQuery(getGamesQuery, [`%${searchQuery}%`]);
+      const games = await database.execute(getGamesQuery, [`%${searchQuery}%`]);
 
       const totalItems = games.length;
 
@@ -63,7 +60,7 @@ export const UserRoute = (app) => {
             WHERE G.gameId = ? AND M.marketName LIKE ?
         `;
 
-      const markets = await executeQuery(getMarketsQuery, [gameId, `%${searchQuery}%`]);
+      const markets = await database.execute(getMarketsQuery, [gameId, `%${searchQuery}%`]);
 
       const totalItems = markets.length;
 
@@ -100,7 +97,7 @@ export const UserRoute = (app) => {
         WHERE M.marketId = ? AND R.runnerName LIKE ?
       `;
 
-      const runners = await executeQuery(getRunnersQuery, [marketId, `%${searchQuery}%`]);
+      const runners = await database.execute(getRunnersQuery, [marketId, `%${searchQuery}%`]);
 
       const totalItems = runners.length;
 
@@ -155,7 +152,7 @@ export const UserRoute = (app) => {
   app.get('/api/User-Details', async (req, res) => {
     try {
       const getUsersQuery = 'SELECT * FROM user';
-      const users = await executeQuery(getUsersQuery);
+      const users = await database.execute(getUsersQuery);
 
       if (!users || users.length === 0) {
         throw { code: 404, message: 'User not found' };

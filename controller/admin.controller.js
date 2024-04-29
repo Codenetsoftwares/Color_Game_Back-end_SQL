@@ -1,12 +1,9 @@
-import mysql from 'mysql2';
+import { database } from '../controller/database.controller.js'
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
-
 import awsS3Obj from '../helper/awsS3.js';
-
-import { executeQuery } from '../DB/db.js';
 import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../middleware/serverError.js';
 
 dotenv.config();
@@ -19,7 +16,7 @@ export const AdminController = {
       }
 
       const existingAdminQuery = 'SELECT * FROM Admin WHERE userName = ?';
-      const existingAdmin = await executeQuery(existingAdminQuery, [data.userName]);
+      const existingAdmin = await database.execute(existingAdminQuery, [data.userName]);
       if (existingAdmin.length > 0) {
         throw apiResponseErr(null, false, 409, 'Admin Already Exists');
       }
@@ -33,7 +30,7 @@ export const AdminController = {
             VALUES (?, ?, ?, ?)
         `;
 
-      await executeQuery(insertAdminQuery, [adminId, data.userName, encryptedPassword, JSON.stringify(data.roles)]);
+      await database.execute(insertAdminQuery, [adminId, data.userName, encryptedPassword, JSON.stringify(data.roles)]);
     } catch (error) {
       throw error;
     }
@@ -49,7 +46,7 @@ export const AdminController = {
       }
 
       const getUserQuery = 'SELECT * FROM Admin WHERE userName = ?';
-      const [existingUser] = await executeQuery(getUserQuery, [userName]);
+      const [existingUser] = await database.execute(getUserQuery, [userName]);
 
       if (!existingUser) {
         throw apiResponseErr(null, false, 400, 'Invalid userName or Password');
@@ -90,7 +87,7 @@ export const AdminController = {
       }
 
       const existingUserQuery = 'SELECT * FROM User WHERE userName = ?';
-      const [existingUser] = await executeQuery(existingUserQuery, [data.userName]);
+      const [existingUser] = await database.execute(existingUserQuery, [data.userName]);
 
       console.log('Existing User:', existingUser);
 
@@ -105,7 +102,7 @@ export const AdminController = {
         VALUES (?, ?, ?, ?, ?)
       `;
 
-      await executeQuery(insertUserQuery, [
+      await database.execute(insertUserQuery, [
         data.firstName,
         data.lastName,
         data.userName,
@@ -127,7 +124,7 @@ export const AdminController = {
       }
 
       const getUserQuery = 'SELECT * FROM User WHERE userName = ?';
-      const [existingUser] = await executeQuery(getUserQuery, [userName]);
+      const [existingUser] = await database.execute(getUserQuery, [userName]);
 
       if (!existingUser) {
         throw apiResponseErr(null, false, 400, 'Invalid User Name or password');
@@ -164,7 +161,7 @@ export const AdminController = {
     try {
       const adminQuery = "SELECT * FROM Admin WHERE JSON_UNQUOTE(JSON_EXTRACT(roles, '$[0]')) = 'Admin'";
 
-      const [adminRows] = await executeQuery(adminQuery);
+      const [adminRows] = await database.execute(adminQuery);
 
       if (!adminRows) {
         throw apiResponseErr(null, false, 400, 'Admin Not Found');
@@ -173,10 +170,10 @@ export const AdminController = {
       const gameId = uuidv4();
 
       const insertGameQuery = 'INSERT INTO Game (gameName, Description, gameId) VALUES (?, ?, ?)';
-      const insertGameResult = await executeQuery(insertGameQuery, [gameName, Description, gameId]);
+      const insertGameResult = await database.execute(insertGameQuery, [gameName, Description, gameId]);
 
       const selectGameQuery = 'SELECT * FROM Game WHERE id = ?';
-      const selectedGameRows = await executeQuery(selectGameQuery, [insertGameResult.insertId]);
+      const selectedGameRows = await database.execute(selectGameQuery, [insertGameResult.insertId]);
 
       if (!selectedGameRows || selectedGameRows.length === 0) {
         console.error('Game Not Found');
@@ -218,7 +215,7 @@ export const AdminController = {
         VALUES (?, ?, ?, ?, ?)
       `;
 
-      const insertMarketResult = await executeQuery(insertMarketQuery, [
+      const insertMarketResult = await database.execute(insertMarketQuery, [
         marketId,
         gameId,
         marketName,
@@ -227,7 +224,7 @@ export const AdminController = {
       ]);
 
       const selectMarketQuery = 'SELECT * FROM Market WHERE marketId = ?';
-      const selectedMarketRows = await executeQuery(selectMarketQuery, [marketId]);
+      const selectedMarketRows = await database.execute(selectMarketQuery, [marketId]);
 
       if (!selectedMarketRows || selectedMarketRows.length === 0) {
         console.error('Market not found');
@@ -271,7 +268,7 @@ WHERE marketId = ? AND gameId = ?
       console.log('Game ID:', gameId);
       console.log('Market ID:', marketId);
 
-      const [market] = await executeQuery(getMarketQuery, [marketId, gameId]);
+      const [market] = await database.execute(getMarketQuery, [marketId, gameId]);
 
       console.log('Market found:', market);
 
@@ -304,7 +301,7 @@ WHERE marketId = ? AND gameId = ?
             VALUES ?
         `;
 
-      await executeQuery(insertRunnersQuery, [
+      await database.execute(insertRunnersQuery, [
         newRunners.map((runner) => [runner.runnerId, runner.runnerName, runner.gameId, runner.marketId]),
       ]);
 
@@ -321,7 +318,7 @@ WHERE marketId = ? AND gameId = ?
         FROM Rate
         WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
-      const existingRate = await executeQuery(checkRateQuery, [runnerId, gameId, marketId]);
+      const existingRate = await database.execute(checkRateQuery, [runnerId, gameId, marketId]);
 
       if (existingRate && existingRate.length > 0) {
         const updateRateQuery = `
@@ -329,7 +326,7 @@ WHERE marketId = ? AND gameId = ?
           SET Back = ?, Lay = ?
           WHERE runnerId = ? AND gameId = ? AND marketId = ?
         `;
-        await executeQuery(updateRateQuery, [back, lay, runnerId, gameId, marketId]);
+        await database.execute(updateRateQuery, [back, lay, runnerId, gameId, marketId]);
       } else {
         const insertRateQuery = `
           INSERT INTO Rate (runnerId, Back, Lay, marketId, gameId)
@@ -340,7 +337,7 @@ WHERE marketId = ? AND gameId = ?
             WHERE marketId = ? AND gameId = ?
           )
         `;
-        await executeQuery(insertRateQuery, [runnerId, back, lay, marketId, gameId, marketId, gameId]);
+        await database.execute(insertRateQuery, [runnerId, back, lay, marketId, gameId, marketId, gameId]);
       }
 
       const updateRunnerQuery = `
@@ -348,7 +345,7 @@ WHERE marketId = ? AND gameId = ?
         SET rateBack = ?, rateLay = ?
         WHERE runnerId = ? AND gameId = ? AND marketId = ?
       `;
-      await executeQuery(updateRunnerQuery, [back, lay, runnerId, gameId, marketId]);
+      await database.execute(updateRunnerQuery, [back, lay, runnerId, gameId, marketId]);
 
       return { success: true };
     } catch (error) {
@@ -367,7 +364,7 @@ WHERE marketId = ? AND gameId = ?
       WHERE marketId = ?
     `;
 
-      const updateResult = await executeQuery(updateMarketQuery, [formattedStatus, marketId]);
+      const updateResult = await database.execute(updateMarketQuery, [formattedStatus, marketId]);
 
       if (updateResult.affectedRows === 0) {
         throw new Error('Market not found.');
@@ -391,7 +388,7 @@ WHERE marketId = ? AND gameId = ?
 
     const updateGameValues = [gameName, description, gameId, adminId];
 
-    await executeQuery(updateGameQuery, updateGameValues);
+    await database.execute(updateGameQuery, updateGameValues);
   },
 
   updateMarket: async (adminId, gameId, marketId, marketName, participants, timeSpan) => {
@@ -405,7 +402,7 @@ WHERE marketId = ? AND gameId = ?
 
     const updateMarketValues = [marketName, participants, timeSpan, marketId, gameId, adminId];
 
-    await executeQuery(updateMarketQuery, updateMarketValues);
+    await database.execute(updateMarketQuery, updateMarketValues);
   },
 
   updateRunner: async (adminId, gameId, marketId, runnerId, runnerName) => {
@@ -419,7 +416,7 @@ WHERE marketId = ? AND gameId = ?
 
     const updateRunnerValues = [runnerName, runnerId, marketId, gameId, adminId];
 
-    await executeQuery(updateRunnerQuery, updateRunnerValues);
+    await database.execute(updateRunnerQuery, updateRunnerValues);
   },
 
   updateRate: async (adminId, gameId, marketId, runnerId, back, lay) => {
@@ -434,7 +431,7 @@ WHERE marketId = ? AND gameId = ?
 
     const updateRateValues = [back, lay, runnerId, marketId, gameId, adminId];
 
-    await executeQuery(updateRateQuery, updateRateValues);
+    await database.execute(updateRateQuery, updateRateValues);
   },
 
   CreateSlider: async (sliderCount, data, user) => {
@@ -461,7 +458,7 @@ WHERE marketId = ? AND gameId = ?
       };
 
       const createSliderQuery = 'INSERT INTO Slider SET ?';
-      const savedSlider = await executeQuery(createSliderQuery, [newSlider]);
+      const savedSlider = await database.execute(createSliderQuery, [newSlider]);
       console.log('Saved slider:', savedSlider);
 
       return true;
@@ -485,7 +482,7 @@ WHERE marketId = ? AND gameId = ?
             ORDER BY id DESC
             LIMIT 1
         `;
-      const [existingAnnouncement] = await executeQuery(existingAnnouncementQuery, [typeOfAnnouncement]);
+      const [existingAnnouncement] = await database.execute(existingAnnouncementQuery, [typeOfAnnouncement]);
 
       if (existingAnnouncement) {
         announcementId = existingAnnouncement.announceId;
@@ -497,7 +494,7 @@ WHERE marketId = ? AND gameId = ?
             INSERT INTO Announcement (announceId, typeOfAnnouncement, announcement, createdBy)
             VALUES (?, ?, ?, ?)
         `;
-      await executeQuery(insertAnnouncementQuery, [announcementId, typeOfAnnouncement, announcement, user._id]);
+      await database.execute(insertAnnouncementQuery, [announcementId, typeOfAnnouncement, announcement, user._id]);
 
       return;
     } catch (error) {
@@ -512,7 +509,7 @@ WHERE marketId = ? AND gameId = ?
           FROM Announcement
           WHERE announceId = ?
       `;
-      const [announcement] = await executeQuery(getAnnouncementQuery, [announceId]);
+      const [announcement] = await database.execute(getAnnouncementQuery, [announceId]);
 
       if (!announcement) {
         throw apiResponseErr(null, false, 400, 'Announcement not found');
@@ -525,7 +522,7 @@ WHERE marketId = ? AND gameId = ?
           ORDER BY id DESC
           LIMIT 1
       `;
-      const [latestAnnouncement] = await executeQuery(getLatestAnnouncementQuery, [announcement.typeOfAnnouncement]);
+      const [latestAnnouncement] = await database.execute(getLatestAnnouncementQuery, [announcement.typeOfAnnouncement]);
 
       if (!latestAnnouncement) {
         throw apiResponseErr(null, false, 400, 'Latest announcement not found');
@@ -552,14 +549,14 @@ WHERE marketId = ? AND gameId = ?
       `;
       const updateAnnouncementValues = [typeOfAnnouncement, announcement, announceId];
 
-      await executeQuery(updateAnnouncementQuery, updateAnnouncementValues);
+      await database.execute(updateAnnouncementQuery, updateAnnouncementValues);
 
       const getUpdatedAnnouncementQuery = `
           SELECT *
           FROM Announcement
           WHERE announceId = ?
       `;
-      const [updatedAnnouncement] = await executeQuery(getUpdatedAnnouncementQuery, [announceId]);
+      const [updatedAnnouncement] = await database.execute(getUpdatedAnnouncementQuery, [announceId]);
 
       if (!updatedAnnouncement) {
         throw apiResponseErr(null, false, 400, 'Announcement not found');

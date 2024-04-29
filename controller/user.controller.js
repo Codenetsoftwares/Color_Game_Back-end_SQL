@@ -1,23 +1,20 @@
-import mysql from 'mysql2';
+import { database } from '../controller/database.controller.js'
 import dotenv from 'dotenv';
-
 dotenv.config();
-
-import { executeQuery } from '../DB/db.js';
 import { error } from 'console';
 
 export const UserController = {
   eligibilityCheck: async (userId, eligibilityCheck) => {
     try {
       const userQuery = 'SELECT * FROM user WHERE id = ?';
-      const user = await executeQuery(userQuery, [userId]);
+      const user = await database.execute(userQuery, [userId]);
 
       if (user.length === 0) {
         throw apiResponseErr(null, false, 400, 'User not found' );
       }
 
       const updateQuery = 'UPDATE user SET eligibilityCheck = ? WHERE id = ?';
-      const updatedRows = await executeQuery(updateQuery, [eligibilityCheck ? 1 : 0, userId]);
+      const updatedRows = await database.execute(updateQuery, [eligibilityCheck ? 1 : 0, userId]);
 
       if (updatedRows.affectedRows > 0) {
         return {
@@ -38,13 +35,13 @@ export const UserController = {
       const getMarketsQuery = 'SELECT * FROM market WHERE gameId = ?';
       const getRunnersQuery = 'SELECT * FROM runner WHERE marketId = ?';
 
-      const games = await executeQuery(getGamesQuery);
+      const games = await database.execute(getGamesQuery);
 
       for (const game of games) {
-        game.markets = await executeQuery(getMarketsQuery, [game.gameId]);
+        game.markets = await database.execute(getMarketsQuery, [game.gameId]);
 
         for (const market of game.markets) {
-          market.runners = await executeQuery(getRunnersQuery, [market.marketId]);
+          market.runners = await database.execute(getRunnersQuery, [market.marketId]);
         }
       }
 
@@ -100,7 +97,7 @@ export const UserController = {
             FROM Announcement
             WHERE typeOfAnnouncement = ?
         `;
-      const [announcement] = await executeQuery(getAnnouncementQuery, [typeOfAnnouncement]);
+      const [announcement] = await database.execute(getAnnouncementQuery, [typeOfAnnouncement]);
 
       if (!announcement) {
         throw apiResponseErr(null, false, 400, 'Announcement not found');
@@ -113,7 +110,7 @@ export const UserController = {
             ORDER BY id DESC
             LIMIT 1
         `;
-      const [latestAnnouncement] = await executeQuery(getLatestAnnouncementQuery, [announcement.typeOfAnnouncement]);
+      const [latestAnnouncement] = await database.execute(getLatestAnnouncementQuery, [announcement.typeOfAnnouncement]);
 
       if (!latestAnnouncement) {
         throw apiResponseErr(null, false, 400, 'Latest announcement not found');
@@ -135,7 +132,7 @@ export const UserController = {
             SELECT *
             FROM Announcement
         `;
-      const announcementTypes = await executeQuery(getAnnouncementTypesQuery);
+      const announcementTypes = await database.execute(getAnnouncementTypesQuery);
       return announcementTypes.map((row) => ({
         announceId: row.announceId,
         typeOfAnnouncement: row.typeOfAnnouncement,
