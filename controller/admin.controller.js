@@ -16,7 +16,10 @@ export const AdminController = {
       }
 
       const existingAdminQuery = 'SELECT * FROM Admin WHERE userName = ?';
-      const existingAdmin = await database.execute(existingAdminQuery, [data.userName]);
+      console.log('Existing Admin Query:', existingAdminQuery);
+
+      const [existingAdmin] = await database.execute(existingAdminQuery, [data.userName]);
+      console.log("existingAdmin", existingAdmin)
       if (existingAdmin.length > 0) {
         throw apiResponseErr(null, false, 409, 'Admin Already Exists');
       }
@@ -35,6 +38,7 @@ export const AdminController = {
       throw error;
     }
   },
+
 
   GenerateAdminAccessToken: async (userName, password, persist) => {
     try {
@@ -87,11 +91,11 @@ export const AdminController = {
       }
 
       const existingUserQuery = 'SELECT * FROM User WHERE userName = ?';
-      const [existingUser] = await database.execute(existingUserQuery, [data.userName]);
+      const [existingUsers] = await database.execute(existingUserQuery, [data.userName]);
 
-      console.log('Existing User:', existingUser);
+      console.log('Existing User:', existingUsers);
 
-      if (existingUser) {
+      if (existingUsers.length > 0) {
         throw apiResponseErr(null, false, 409, 'User Already Exists');
       }
 
