@@ -202,4 +202,6 @@ export const UserRoute = (app) => {
         .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
   });
+
+  
 };
