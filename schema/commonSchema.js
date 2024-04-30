@@ -99,7 +99,7 @@ export const updateGameSchema = [
 export const updateMarketSchema = [
   body('marketId').notEmpty().withMessage('Market ID is required'),
   body('marketName').optional().notEmpty().withMessage('Market name cannot be empty'),
-  body('participants').optional().isArray().withMessage('Participants must be an array'),
+  body('participants').optional().notEmpty().withMessage('Participants is required'),
   body('timeSpan').optional().isString().withMessage('Time span must be a string'),
 ];
 
