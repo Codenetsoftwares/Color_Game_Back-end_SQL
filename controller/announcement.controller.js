@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const announcements = async (req, res) => {
     const { typeOfAnnouncement, announcement } = req.body;
     try {
-       
+
         const gameQuery = 'SELECT * FROM Game WHERE gameName = ?';
         const [gameResult] = await database.execute(gameQuery, [typeOfAnnouncement]);
         const game = gameResult[0];
@@ -43,29 +43,30 @@ export const announcements = async (req, res) => {
         res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
-
 // done
 export const getAnnouncement = async (req, res) => {
-    const { announceId } = req.params;
-
     try {
-        const announcer = await Announcement.findOne();
-        const announcement = announcer.announcements.find((a) => String(a.announceId) === announceId);
+        const { announceId } = req.params;
+        const announcementQuery = `
+            SELECT * 
+            FROM Announcement 
+            WHERE announceId = ?
+        `;
+        const [announcementResult] = await database.execute(announcementQuery, [announceId]);
+        const announcement = announcementResult[0];
 
         if (!announcement) {
             return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
         }
 
-        const latestAnnouncement = announcer.announcements
-            .filter((a) => a.typeOfAnnouncement === announcement.typeOfAnnouncement)
-            .reduce((latest, current) => (latest.announceId < current.announceId ? current : latest));
+        const announcementText = announcement.announcement;
 
         return res.status(201).json(
             apiResponseSuccess(
                 {
-                    announcementId: latestAnnouncement.announceId,
-                    typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
-                    announcement: [latestAnnouncement.announcement[latestAnnouncement.announcement.length - 1]],
+                    announceId: announcement.announceId,
+                    typeOfAnnouncement: announcement.typeOfAnnouncement,
+                    announcement: [announcementText],
                 },
                 true,
                 201,
@@ -84,31 +85,42 @@ export const updateAnnouncement = async (req, res) => {
     const { typeOfAnnouncement, announcement } = req.body;
 
     try {
-        console.log('announceId', announceId);
-        const announce = await Announcement.findOne();
-        const announcementToUpdate = announce.announcements.find((a) => String(a.announceId) === announceId);
+        if (typeOfAnnouncement === undefined && announcement === undefined) {
+            return res.status(400).json(apiResponseErr(null, false, 400, 'At least one of typeOfAnnouncement or announcement is required'));
+        }
+
+        const announcementQuery = `
+            SELECT *
+            FROM Announcement
+            WHERE announceId = ?
+        `;
+        const [announcementResult] = await database.execute(announcementQuery, [announceId]);
+        const announcementToUpdate = announcementResult[0];
 
         if (!announcementToUpdate) return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
 
-        const existingAnnouncement = announce.announcements.find(
-            (a) => a.typeOfAnnouncement === typeOfAnnouncement && String(a.announceId) !== announceId,
-        );
-
-        if (existingAnnouncement) return res.status(400).json(apiResponseErr(null, false, 400, 'Already exists'));
-
         if (typeOfAnnouncement !== undefined) {
-            announcementToUpdate.typeOfAnnouncement = typeOfAnnouncement;
+            const updateTypeOfAnnouncementQuery = `
+                UPDATE Announcement
+                SET typeOfAnnouncement = ?
+                WHERE announceId = ?
+            `;
+            await database.execute(updateTypeOfAnnouncementQuery, [typeOfAnnouncement, announceId]);
         }
 
         if (announcement !== undefined) {
-            announcementToUpdate.announcement = announcement;
+            const updateAnnouncementQuery = `
+                UPDATE Announcement
+                SET announcement = ?
+                WHERE announceId = ?
+            `;
+            await database.execute(updateAnnouncementQuery, [announcement, announceId]);
         }
 
-        const updateAnnouncement = await announce.save();
-        return res.status(201).json(apiResponseSuccess(updateAnnouncement, true, 201, 'Announcement Update Successfully'));
+        return res.status(201).json(apiResponseSuccess(null, true, 201, 'Announcement updated successfully'));
     } catch (error) {
-        res
-            .status(500)
-            .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
     }
 };
+
+

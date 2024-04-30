@@ -1,6 +1,5 @@
 import { apiResponseSuccess, apiResponseErr, apiResponsePagination } from '../middleware/serverError.js';
 import { database } from '../controller/database.controller.js'
-import mongoose, { set } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
 // done
@@ -40,9 +39,8 @@ export const getAllGames = async (req, res) => {
     const searchQuery = req.query.search || '';
 
     const fetchGameDataQuery = `
-    SELECT G.gameId, G.gameName, G.description, A.announcementId, A.announcement
-    FROM Game G
-    LEFT JOIN Announcement A ON G.gameId = A.gameId    
+      SELECT gameId, gameName, description
+      FROM Game
     `;
     const [fetchGameDataResult] = await database.execute(fetchGameDataQuery);
 
@@ -50,25 +48,11 @@ export const getAllGames = async (req, res) => {
       return res.status(400).json(apiResponseErr(null, false, 400, 'Data Not Found'));
     }
 
-    const gameData = [];
-    for (const row of fetchGameDataResult) {
-      const gameIndex = gameData.findIndex((game) => game.gameId === row.gameId);
-      if (gameIndex === -1) {
-        gameData.push({
-          gameId: row.gameId,
-          gameName: row.gameName,
-          description: row.description,
-          announcements: [],
-        });
-      }
-      if (row.announcementId) {
-        const announcement = {
-          announcementId: row.announcementId,
-          announcementText: row.announcementText,
-        };
-        gameData[gameIndex].announcements.push(announcement);
-      }
-    }
+    const gameData = fetchGameDataResult.map(row => ({
+      gameId: row.gameId,
+      gameName: row.gameName,
+      description: row.description,
+    }));
 
     const filteredGameData = gameData.filter(
       (game) => game.gameName && game.gameName.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -124,7 +108,7 @@ export const updateGame = async (req, res) => {
 // done
 export const createMarket = async (req, res) => {
   try {
-    const gameId = req.params.gameId; 
+    const gameId = req.params.gameId;
     const { marketName, participants, timeSpan } = req.body;
 
     const existingMarketQuery = 'SELECT * FROM Market WHERE gameId = ? AND marketName = ?';
@@ -152,7 +136,7 @@ export const createMarket = async (req, res) => {
     const [marketListResult] = await database.execute(marketListQuery, [gameId]);
 
 
-    return res.status(201).send(apiResponseSuccess({marketList: marketListResult }, true, 201, 'Market created successfully'));
+    return res.status(201).send(apiResponseSuccess({ marketList: marketListResult }, true, 201, 'Market created successfully'));
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
@@ -163,264 +147,270 @@ export const getAllMarkets = async (req, res) => {
     const gameId = req.params.gameId;
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
-    const searchQuery = req.query.search || '';
+    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
 
-    const fetchMarketsQuery = `
-      SELECT M.marketId, M.marketName, M.participants, M.timeSpan
-      FROM Market M
-      WHERE M.gameId = ? AND LOWER(M.marketName) LIKE ?
+    const marketsQuery = `
+      SELECT Market.marketId, Market.marketName, Market.timeSpan, Market.participants, Market.isActive
+      FROM Market
+      WHERE Market.gameId = ?
+        AND LOWER(Market.marketName) LIKE CONCAT('%', ?, '%')
     `;
-    const [marketsResult] = await database.execute(fetchMarketsQuery, [gameId, `%${searchQuery.toLowerCase()}%`]);
 
-    const totalItems = marketsResult.length;
+    const [markets] = await database.execute(marketsQuery, [gameId, searchQuery]);
+
+    const totalItems = markets.length;
     const totalPages = Math.ceil(totalItems / pageSize);
     const startIndex = (page - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalItems);
-    const paginatedMarkets = marketsResult.slice(startIndex, endIndex);
+    const endIndex = page * pageSize;
+
+    const paginatedMarkets = markets.slice(startIndex, endIndex);
 
     const paginationData = {
-      page,
-      totalPages,
-      totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      totalItems: totalItems
     };
 
-    return res.status(200).json(apiResponseSuccess(paginatedMarkets, true, 200, 'Success', paginationData));
+    return res.status(200).send(apiResponseSuccess(paginatedMarkets, true, 200, 'Success', paginationData));
   } catch (error) {
-    res.status(500).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-
-
+// done
 export const updateMarket = async (req, res) => {
-  const { marketId, marketName, participants, timeSpan } = req.body;
-
   try {
-    const updatedAdmin = await Admin.findOneAndUpdate(
-      { 'gameList.markets.marketId': marketId },
-      {
-        $set: {
-          'gameList.$.markets.$[market].marketName': marketName,
-          'gameList.$.markets.$[market].participants': participants,
-          'gameList.$.markets.$[market].timeSpan': timeSpan,
-        },
-      },
-      {
-        new: true,
-        arrayFilters: [{ 'market.marketId': marketId }],
-      },
-    );
-
-    if (!updatedAdmin) {
-      return res.status(404).json(apiResponseErr(null, false, 404, 'Market not found.'));
+    const { marketId, marketName, participants, timeSpan } = req.body;
+    if (marketName === undefined && participants === undefined && timeSpan === undefined) {
+      return res.status(400).json(apiResponseErr(null, false, 400, 'At least one field (marketName, participants, or timeSpan) is required.'));
     }
 
-    return res.status(200).json(apiResponseSuccess(updatedAdmin, true, 200, 'Market updated successfully.'));
+    let updateMarketQuery = 'UPDATE Market SET ';
+    const updateParams = [];
+
+    if (marketName !== undefined) {
+      updateMarketQuery += 'marketName = ?, ';
+      updateParams.push(marketName);
+    }
+
+    if (participants !== undefined) {
+      updateMarketQuery += 'participants = ?, ';
+      updateParams.push(participants);
+    }
+
+    if (timeSpan !== undefined) {
+      updateMarketQuery += 'timeSpan = ?, ';
+      updateParams.push(timeSpan);
+    }
+
+    updateMarketQuery = updateMarketQuery.slice(0, -2);
+
+    updateMarketQuery += ' WHERE marketId = ?';
+    updateParams.push(marketId);
+
+    const [result] = await database.execute(updateMarketQuery, updateParams);
+    const rowsAffected = result.affectedRows;
+
+    if (rowsAffected === 0) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Market not found.'));
+    }
+    return res.status(200).json(apiResponseSuccess(null, true, 200, 'Market updated successfully.'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+// done
 export const createRunner = async (req, res) => {
-  const marketId = req.params.marketId;
-  const { runnerNames } = req.body;
   try {
+    const marketId = req.params.marketId;
+    const { runnerNames } = req.body;
+
     if (!runnerNames) {
       throw apiResponseErr(null, false, 404, `RunnerName Required`);
     }
-    const runner = await Admin.findOne(stringConstructor.StringConst);
-    if (!runner) {
-      throw apiResponseErr(null, false, 400, 'Admin not found');
-    }
-    const market = runner.gameList.reduce((acc, game) => {
-      return acc || game.markets.find((market) => String(market.marketId) === String(marketId));
-    }, null);
 
+    const marketQuery = `
+      SELECT *
+      FROM Market
+      WHERE marketId = ?
+    `;
+
+    const [marketResult] = await database.execute(marketQuery, [marketId]);
+    const market = marketResult[0];
     if (!market) {
       throw apiResponseErr(null, false, 400, 'Market Not Found');
     }
 
-    const existingRunners = market.runners.map(
-      (runner) => runner.runnerName.name && runner.runnerName.name.toLowerCase(),
-    );
+    const existingRunnersQuery = `
+      SELECT runnerName
+      FROM Runner
+      WHERE marketId = ?
+    `;
+
+    const [existingRunnersResult] = await database.execute(existingRunnersQuery, [marketId]);
+    const existingRunners = existingRunnersResult.map(row => row.runnerName.toLowerCase());
+
     for (const runnerName of runnerNames) {
       const lowerCaseRunnerName = runnerName.toLowerCase();
       if (existingRunners.includes(lowerCaseRunnerName)) {
         throw apiResponseErr(null, false, 400, `Runner already exists for this market`);
       }
     }
+
     const maxParticipants = market.participants;
     if (runnerNames.length !== maxParticipants) {
       throw apiResponseErr(null, false, 400, 'Number of runners exceeds the maximum allowed participants');
     }
-    const newRunners = runnerNames.map((runnerName) => {
-      const runnerId = new mongoose.Types.ObjectId();
-      const name = runnerName;
-      return {
-        runnerName: { runnerId, name },
-        rate: {
-          Back: '',
-          Lay: '',
-        },
-      };
-    });
-    market.runners.push(...newRunners);
-    await runner.save();
-    return res
-      .status(201)
-      .send(apiResponseSuccess({ gameList: runner.gameList }, true, 201, 'Runner created successfully'));
+
+    const insertRunnerQuery = `
+      INSERT INTO Runner (marketId, runnerId, runnerName, isWin, bal)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    const insertRunnerParams = [];
+    for (const runnerName of runnerNames) {
+      const runnerId = uuidv4();
+      const bal = 0;
+      insertRunnerParams.push([marketId, runnerId, runnerName, 0, bal]);
+    }
+    await Promise.all(insertRunnerParams.map(params => database.execute(insertRunnerQuery, params)));
+
+    return res.status(201).send(apiResponseSuccess(null, true, 201, 'Runner created successfully'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+// done
 export const updateRunner = async (req, res) => {
-  const { runnerId, runnerName } = req.body;
-
   try {
-    const updatedAdmin = await Admin.findOneAndUpdate(
-      { 'gameList.markets.runners.runnerName.runnerId': runnerId },
-      {
-        $set: {
-          'gameList.$[game].markets.$[market].runners.$[runner].runnerName.name': runnerName,
-        },
-      },
-      {
-        new: true,
-        arrayFilters: [
-          { 'game.markets.runners.runnerName.runnerId': runnerId },
-          { 'market.runners.runnerName.runnerId': runnerId },
-          { 'runner.runnerName.runnerId': runnerId },
-        ],
-      },
-    );
+    const { runnerId, runnerName } = req.body;
+    const updateRunnerQuery = `
+      UPDATE Runner
+      SET runnerName = ?
+      WHERE runnerId = ?
+    `;
 
-    if (!updatedAdmin) return res.status(404).json(apiResponseErr(null, false, 404, 'Runner not found.'));
+    const [result] = await database.execute(updateRunnerQuery, [runnerName, runnerId]);
+    const rowsAffected = result.affectedRows;
 
-    return res.status(200).json(apiResponseSuccess(updatedAdmin, true, 200, 'Runner updated successfully.'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
-export const createRate = async (req, res) => {
-  const runnerId = req.params.runnerId;
-  const { back, lay } = req.body;
-  try {
-    const runnerObj = await Admin.findOneAndUpdate(
-      { 'gameList.markets.runners.runnerName.runnerId': runnerId },
-      {
-        $set: {
-          'gameList.$[game].markets.$[market].runners.$[runner].rate.0.Back': back,
-          'gameList.$[game].markets.$[market].runners.$[runner].rate.0.Lay': lay,
-        },
-      },
-      {
-        new: true,
-        arrayFilters: [
-          { 'game.gameId': { $exists: true } },
-          { 'market.marketId': { $exists: true } },
-          { 'runner.runnerName.runnerId': runnerId },
-        ],
-      },
-    );
-    if (!runnerObj) {
-      throw apiResponseErr(null, false, 400, `Runner not found`);
+    if (rowsAffected === 0) {
+      return res.status(404).json(apiResponseErr(null, false, 404, 'Runner not found.'));
     }
 
-    return res
-      .status(201)
-      .send(apiResponseSuccess({ gameList: runnerObj.gameList }, true, 201, 'Rate created successfully'));
+    return res.status(200).json(apiResponseSuccess(null, true, 200, 'Runner updated successfully.'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    // Handle errors
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+// done
+export const createRate = async (req, res) => {
+  try {
+    const runnerId = req.params.runnerId;
+    const { back, lay } = req.body;
+    const existingRateQuery = `
+      SELECT COUNT(*) AS count
+      FROM Rate
+      WHERE runnerId = ?
+    `;
+    const [existingRateResult] = await database.execute(existingRateQuery, [runnerId]);
+    const rateExists = existingRateResult[0].count > 0;
+
+    if (rateExists) {
+      const updateRateQuery = `
+        UPDATE Rate
+        SET Back = ?, Lay = ?
+        WHERE runnerId = ?
+      `;
+      await database.execute(updateRateQuery, [back, lay, runnerId]);
+    } else {
+      const insertRateQuery = `
+        INSERT INTO Rate (runnerId, Back, Lay)
+        VALUES (?, ?, ?)
+      `;
+      await database.execute(insertRateQuery, [runnerId, back, lay]);
+    }
+
+    const updateRunnerQuery = `
+      UPDATE Runner
+      SET Back = ?, Lay = ?
+      WHERE runnerId = ?
+    `;
+    await database.execute(updateRunnerQuery, [back, lay, runnerId]);
+
+    return res.status(201).send(apiResponseSuccess(null, true, 201, 'Rate created successfully'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+// done
 export const updateRate = async (req, res) => {
   const { runnerId, back, lay } = req.body;
 
   try {
-    const updatedAdmin = await Admin.findOneAndUpdate(
-      { 'gameList.markets.runners.runnerName.runnerId': runnerId },
-      {
-        $set: {
-          'gameList.$[game].markets.$[market].runners.$[runner].rate.0.Back': back,
-          'gameList.$[game].markets.$[market].runners.$[runner].rate.0.Lay': lay,
-        },
-      },
-      {
-        new: true,
-        arrayFilters: [
-          { 'game.markets.runners.runnerName.runnerId': runnerId },
-          { 'market.runners.runnerName.runnerId': runnerId },
-          { 'runner.runnerName.runnerId': runnerId },
-        ],
-      },
-    );
+    let updateField;
+    let updatedValue;
 
-    if (!updatedAdmin) return res.status(404).json(apiResponseErr(null, false, 404, 'Runner not found.'));
-    return res.status(200).json(apiResponseSuccess(updatedAdmin, true, 200, 'Rate updated successfully.'));
+    if (back !== undefined) {
+      updateField = 'Back';
+      updatedValue = back;
+    } else if (lay !== undefined) {
+      updateField = 'Lay';
+      updatedValue = lay;
+    } else {
+      throw apiResponseErr(null, false, 400, 'Either Back or Lay field is required for update.');
+    }
+
+    const updateRateQuery = `
+      UPDATE Runner
+      SET ${updateField} = ?
+      WHERE runnerId = ?;
+    `;
+    await database.execute(updateRateQuery, [updatedValue, runnerId]);
+
+    return res.status(200).json(apiResponseSuccess(null, true, 200, 'Rate updated successfully.'));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+// done
 export const getAllRunners = async (req, res) => {
   try {
-    const marketId = new mongoose.Types.ObjectId(req.params.marketId);
+    const marketId = req.params.marketId;
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
     const searchQuery = req.query.search || '';
 
-    const admin = await Admin.findOne({ 'gameList.markets.marketId': marketId });
+    const runnersQuery = `
+      SELECT Runner.*, Rate.Back, Rate.Lay
+      FROM Runner
+      LEFT JOIN Rate ON Runner.runnerId = Rate.runnerId
+      WHERE Runner.marketId = ?
+    `;
+    const [runnersResult] = await database.execute(runnersQuery, [marketId]);
 
-    if (!admin || !admin.gameList || admin.gameList.length === 0) {
-      throw apiResponseErr(null, true, 400, 'Market not found for the specified Admin');
-    }
+    const runners = runnersResult.map(row => ({
+      runnerId: row.runnerId,
+      runnerName: row.runnerName,
+      isWin: row.isWin,
+      back: row.Back,
+      lay: row.Lay,
+    }));
 
-    let runnerData = [];
-    let totalItems = 0;
+    const filteredRunners = runners.filter(runner =>
+      runner.runnerName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    admin.gameList.forEach((game) => {
-      const market = game.markets.find((m) => m.marketId.equals(marketId));
-      if (market) {
-        const filteredRunners = market.runners.filter(
-          (runner) =>
-            runner.runnerName.name && runner.runnerName.name.toLowerCase().includes(searchQuery.toLowerCase()),
-        );
-
-        totalItems += filteredRunners.length;
-
-        const paginatedRunners = filteredRunners.slice((page - 1) * pageSize, page * pageSize);
-
-        paginatedRunners.forEach((runner) => {
-          runnerData.push({
-            runnerId: runner.runnerName.runnerId,
-            runnerName: runner.runnerName.name,
-            isWin: runner.runnerName.isWin,
-            rates: runner.rate.map((rate) => ({
-              Back: rate.Back,
-              Lay: rate.Lay,
-            })),
-          });
-        });
-      }
-    });
-
+    const totalItems = filteredRunners.length;
     const totalPages = Math.ceil(totalItems / pageSize);
+
+    const paginatedRunners = filteredRunners.slice((page - 1) * pageSize, page * pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
 
-    res.status(200).send(apiResponseSuccess(runnerData, true, 200, 'success', paginationData));
+    res.status(200).send(apiResponseSuccess(paginatedRunners, true, 200, 'success', paginationData));
   } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
+
 
