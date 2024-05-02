@@ -51,8 +51,8 @@ export const createdUserSchema = [
 
 export const createdGameSchema = [
   body('gameName').trim().notEmpty().withMessage('Game name is required'),
-  body('description').optional().trim(),
-  // body('isBlink').optional().isBoolean().withMessage('isBlink must be a boolean'),
+  body('description').optional().notEmpty().withMessage('Description is required'),
+  body('isBlink').optional().isBoolean().notEmpty().withMessage('isBlink must be a boolean'),
 ];
 
 export const createdMarketSchema = [
@@ -152,7 +152,9 @@ export const eligibilityCheckValidationRules = [
 ];
 
 export const gameIdValidate = [
-  param('gameId').notEmpty().withMessage('Game ID cannot be empty').isString().withMessage('Game ID must be a string'),
+  param('gameId')
+    .notEmpty().withMessage('Game ID cannot be empty')
+    .isString().withMessage('Game ID must be a string')
 ];
 
 export const validateGameId = [

@@ -15,7 +15,7 @@ import {
   deleteRunner,
   generateAccessToken
 } from '../controller/admin.controller.js';
-import {  
+import {
   createdUserSchema,
   depositSchema,
   loginSchema,
@@ -25,7 +25,7 @@ import {
   userUpdateSchema,
   validateMarketId,
   validateDeleteRunner,
-  suspendedMarketSchema 
+  suspendedMarketSchema
 } from '../schema/commonSchema.js';
 
 dotenv.config();
@@ -45,14 +45,16 @@ export const AdminRoute = (app) => {
   app.post('/api/deposit-amount', depositSchema, customErrorHandler, Authorize(['Admin']), deposit);
   // done
   app.post('/api/sendBalance-user', sendBalanceSchema, customErrorHandler, Authorize(['Admin']), sendBalance);
+  // done
+  app.put('/api/users-update/:userId', userUpdateSchema, customErrorHandler, Authorize(['Admin']), userUpdate);
+  // done
+  app.delete('/api/game-delete/:gameId', gameIdValidate, customErrorHandler, Authorize(['Admin']), deleteGame);
+  // done
+  app.delete('/api/market-delete/:marketId', validateMarketId, customErrorHandler, Authorize(['Admin']), deleteMarket);
+  // done
+  app.delete('/api/runner-delete/:runnerId', validateDeleteRunner, customErrorHandler, Authorize(['Admin']), deleteRunner);
 
   app.post('/api/afterWining', winningSchema, customErrorHandler, Authorize(['Admin']), afterWining);
 
-  app.put('/api/users-update/:userId',userUpdateSchema,customErrorHandler,Authorize(['Admin']), userUpdate);
-
-  app.delete('/api/game-delete/:gameId',gameIdValidate,customErrorHandler,Authorize(['Admin']), deleteGame);
-
-  app.delete('/api/market-delete/:marketId',validateMarketId,customErrorHandler,Authorize(['Admin']),deleteMarket );
-
-  app.delete('/api/runner-delete/:runnerId',validateDeleteRunner,customErrorHandler,Authorize(['Admin']), deleteRunner);
 };
+

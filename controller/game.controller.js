@@ -343,28 +343,34 @@ export const createRate = async (req, res) => {
 };
 // done
 export const updateRate = async (req, res) => {
-  const { runnerId, back, lay } = req.body;
-
   try {
-    let updateField;
-    let updatedValue;
+    const { runnerId, back, lay } = req.body;
+
+    if (back === undefined && lay === undefined) {
+      throw apiResponseErr(null, false, 400, 'Either Back or Lay field is required for update.');
+    }
+
+    const updateFields = [];
+    const updateValues = [];
 
     if (back !== undefined) {
-      updateField = 'Back';
-      updatedValue = back;
-    } else if (lay !== undefined) {
-      updateField = 'Lay';
-      updatedValue = lay;
-    } else {
-      throw apiResponseErr(null, false, 400, 'Either Back or Lay field is required for update.');
+      updateFields.push('Back = ?');
+      updateValues.push(back);
+    }
+
+    if (lay !== undefined) {
+      updateFields.push('Lay = ?');
+      updateValues.push(lay);
     }
 
     const updateRateQuery = `
       UPDATE Runner
-      SET ${updateField} = ?
+      SET ${updateFields.join(', ')}
       WHERE runnerId = ?;
     `;
-    await database.execute(updateRateQuery, [updatedValue, runnerId]);
+    const queryParams = [...updateValues, runnerId];
+
+    await database.execute(updateRateQuery, queryParams);
 
     return res.status(200).json(apiResponseSuccess(null, true, 200, 'Rate updated successfully.'));
   } catch (error) {

@@ -13,9 +13,8 @@ export const createAdmin = async (req, res) => {
     const existingAdminQuery = 'SELECT * FROM Admin WHERE userName = ?';
     const [existingAdmin] = await database.execute(existingAdminQuery, [userName]);
 
-    if (existingAdmin.length > 0) {
-      throw new Error('Admin already exists');
-    }
+    if (existingAdmin.length > 0) apiResponseErr(null, 400, false, 'Admin already exists');
+
 
     const saltRounds = 10;
     const encryptedPassword = await bcrypt.hash(password, saltRounds);
@@ -44,17 +43,13 @@ export const generateAccessToken = async (req, res) => {
     const existingAdminQuery = 'SELECT * FROM Admin WHERE userName = ?';
     const [existingAdmin] = await database.execute(existingAdminQuery, [userName]);
 
-    if (existingAdmin.length === 0) {
-      return apiResponseErr(null, false, 400, 'Admin Does Not Exist');
-    }
+    if (existingAdmin.length === 0) return apiResponseErr(null, false, 400, 'Admin Does Not Exist');
 
     const admin = existingAdmin[0];
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
 
-    if (!isPasswordValid) {
-      return apiResponseErr(null, false, 400, 'Invalid username or password');
-    }
+    if (!isPasswordValid) return apiResponseErr(null, false, 400, 'Invalid username or password');
 
     const accessTokenResponse = {
       id: admin.id,
@@ -222,7 +217,7 @@ export const sendBalance = async (req, res) => {
 
     const successResponse = {
       userId,
-      balance: user[0].balance ,
+      balance: user[0].balance,
       walletId: newUserWalletId,
     };
     return res.status(201).json(apiResponseSuccess(successResponse, true, 201, 'Send balance to User successful'));
@@ -231,7 +226,117 @@ export const sendBalance = async (req, res) => {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+// done
+export const userUpdate = async (req, res) => {
+  const { userId } = req.params;
+  const { firstName, lastName, userName, phoneNumber, password } = req.body;
 
+  try {
+    let updateUserQuery = 'UPDATE User SET';
+    const updateParams = [];
+
+    if (firstName) {
+      updateUserQuery += ' firstName = ?,';
+      updateParams.push(firstName);
+    }
+    if (lastName) {
+      updateUserQuery += ' lastName = ?,';
+      updateParams.push(lastName);
+    }
+    if (userName) {
+      updateUserQuery += ' userName = ?,';
+      updateParams.push(userName);
+    }
+    if (phoneNumber) {
+      updateUserQuery += ' phoneNumber = ?,';
+      updateParams.push(phoneNumber);
+    }
+    if (password) {
+      const passwordSalt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(password, passwordSalt);
+      updateUserQuery += ' password = ?,';
+      updateParams.push(hashedPassword);
+    }
+
+    updateUserQuery = updateUserQuery.slice(0, -1) + ' WHERE id = ?';
+    updateParams.push(userId);
+
+    await database.execute(updateUserQuery, updateParams);
+
+    res.status(200).send(apiResponseSuccess(null, true, 200, 'User updated successfully'));
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).send(apiResponseErr(null, false, 500, error.message));
+  }
+};
+// done
+export const deleteGame = async (req, res) => {
+  const gameId = req.params.gameId;
+  try {
+    if (!gameId) {
+      return res.status(400).send(apiResponseErr(null, false, 400, 'Game ID cannot be empty'));
+    }
+    const deleteRateQuery = 'DELETE FROM Rate WHERE runnerId IN (SELECT runnerId FROM Runner WHERE marketId IN (SELECT marketId FROM Market WHERE gameId = ?))';
+    await database.execute(deleteRateQuery, [gameId]);
+
+    const deleteRunnerQuery = 'DELETE FROM Runner WHERE marketId IN (SELECT marketId FROM Market WHERE gameId = ?)';
+    await database.execute(deleteRunnerQuery, [gameId]);
+
+    const deleteMarketQuery = 'DELETE FROM Market WHERE gameId = ?';
+    await database.execute(deleteMarketQuery, [gameId]);
+
+    const deleteGameQuery = 'DELETE FROM Game WHERE gameId = ?';
+    const [result] = await database.execute(deleteGameQuery, [gameId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send(apiResponseErr(null, false, 404, 'Game not found'));
+    }
+
+    res.status(200).send(apiResponseSuccess(null, true, 200, 'Game deleted successfully'));
+
+  } catch (error) {
+    res.status(500).send(apiResponseErr(null, false, 500, error.message));
+  }
+};
+// done
+export const deleteMarket = async (req, res) => {
+  try {
+    const { marketId } = req.params;
+
+    const deleteRateQuery = 'DELETE FROM Rate WHERE runnerId IN (SELECT runnerId FROM Runner WHERE marketId = ?)';
+    await database.execute(deleteRateQuery, [marketId]);
+
+    const deleteRunnerQuery = 'DELETE FROM Runner WHERE marketId = ?';
+    await database.execute(deleteRunnerQuery, [marketId]);
+
+    const deleteMarketQuery = 'DELETE FROM Market WHERE marketId = ?';
+    const [result] = await database.execute(deleteMarketQuery, [marketId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send(apiResponseErr(null, false, 404, 'Market not found'));
+    }
+
+    res.status(200).send(apiResponseSuccess(null, true, 200, 'Market deleted successfully'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(null, false, 500, error.message));
+  }
+};
+// done
+export const deleteRunner = async (req, res) => {
+  const runnerId = req.params.runnerId;
+  try {
+    const deleteRunnerQuery = 'DELETE FROM Runner WHERE runnerId = ?';
+    const [result] = await database.execute(deleteRunnerQuery, [runnerId]);
+
+    if (result.affectedRows === 0) {
+      throw apiResponseErr(null, false, 400, 'Runner not found');
+    }
+
+    res.status(200).send(apiResponseSuccess(null, true, 200, 'Runner deleted successfully'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
 
 export const afterWining = async (req, res) => {
   const { runnerId, marketId, isWin } = req.body
@@ -319,113 +424,5 @@ export const afterWining = async (req, res) => {
     return res.status(500).json(apiResponseErr(null, false, 500, error.message));
   }
 };
-export const userUpdate = async (req, res) => {
-  const { userId } = req.params;
-  const { firstName, lastName, userName, phoneNumber, password, balance } = req.body;
 
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(400).send(apiResponseErr(null, false, 400, 'User Not Found'));
-    }
-
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
-    if (userName) user.userName = userName;
-    if (phoneNumber) user.phoneNumber = phoneNumber;
-    if (password) {
-      const passwordSalt = await bcrypt.genSalt();
-      user.password = await bcrypt.hash(password, passwordSalt);
-    }
-    if (balance) user.wallet.balance = balance;
-
-    const updateUser = await user.save();
-    res.status(200).send(apiResponseSuccess(updateUser, true, 200, 'User updated successfully'));
-  } catch (error) {
-
-    res.status(500).send(apiResponseErr(null, false, 500, error.message));
-  }
-};
-
-export const deleteGame = async (req, res) => {
-  const gameId = req.params.gameId;
-  try {
-    const admin = await Admin.findOne();
-    const game = admin.gameList.find(game => String(game.gameId) === gameId);
-
-    if (!game) {
-      return res.status(400).send(apiResponseErr(null, false, 400, 'Game Not Found'));
-    }
-    admin.gameList = admin.gameList.filter(game => String(game.gameId) !== gameId);
-    const deleteGame = await admin.save();
-    res.status(200).send(apiResponseSuccess(deleteGame, true, 200, 'Game deleted successfully'));
-  } catch (error) {
-    res.status(500).send(apiResponseErr(null, false, 500, error.message));
-  }
-};
-
-export const deleteMarket = async (req, res) => {
-  const { marketId } = req.params;
-
-  try {
-    const admin = await Admin.findOne({ 'gameList.markets.marketId': marketId });
-
-    if (!admin) {
-      return res.status(400).send(apiResponseErr(null, false, 400, 'Admin Not Found'));
-    }
-
-    let marketIndex = -1;
-    admin.gameList.forEach((game, index) => {
-      game.markets.forEach(market => {
-        if (market.marketId && market.marketId.toString() === marketId.toString()) {
-          marketIndex = index;
-        }
-      });
-    });
-
-    if (marketIndex === -1) {
-      return res.status(400).send(apiResponseErr(null, false, 400, 'Market Not Found'));
-    }
-
-    admin.gameList[marketIndex].markets = admin.gameList[marketIndex].markets.filter(market => market.marketId.toString() !== marketId.toString());
-
-    const deleteMarket = await admin.save();
-
-    res.status(200).send(apiResponseSuccess(deleteMarket, true, 200, 'Market deleted successfully'));
-  } catch (error) {
-    res.status(500).send(apiResponseErr(null, false, 500, error.message));
-  }
-};
-
-export const deleteRunner = async (req, res) => {
-  const runnerId = req.params.runnerId;
-  try {
-    const runnerObj = await Admin.findOneAndUpdate(
-      { 'gameList.markets.runners.runnerName.runnerId': runnerId },
-      {
-        $pull: {
-          'gameList.$[game].markets.$[market].runners': { 'runnerName.runnerId': runnerId }
-        },
-      },
-      {
-        new: true,
-        arrayFilters: [
-          { 'game.gameId': { $exists: true } },
-          { 'market.marketId': { $exists: true } }
-        ],
-      },
-    );
-    if (!runnerObj) {
-      throw apiResponseErr(null, false, 400, `Runner not found`);
-    }
-
-    return res
-      .status(200)
-      .send(apiResponseSuccess({ gameList: runnerObj.gameList }, true, 200, 'Runner deleted successfully'));
-  } catch (error) {
-    res
-      .status(500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
-  }
-};
 
