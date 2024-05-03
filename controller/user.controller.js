@@ -2,6 +2,7 @@ import { database } from '../controller/database.controller.js'
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'
 import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../middleware/serverError.js';
+import moment from 'moment';
 
 export const loginUser = async (req, res) => {
   try {
@@ -635,4 +636,34 @@ export const createBid = async (req, res) => {
   }
 };
 
+export const getUserBetHistory = async (req, res) => {
+  try {
+    const marketId = req.params.marketId;
+    const userId = req.body.userId;
+    const startDate = req.query.startDate; // Format: YYYY-MM-DD
+    const endDate = req.query.endDate;     // Format: YYYY-MM-DD
+
+    if (!marketId || !userId || !startDate || !endDate) {
+      throw apiResponseErr(null, false, 400, 'Missing required parameters');
+    }
+
+    const betHistoryQuery = `
+      SELECT * FROM betHistory
+      WHERE 
+        marketId = ? AND
+        userId = ? AND
+        date >= ? AND
+        date <= ?;
+    `;
+    const betHistory = await query(betHistoryQuery, [marketId, userId, startDate, endDate]);
+
+    if (!betHistory || betHistory.length === 0) {
+      throw apiResponseErr(null, false, 404, 'No bet history found for the specified parameters');
+    }
+
+    res.status(200).send(apiResponseSuccess(betHistory, true, 200, 'Success'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
 

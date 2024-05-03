@@ -1,11 +1,11 @@
-import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, } from '../controller/user.controller.js';
+import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, getUserBetHistory, } from '../controller/user.controller.js';
 import { Authorize } from "../middleware/auth.js";
-import { bidTypeSchema } from '../schema/commonSchema.js';
+import { bidHistorySchema, bidTypeSchema } from '../schema/commonSchema.js';
 import customErrorHandler from '../middleware/customErrorHandler.js'
 
 export const UserRoute = (app) => {
 
-  app.post('/api/user/login', loginUser);
+  app.post('/api/user-login', loginUser);
 
   app.post('/api/eligibilityCheck/:userId', Authorize(["User"]), eligibilityCheck);
 
@@ -32,7 +32,9 @@ export const UserRoute = (app) => {
   app.get('/api/transactionDetails/:userId', Authorize(['User']), transactionDetails);
   // 80%
   app.post('/api/user-filter-marketData/:marketId', filterMarketData);
-// testing after done from frontend
+  // testing after done from frontend
   app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, Authorize(['User']), createBid)
-}
 
+  app.get('/api/user-betHistory/:marketId', bidHistorySchema, customErrorHandler, Authorize(['User']), getUserBetHistory)
+
+}

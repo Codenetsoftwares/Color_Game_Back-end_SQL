@@ -53,6 +53,7 @@ export const generateAccessToken = async (req, res) => {
 
     const accessTokenResponse = {
       id: admin.id,
+      adminId:admin.adminId,
       userName: admin.userName,
       UserType: admin.userType || 'Admin',
     };
@@ -61,7 +62,7 @@ export const generateAccessToken = async (req, res) => {
       expiresIn: '1d',
     });
 
-    return res.status(200).send(apiResponseSuccess({ accessToken, userName: admin.userName, UserType: admin.userType || 'Admin' },
+    return res.status(200).send(apiResponseSuccess({ accessToken,adminId:admin.adminId, userName: admin.userName, UserType: admin.userType || 'Admin' },
       true,
       200,
       'Admin login successfully',
