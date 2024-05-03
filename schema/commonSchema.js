@@ -6,10 +6,10 @@ export const testValidator = [
 ];
 
 export const bidTypeSchema = [
-  body('userId').exists().withMessage('User ID is required.').isMongoId().withMessage('Invalid User ID format.'),
-  body('gameId').exists().withMessage('Game ID is required.').isMongoId().withMessage('Invalid Game ID format.'),
-  body('marketId').exists().withMessage('Market ID is required.').isMongoId().withMessage('Invalid Market ID format.'),
-  body('runnerId').exists().withMessage('Runner ID is required.').isMongoId().withMessage('Invalid Runner ID format.'),
+  body('userId').exists().withMessage('User ID is required.'),
+  body('gameId').exists().withMessage('Game ID is required.'),
+  body('marketId').exists().withMessage('Market ID is required.'),
+  body('runnerId').exists().withMessage('Runner ID is required.'),
   body('value').exists().withMessage('Value is required.'),
   body('bidType')
     .exists()

@@ -457,3 +457,182 @@ export const getUserWallet = async (req, res) => {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
+export const transactionDetails = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+
+    const getUserQuery = `
+      SELECT * FROM TransactionRecord
+      WHERE userId = ?
+    `;
+    const [transactionData] = await database.execute(getUserQuery, [userId]);
+
+    if (!transactionData || transactionData.length === 0) {
+      throw apiResponseErr(null, 400, false, 'User Not Found or No Transactions Found');
+    }
+
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, transactionData.length);
+
+    const paginatedDetails = transactionData.slice(startIndex, endIndex);
+
+    const totalItems = transactionData.length;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const paginationData = apiResponsePagination(page, totalPages, totalItems);
+
+    res.status(200).send(apiResponseSuccess(paginatedDetails, true, 200, 'Success', paginationData));
+  } catch (error) {
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+// pending
+export const filterMarketData = async (req, res) => {
+  try {
+    const marketId = req.params.marketId;
+    const userId = req.body?.userId;
+
+    const marketQuery = `
+      SELECT m.*, r.runnerId, r.runnerName, r.bal
+      FROM Market m
+      LEFT JOIN Runner r ON m.marketId = r.marketId
+      WHERE m.marketId = ?;
+    `;
+    const [marketData] = await database.execute(marketQuery, [marketId]);
+
+    if (marketData.length === 0) {
+      throw apiResponseErr(null, false, 400, 'Market not found with MarketId');
+    }
+
+    let marketDataObj = {
+      marketId: marketData[0].marketId,
+      marketName: marketData[0].marketName,
+      participants: marketData[0].participants,
+      timeSpan: marketData[0].timeSpan,
+      announcementResult: marketData[0].announcementResult,
+      isActive: marketData[0].isActive,
+      runners: marketData.map((runner) => ({
+        runnerName: {
+          runnerId: runner.runnerId,
+          name: runner.runnerName,
+          isWin: runner.isWin,
+          bal: runner.bal
+        },
+        rate: runner.rate,
+        _id: runner._id
+      })),
+      _id: marketData[0]._id
+    };
+
+    if (userId) {
+      const currentOrdersQuery = `
+        SELECT *
+        FROM currentOrder
+        WHERE userId = ? AND marketId = ?;
+      `;
+      const [currentOrders] = await database.execute(currentOrdersQuery, [userId, marketId]);
+
+      if (currentOrders.length > 0) {
+        marketDataObj.runners.forEach((runner) => {
+          currentOrders.forEach((order) => {
+            if (order.type === 'Back') {
+              if (String(runner.runnerId) === String(order.runnerId)) {
+                runner.runnerName.bal += Number(order.bidAmount);
+              } else {
+                runner.runnerName.bal -= Number(order.value);
+              }
+            } else if (order.type === 'Lay') {
+              if (String(runner.runnerId) === String(order.runnerId)) {
+                runner.runnerName.bal -= Number(order.bidAmount);
+              } else {
+                runner.runnerName.bal += Number(order.value);
+              }
+            }
+          });
+        });
+
+        const totalMarketBalance = marketDataObj.runners.reduce((total, runner) => total + runner.runnerName.bal, 0);
+
+        const updateUserBalanceQuery = `
+          UPDATE MarketBalance
+          SET bal = ?
+          WHERE userId = ? AND marketId = ?;
+        `;
+        await database.execute(updateUserBalanceQuery, [totalMarketBalance, userId, marketId]);
+      }
+    }
+
+    return res.status(200).send(apiResponseSuccess(marketDataObj, true, 200, 'Success'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+// pending
+export const createBid = async (req, res) => {
+  const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
+  try {
+    if (!userId) throw apiResponseErr(null, 400, false, 'User ID is required');
+
+    if (value < 0) throw apiResponseErr(null, 400, false, 'Bid value cannot be negative');
+
+    const userQuery = `
+      SELECT * FROM User WHERE id = ? AND balance >= ?;
+    `;
+
+    const [userData] = await database.execute(userQuery, [userId, value]);
+    if (userData.length === 0) throw apiResponseErr(null, 400, false, 'User not found or insufficient balance');
+
+    const gameQuery = `
+      SELECT * FROM Game WHERE gameId = ?;
+    `;
+
+    const [gameData] = await database.execute(gameQuery, [gameId]);
+    if (gameData.length === 0) throw apiResponseErr(null, 400, false, 'Game not found');
+
+    const marketQuery = `
+      SELECT * FROM Market WHERE marketId = ?;
+    `;
+    const [marketData] = await database.execute(marketQuery, [marketId]);
+    if (marketData.length === 0) throw apiResponseErr(null, 400, false, 'Market not found');
+
+    const runnerQuery = `
+      SELECT * FROM Runner WHERE runnerId = ?;
+    `;
+    const [runnerData] = await database.execute(runnerQuery, [runnerId]);
+    if (runnerData.length === 0) throw apiResponseErr(null, 400, false, 'Runner not found');
+
+    const adjustedRate = bidType === 'Back' ? runnerData[0].Back - 1 : runnerData[0].Lay - 1;
+    const mainValue = Math.round(adjustedRate * value);
+    const betAmount = bidType === 'Back' ? value : mainValue;
+
+    const updateUserBalanceQuery = `
+      UPDATE User SET balance = balance - ?, exposure = ?, marketListExposure = ? WHERE id = ?;
+    `;
+
+    const walletParam = wallet !== undefined ? wallet : null;
+    const exposureParam = exposure !== undefined ? exposure : null;
+    const marketListExposureParam = marketListExposure !== undefined ? marketListExposure : null;
+
+    await database.execute(updateUserBalanceQuery, [walletParam, exposureParam, marketListExposureParam, userId]);
+
+    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    const insertCurrentOrderQuery = `
+      INSERT INTO currentOrder (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    `;
+    await database.execute(insertCurrentOrderQuery, [userId, gameId, gameData[0].gameName, marketId, marketData[0].marketName, runnerId, runnerData[0].runnerName, adjustedRate, value, bidType, currentDate, mainValue, 0, 0]);
+    return res.status(200).send(apiResponseSuccess(null, true, 200, 'Bid placed successfully'));
+
+  } catch (error) {
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+
+
