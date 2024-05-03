@@ -15,10 +15,10 @@ const app = express();
 
 app.use(bodyParser.json());
 
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.urlencoded({ extended: true }));
-const allowedOrigins = process.env.FRONTEND_URI.split(',');
+const allowedOrigins = process.env.FRONTEND_URI.split(",");
 app.use(cors({ origin: allowedOrigins }));
 
 const pool = mysql.createPool({
@@ -33,22 +33,23 @@ const pool = mysql.createPool({
 
 pool.getConnection((err, connection) => {
   if (err) {
-    console.log('Error to connecting Database: ' + err.message);
+    console.log("Error to connecting Database: " + err.message);
   } else {
-    console.log('Database connection successfully');
+    console.log("Database connection successfully");
     connection.release();
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+app.get("/", (req, res) => {
+  res.send("Hello World!");
 });
 
 AdminRoute(app);
 UserRoute(app);
 GameRoute(app);
 AnnouncementRoute(app);
+SliderRoute(app);
 
 app.listen(8080, () => {
-  console.log('App is running on - http://localhost:8080');
+  console.log("App is running on - http://localhost:8080");
 });
