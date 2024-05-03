@@ -39,7 +39,13 @@ export const loginUser = async (req, res) => {
       expiresIn: '1d',
     });
 
-    res.status(200).send(apiResponseSuccess(accessToken, true, 200, 'Login successful'));
+    res.status(200).send(apiResponseSuccess({
+      accessToken, id: existingUser.id,
+      userName: existingUser.userName,
+      isEighteen: existingUser.eligibilityCheck,
+      UserType: existingUser.userType || 'User',
+      wallet: existingUser.wallet
+    }, true, 200, 'Login successful'));
 
   } catch (error) {
     res
@@ -572,7 +578,7 @@ export const filterMarketData = async (req, res) => {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-// pending
+// test from frontend after fixing frontend
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
   try {
@@ -635,35 +641,69 @@ export const createBid = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const getUserBetHistory = async (req, res) => {
   try {
+    const userId = req.user.id;
+    console.log("userId", userId)
     const marketId = req.params.marketId;
-    const userId = req.body.userId;
-    const startDate = req.query.startDate; // Format: YYYY-MM-DD
-    const endDate = req.query.endDate;     // Format: YYYY-MM-DD
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 5;
+    const { startDate, endDate } = req.query;
 
-    if (!marketId || !userId || !startDate || !endDate) {
-      throw apiResponseErr(null, false, 400, 'Missing required parameters');
+    let start = null;
+    let end = null;
+
+    if (startDate) {
+      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+      if (!start.isValid()) {
+        throw new Error('startDate is not a valid date');
+      }
     }
 
-    const betHistoryQuery = `
-      SELECT * FROM betHistory
-      WHERE 
-        marketId = ? AND
-        userId = ? AND
-        date >= ? AND
-        date <= ?;
-    `;
-    const betHistory = await query(betHistoryQuery, [marketId, userId, startDate, endDate]);
+    if (endDate) {
+      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+      if (!end.isValid()) {
+        throw new Error('endDate is not a valid date');
+      }
 
-    if (!betHistory || betHistory.length === 0) {
-      throw apiResponseErr(null, false, 404, 'No bet history found for the specified parameters');
+      if (end.isAfter(moment())) {
+        throw new Error('Invalid End Date');
+      }
     }
 
-    res.status(200).send(apiResponseSuccess(betHistory, true, 200, 'Success'));
+    if (start && end && end.isBefore(start)) {
+      throw new Error('endDate should be after startDate');
+    }
+
+    let betHistoryQuery = `
+      SELECT gameName, marketName, runnerName, rate, value, type, date
+      FROM betHistory
+      WHERE userId = ? AND marketId = ?`;
+
+    const queryParams = [userId, marketId];
+
+    if (start && end) {
+      betHistoryQuery += ` AND date BETWEEN ? AND ?`;
+      queryParams.push(start.format('YYYY-MM-DD HH:mm:ss'));
+      queryParams.push(end.endOf('day').format('YYYY-MM-DD HH:mm:ss'));
+    }
+
+    const [rows] = await database.execute(betHistoryQuery, queryParams);
+
+    const betDetails = rows.map(row => ({
+      gameName: row.gameName,
+      marketName: row.marketName,
+      runnerName: row.runnerName,
+      rate: row.rate,
+      value: row.value,
+      type: row.type,
+      date: row.date
+    }));
+    res.status(200).send(apiResponseSuccess(betDetails, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
 

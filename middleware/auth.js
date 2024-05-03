@@ -24,36 +24,34 @@ export const Authorize = (roles) => {
 
       let existingUser;
       if (roles.includes('Admin')) {
-        [existingUser] = await database.execute('SELECT * FROM Admin WHERE userName = ?', [user.userName])
-        if (!existingUser) {
-          return res.status(401).send(apiResponseErr(null, false, 401, 'Unauthorized access'));
-        }
+        [existingUser] = await database.execute('SELECT * FROM Admin WHERE adminId = ?', [user.adminId]);
       }
 
       if (roles.includes('User')) {
-        [existingUser] = await database.execute('SELECT * FROM User WHERE userName = ?', [user.userName])
-        if (!existingUser) {
-          return res.status(401).send(apiResponseErr(null, false, 401, 'Unauthorized access'));
-        }
+        [existingUser] = await database.execute('SELECT * FROM User WHERE id = ?', [user.id]);
+      }
+
+      if (!existingUser) {
+        return res.status(401).send(apiResponseErr(null, false, 401, 'Unauthorized access'));
       }
       
       const rolesArray = existingUser[0].roles.replace(/['"]+/g, '').split(',');
 
-            if (roles && roles.length > 0) {
-                let userHasRequiredRole = false;
+      if (roles && roles.length > 0) {
+        let userHasRequiredRole = false;
 
-                roles.forEach((role) => {
-                    if (rolesArray.includes(role)) {
-                        userHasRequiredRole = true;
-                    }
-                });
+        roles.forEach((role) => {
+          if (rolesArray.includes(role)) {
+            userHasRequiredRole = true;
+          }
+        });
 
-                if (!userHasRequiredRole) {
-                    return res.status(401).send({ code: 401, message: 'Unauthorized access' });
-                }
-            }
+        if (!userHasRequiredRole) {
+          return res.status(401).send({ code: 401, message: 'Unauthorized access' });
+        }
+      }
 
-      req.user = existingUser;
+      req.user = existingUser[0]; 
       next();
     } catch (err) {
       console.error('Authorization Error:', err.message);
