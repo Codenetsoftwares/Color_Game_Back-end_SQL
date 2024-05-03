@@ -30,9 +30,9 @@ export const UserRoute = (app) => {
   app.get('/api/user/view-wallet/:userId', Authorize(['User']), getUserWallet)
 
   app.get('/api/transactionDetails/:userId', Authorize(['User']), transactionDetails);
-// pending
+  // 80%
   app.post('/api/user-filter-marketData/:marketId', filterMarketData);
-
-  app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, Authorize(['User']),createBid)
+// testing after done from frontend
+  app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, Authorize(['User']), createBid)
 }
 
