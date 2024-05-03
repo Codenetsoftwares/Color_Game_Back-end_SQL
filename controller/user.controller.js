@@ -706,4 +706,38 @@ export const getUserBetHistory = async (req, res) => {
   }
 };
 
+export const currentOrderHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { marketId } = req.params;
+
+    if (!marketId) {
+      return res.status(400).send(apiResponseErr(null, 400, false, 'Market ID is required'));
+    }
+
+    const orderQuery = `
+      SELECT runnerName, rate, value, type, bidAmount
+      FROM currentOrder
+      WHERE userId = ? AND marketId = ?;
+    `;
+
+    const [orders] = await database.execute(orderQuery, [userId, marketId]);
+
+    if (orders.length === 0) {
+      return res.status(404).send(apiResponseErr(null, 404, false, 'Orders not found for the specified user and market'));
+    }
+
+    const result = orders.map(order => ({
+      runnerName: order.runnerName,
+      rate: order.rate,
+      value: order.value,
+      type: order.type,
+      bidAmount: order.bidAmount
+    }));
+
+    res.status(200).send(apiResponseSuccess(result, true, 200, 'Success'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+}
 
