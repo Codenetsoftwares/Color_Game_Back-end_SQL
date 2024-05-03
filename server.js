@@ -1,13 +1,14 @@
 // server.js
-import mysql from 'mysql2';
-import express from 'express';
-import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
-import { AdminRoute } from './routes/admin.route.js';
-import { UserRoute } from './routes/user.route.js';
-import { GameRoute } from './routes/game.route.js';
-import cors from 'cors';
-import { AnnouncementRoute } from './routes/announcement.route.js';
+import mysql from "mysql2";
+import express from "express";
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import { AdminRoute } from "./routes/admin.route.js";
+import { UserRoute } from "./routes/user.route.js";
+import { GameRoute } from "./routes/game.route.js";
+import { SliderRoute } from "./routes/slider.route.js";
+import cors from "cors";
+import { AnnouncementRoute } from "./routes/announcement.route.js";
 
 dotenv.config();
 const app = express();
