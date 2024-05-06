@@ -39,8 +39,9 @@ export const getAllGames = async (req, res) => {
     const searchQuery = req.query.search || '';
 
     const fetchGameDataQuery = `
-      SELECT gameId, gameName, description
-      FROM Game
+      SELECT g.gameId, g.gameName, g.description, a.announceId
+      FROM Game g
+      LEFT JOIN Announcement a ON g.gameId = a.gameId
     `;
     const [fetchGameDataResult] = await database.execute(fetchGameDataQuery);
 
@@ -52,6 +53,7 @@ export const getAllGames = async (req, res) => {
       gameId: row.gameId,
       gameName: row.gameName,
       description: row.description,
+      announceId: row.announceId 
     }));
 
     const filteredGameData = gameData.filter(

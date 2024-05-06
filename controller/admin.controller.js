@@ -53,7 +53,7 @@ export const generateAccessToken = async (req, res) => {
 
     const accessTokenResponse = {
       id: admin.id,
-      adminId:admin.adminId,
+      adminId: admin.adminId,
       userName: admin.userName,
       UserType: admin.userType || 'Admin',
     };
@@ -62,7 +62,7 @@ export const generateAccessToken = async (req, res) => {
       expiresIn: '1d',
     });
 
-    return res.status(200).send(apiResponseSuccess({ accessToken,adminId:admin.adminId, userName: admin.userName, UserType: admin.userType || 'Admin' },
+    return res.status(200).send(apiResponseSuccess({ accessToken, adminId: admin.adminId, userName: admin.userName, UserType: admin.userType || 'Admin' },
       true,
       200,
       'Admin login successfully',
@@ -340,90 +340,87 @@ export const deleteRunner = async (req, res) => {
 };
 
 export const afterWining = async (req, res) => {
-  const { runnerId, marketId, isWin } = req.body
+  const { marketId, runnerId, isWin } = req.body;
   try {
-    const adminDoc = await Admin.findOne({ 'gameList.markets.runners.runnerName.runnerId': runnerId });
-    if (!adminDoc) return res.status(400).json(apiResponseErr(null, false, 400, 'Runner not found'));
+    const updateRunnerQuery = `
+      UPDATE Runner
+      SET isWin = CASE 
+        WHEN runnerId = ? THEN ?
+        ELSE 0
+      END
+      WHERE marketId = ?;
+    `;
+    await database.execute(updateRunnerQuery, [runnerId, isWin ? 1 : 0, marketId]);
 
-    for (const game of adminDoc.gameList) {
-      for (const market of game.markets) {
-        if (String(market.marketId) === marketId) {
-          market.runners.forEach(runner => {
-            if (String(runner.runnerName.runnerId) === String(runnerId)) {
-              runner.runnerName.isWin = isWin;
-            } else {
-              runner.runnerName.isWin = false;
-            }
-          });
-          if (isWin) {
-            market.announcementResult = true;
-          }
-        }
-      }
-    }
+    const updateMarketBalanceQuery = `
+      UPDATE MarketBalance
+      SET bal = CASE 
+        WHEN runnerId = ? THEN bal + (
+          SELECT COALESCE(SUM(exposure), 0) 
+          FROM User 
+          WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
+        )
+        ELSE bal - (
+          SELECT COALESCE(SUM(exposure), 0) 
+          FROM User 
+          WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
+        )
+      END
+      WHERE marketId = ?;
+    `;
+    await database.execute(updateMarketBalanceQuery, [runnerId, runnerId, runnerId, marketId]);
 
-    const users = await User.find({ "marketBalance.marketId": marketId });
-    for (const user of users) {
-      const marketBalance = user.marketBalance.find(item => String(item.marketId) === marketId);
-      if (marketBalance) {
-        const runnerBalance = marketBalance.runnerBalance.find(item => String(item.runnerId) === runnerId);
-        if (runnerBalance) {
-          const marketExposure = user.wallet.marketListExposure.find(item => Object.keys(item)[0] === marketId);
-          if (marketExposure) {
-            const marketExposureValue = Number(marketExposure[marketId]);
-            if (isWin) {
-              user.wallet.balance += runnerBalance.bal + marketExposureValue;
-            } else {
-              runnerBalance.bal -= marketExposureValue;
-              user.wallet.balance += runnerBalance.bal;
-            }
-
-            const marketIndex = user.wallet.marketListExposure.findIndex(item => Object.keys(item)[0] === marketId);
-            if (marketIndex !== -1) {
-              user.wallet.marketListExposure.splice(marketIndex, 1);
-            }
-
-            await user.save();
-          }
-        }
-      }
+    const deleteMarketBalanceQuery = `
+      DELETE FROM MarketBalance
+      WHERE bal <= 0;
+    `;
+    await database.execute(deleteMarketBalanceQuery);
+    if (isWin) {
+      const updateUserBalanceQuery = `
+    UPDATE User 
+    SET balance = balance + (
+      SELECT COALESCE(SUM(exposure), 0) 
+      FROM (
+        SELECT *
+        FROM User 
+        WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
+      ) AS temp
+    )
+    WHERE EXISTS (
+      SELECT 1
+      FROM (
+        SELECT *
+        FROM User 
+        WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
+      ) AS temp2
+    );
+  `;
+      await database.execute(updateUserBalanceQuery, [runnerId, runnerId]);
     }
 
     if (isWin) {
-      const market = adminDoc.gameList.flatMap(game => game.markets).find(m => String(m.marketId) === marketId);
-      if (market && market.announcementResult) {
-        const orders = await currentOrder.find({ "orders.marketId": marketId });
-        for (const doc of orders) {
-          for (const orderItem of doc.orders) {
-            const betHistoryEntry = {
-              userId: orderItem.userId,
-              gameId: orderItem.gameId,
-              gameName: orderItem.gameName,
-              marketId: orderItem.marketId,
-              marketName: orderItem.marketName,
-              runnerId: orderItem.runnerId,
-              runnerName: orderItem.runnerName,
-              rate: orderItem.rate,
-              value: orderItem.value,
-              type: orderItem.type,
-              date: new Date(),
-              bidAmount: orderItem.bidAmount,
-              isWin: orderItem.isWin,
-              profitLoss: orderItem.profitLoss,
-            };
-            await betHistory.insertMany({ orders: [betHistoryEntry] });
-          }
-        }
-        await currentOrder.deleteMany({ "orders.marketId": marketId });
-      }
-    }
-    await adminDoc.save();
+      const insertBetHistoryQuery = `
+        INSERT INTO betHistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss)
+        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, NOW(), bidAmount, ?, profitLoss
+        FROM currentOrder
+        WHERE marketId = ?;
+      `;
+      await database.execute(insertBetHistoryQuery, [isWin, marketId]);
 
-    return res.status(200).send();
+      const deleteCurrentOrderQuery = `
+        DELETE FROM currentOrder
+        WHERE marketId = ?;
+      `;
+      await database.execute(deleteCurrentOrderQuery, [marketId]);
+    }
+
+    return res.status(200).send(apiResponseSuccess(null, true, 200, 'success'));
   } catch (error) {
-    console.error(error);
-    return res.status(500).json(apiResponseErr(null, false, 500, error.message));
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
+
+
 
 

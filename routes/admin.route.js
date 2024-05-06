@@ -7,13 +7,13 @@ import {
   checkMarketStatus,
   deposit,
   sendBalance,
-  afterWining,
   getAllUsers,
   userUpdate,
   deleteGame,
   deleteMarket,
   deleteRunner,
-  generateAccessToken
+  generateAccessToken,
+  afterWinning
 } from '../controller/admin.controller.js';
 import {
   createdUserSchema,
@@ -54,7 +54,7 @@ export const AdminRoute = (app) => {
   // done
   app.delete('/api/runner-delete/:runnerId', validateDeleteRunner, customErrorHandler, Authorize(['Admin']), deleteRunner);
 
-  app.post('/api/afterWining', winningSchema, customErrorHandler, Authorize(['Admin']), afterWining);
+  app.post('/api/afterWining', winningSchema, customErrorHandler, Authorize(['Admin']), afterWinning);
 
 };
 
