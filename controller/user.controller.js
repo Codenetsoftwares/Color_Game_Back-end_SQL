@@ -193,7 +193,7 @@ export const userRunners = async (req, res) => {
     const searchQuery = req.query.search || '';
 
     const runnersQuery = `
-      SELECT Runner.*, Rate.Back, Rate.Lay
+      SELECT Runner.runnerId, Runner.runnerName, Rate.Back, Rate.Lay
       FROM Runner
       LEFT JOIN Rate ON Runner.runnerId = Rate.runnerId
       WHERE Runner.marketId = ?
@@ -203,9 +203,10 @@ export const userRunners = async (req, res) => {
     const runners = runnersResult.map(row => ({
       runnerId: row.runnerId,
       runnerName: row.runnerName,
-      isWin: row.isWin,
-      back: row.Back,
-      lay: row.Lay,
+      rates: [{
+        Back: row.Back,
+        Lay: row.Lay
+      }]
     }));
 
     const filteredRunners = runners.filter(runner =>
@@ -232,6 +233,7 @@ export const getAllGameData = async (req, res) => {
         G.gameId,
         G.gameName,
         G.description,
+        G.isBlink,
         M.marketId,
         M.marketName,
         M.participants,
@@ -242,8 +244,8 @@ export const getAllGameData = async (req, res) => {
         R.runnerName,
         R.isWin,
         R.bal,
-        R.Back,
-        R.Lay
+        R.Back AS BackRate,
+        R.Lay AS LayRate
       FROM Game G
       LEFT JOIN Market M ON G.gameId = M.gameId
       LEFT JOIN Runner R ON M.marketId = R.marketId
@@ -257,6 +259,7 @@ export const getAllGameData = async (req, res) => {
           gameId: row.gameId,
           gameName: row.gameName,
           description: row.description,
+          isBlink: row.isBlink,
           markets: []
         });
         gameIndex = acc.length - 1;
@@ -277,18 +280,23 @@ export const getAllGameData = async (req, res) => {
       }
       if (row.runnerId) {
         acc[gameIndex].markets[marketIndex].runners.push({
-          runnerId: row.runnerId,
-          runnerName: row.runnerName,
-          isWin: row.isWin,
-          bal: row.bal,
-          Back: row.Back,
-          Lay: row.Lay
+          runnerName: {
+            runnerId: row.runnerId,
+            name: row.runnerName,
+            isWin: row.isWin,
+            bal: row.bal,
+          },
+          rate: [
+            {
+              Back: row.BackRate,
+              Lay: row.LayRate
+            }
+          ]
         });
       }
 
       return acc;
     }, []);
-
 
     res.status(200).send(apiResponseSuccess(allGameData, true, 200, 'Success'));
   } catch (error) {
@@ -304,6 +312,7 @@ export const filteredGameData = async (req, res) => {
         G.gameId,
         G.gameName,
         G.description,
+        G.isBlink,
         M.marketId,
         M.marketName,
         M.participants,
@@ -333,6 +342,7 @@ export const filteredGameData = async (req, res) => {
         acc.gameId = row.gameId;
         acc.gameName = gameName;
         acc.description = description;
+        acc.isBlink = row.isBlink;
         acc.markets = {};
       }
 
@@ -348,12 +358,19 @@ export const filteredGameData = async (req, res) => {
         };
       }
       acc.markets[row.marketId].runners.push({
-        runnerId: row.runnerId,
-        runnerName: row.runnerName,
-        isWin: row.isWin,
-        bal: row.bal,
-        Back: row.Back,
-        Lay: row.Lay
+        runnerName: {
+          runnerId: row.runnerId,
+          name: row.runnerName,
+          isWin: row.isWin,
+          bal: row.bal,
+        },
+          rate: [
+            {
+              Back: row.Back,
+              Lay: row.Lay
+            }
+          ]
+        
       });
 
       return acc;

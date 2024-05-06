@@ -386,7 +386,7 @@ export const getAllRunners = async (req, res) => {
     const searchQuery = req.query.search || '';
 
     const runnersQuery = `
-      SELECT Runner.*, Rate.Back, Rate.Lay
+      SELECT Runner.runnerId, Runner.runnerName, Rate.Back, Rate.Lay
       FROM Runner
       LEFT JOIN Rate ON Runner.runnerId = Rate.runnerId
       WHERE Runner.marketId = ?
@@ -396,9 +396,10 @@ export const getAllRunners = async (req, res) => {
     const runners = runnersResult.map(row => ({
       runnerId: row.runnerId,
       runnerName: row.runnerName,
-      isWin: row.isWin,
-      back: row.Back,
-      lay: row.Lay,
+      rates: [{
+        Back: row.Back,
+        Lay: row.Lay
+      }]
     }));
 
     const filteredRunners = runners.filter(runner =>
