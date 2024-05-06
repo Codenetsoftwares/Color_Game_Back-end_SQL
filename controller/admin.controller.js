@@ -342,85 +342,51 @@ export const deleteRunner = async (req, res) => {
 export const afterWining = async (req, res) => {
   const { marketId, runnerId, isWin } = req.body;
   try {
-    const updateRunnerQuery = `
-      UPDATE Runner
-      SET isWin = CASE 
-        WHEN runnerId = ? THEN ?
-        ELSE 0
-      END
-      WHERE marketId = ?;
-    `;
-    await database.execute(updateRunnerQuery, [runnerId, isWin ? 1 : 0, marketId]);
+    const runnerUpdateQuery = `UPDATE Runner 
+                               SET isWin = ? 
+                               WHERE marketId = ? AND runnerId = ?`;
+    await database.execute(runnerUpdateQuery, [isWin ? 1 : 0, marketId, runnerId]);
 
-    const updateMarketBalanceQuery = `
-      UPDATE MarketBalance
-      SET bal = CASE 
-        WHEN runnerId = ? THEN bal + (
-          SELECT COALESCE(SUM(exposure), 0) 
-          FROM User 
-          WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
-        )
-        ELSE bal - (
-          SELECT COALESCE(SUM(exposure), 0) 
-          FROM User 
-          WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
-        )
-      END
-      WHERE marketId = ?;
-    `;
-    await database.execute(updateMarketBalanceQuery, [runnerId, runnerId, runnerId, marketId]);
+    const userQuery = `SELECT * FROM User WHERE JSON_CONTAINS(marketListExposure, ?)`;
+    const [users] = await database.execute(userQuery, [{ [marketId]: { "$exists": true } }]);
 
-    const deleteMarketBalanceQuery = `
-      DELETE FROM MarketBalance
-      WHERE bal <= 0;
-    `;
-    await database.execute(deleteMarketBalanceQuery);
-    if (isWin) {
-      const updateUserBalanceQuery = `
-    UPDATE User 
-    SET balance = balance + (
-      SELECT COALESCE(SUM(exposure), 0) 
-      FROM (
-        SELECT *
-        FROM User 
-        WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
-      ) AS temp
-    )
-    WHERE EXISTS (
-      SELECT 1
-      FROM (
-        SELECT *
-        FROM User 
-        WHERE JSON_EXTRACT(marketListExposure, '$."${marketId}".*.*.runnerId') = ?
-      ) AS temp2
-    );
-  `;
-      await database.execute(updateUserBalanceQuery, [runnerId, runnerId]);
+    for (const user of users) {
+      const marketBalanceQuery = `SELECT * FROM MarketBalance WHERE userId = ? AND marketId = ? AND runnerId = ?`;
+      const [marketBalances] = await database.execute(marketBalanceQuery, [user.id, marketId, runnerId]);
+
+      if (marketBalances.length > 0) {
+        const marketExposureQuery = `SELECT JSON_UNQUOTE(JSON_EXTRACT(wallet, '$.marketListExposure.${marketId}')) AS marketExposure 
+                                     FROM User 
+                                     WHERE id = ?`;
+        const [marketExposureResult] = await database.execute(marketExposureQuery, [user.id]);
+        const marketExposureValue = marketExposureResult[0].marketExposure || 0;
+
+        if (isWin) {
+          const newBalance = user.balance + marketBalances[0].bal + marketExposureValue;
+          const updateUserBalanceQuery = `UPDATE User SET balance = ? WHERE id = ?`;
+          await database.execute(updateUserBalanceQuery, [newBalance, user.id]);
+        } else {
+          const newBalance = user.balance + marketBalances[0].bal;
+          const updateUserBalanceQuery = `UPDATE User SET balance = ?, 
+                                           marketListExposure = JSON_REMOVE(marketListExposure, '$."${marketId}"') 
+                                           WHERE id = ?`;
+          await database.execute(updateUserBalanceQuery, [newBalance, user.id]);
+        }
+
+        const profitLossEntryQuery = `INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
+                                      VALUES (?, ?, ?, ?, ?, NOW())`;
+        await database.execute(profitLossEntryQuery, [user.id, null, marketId, runnerId, marketBalances[0].bal]);
+      }
     }
 
     if (isWin) {
-      const insertBetHistoryQuery = `
-        INSERT INTO betHistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss)
-        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, NOW(), bidAmount, ?, profitLoss
-        FROM currentOrder
-        WHERE marketId = ?;
-      `;
-      await database.execute(insertBetHistoryQuery, [isWin, marketId]);
-
-      const deleteCurrentOrderQuery = `
-        DELETE FROM currentOrder
-        WHERE marketId = ?;
-      `;
-      await database.execute(deleteCurrentOrderQuery, [marketId]);
+      const deleteOrdersQuery = `DELETE FROM currentOrder WHERE marketId = ?`;
+      await database.execute(deleteOrdersQuery, [marketId]);
     }
 
     return res.status(200).send(apiResponseSuccess(null, true, 200, 'success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(error.responseCode ?? 500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-
-
-
 
