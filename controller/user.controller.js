@@ -886,6 +886,7 @@ GROUP BY ProfitLoss.marketId
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+// done
 export const runnerProfitLoss = async (req, res) => {
   try {
 

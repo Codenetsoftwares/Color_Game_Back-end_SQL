@@ -42,5 +42,6 @@ export const UserRoute = (app) => {
   app.get('/api/profit_loss', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), calculateProfitLoss)
   // done
   app.get('/api/profit_loss_market/:gameId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), marketProfitLoss)
+  // done
   app.get('/api/profit_loss_runner/:marketId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), runnerProfitLoss)
 }
