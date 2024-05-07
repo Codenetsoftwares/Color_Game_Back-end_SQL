@@ -880,7 +880,7 @@ GROUP BY ProfitLoss.marketId
     const [totalItemsRows] = await database.execute(totalItemsQuery, [userId, gameId, startDateObj, endDateObj]);
     const totalItems = totalItemsRows[0].totalItems;
 
-    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, 200, 'Success', { totalItems }));
+    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, 200, 'Success'));
 
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
