@@ -557,7 +557,7 @@ export const filterMarketData = async (req, res) => {
 
     marketDataRows.forEach(row => {
       marketDataObj.runners.push({
-        id: row.id, 
+        id: row.id,
         runnerName: {
           runnerId: row.runnerId,
           name: row.runnerName,
@@ -613,50 +613,50 @@ export const filterMarketData = async (req, res) => {
           bal: runner.runnerName.bal
         });
       });
-      const userMarketBalanceQuery = `
-        SELECT 
-          userId,
-          marketId,
-          runnerId,
-          bal
-        FROM MarketBalance
-        WHERE userId = ? AND marketId = ?
-      `;
-      const [userMarketBalanceRows] = await database.execute(userMarketBalanceQuery, [userId, marketId]);
 
-      if (userMarketBalanceRows.length > 0) {
-        const updateUserMarketBalanceQuery = `
-          UPDATE MarketBalance
-          SET bal = ?
+      for (const balance of userMarketBalance.runnerBalance) {
+        const userMarketBalanceQuery = `
+          SELECT 
+            userId,
+            marketId,
+            runnerId,
+            bal
+          FROM MarketBalance
           WHERE userId = ? AND marketId = ? AND runnerId = ?
         `;
-        for (const balance of userMarketBalance.runnerBalance) {
+        const [userMarketBalanceRows] = await database.execute(userMarketBalanceQuery, [userId, marketId, balance.runnerId]);
+
+        if (userMarketBalanceRows.length > 0) {
+          const updateUserMarketBalanceQuery = `
+            UPDATE MarketBalance
+            SET bal = ?
+            WHERE userId = ? AND marketId = ? AND runnerId = ?
+          `;
           await database.execute(updateUserMarketBalanceQuery, [balance.bal, userId, marketId, balance.runnerId]);
-        }
-      } else {
-        const insertUserMarketBalanceQuery = `
-          INSERT INTO MarketBalance (userId, marketId, runnerId, bal)
-          VALUES (?, ?, ?, ?)
-        `;
-        for (const balance of userMarketBalance.runnerBalance) {
+        } else {
+          const insertUserMarketBalanceQuery = `
+            INSERT INTO MarketBalance (userId, marketId, runnerId, bal)
+            VALUES (?, ?, ?, ?)
+          `;
           await database.execute(insertUserMarketBalanceQuery, [userId, marketId, balance.runnerId, balance.bal]);
         }
       }
     }
+
 
     res.status(200).send(apiResponseSuccess(marketDataObj, true, 200, 'Success'));
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
+// Not getting correct balance but exposure is done
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
   try {
     if (!userId) throw apiResponseErr(null, false, 400, 'User ID is required');
     if (value < 0) throw apiResponseErr(null, false, 400, 'Bid value cannot be negative');
 
-    const [balanceData] = await database.execute('SELECT balance FROM User WHERE id = ?', [userId]);
+    const [balanceData] = await database.execute('SELECT ROUND(balance, 2) AS balance FROM User WHERE id = ?', [userId]);
     const userBalance = balanceData[0].balance;
     if (userBalance < value) throw apiResponseErr(null, false, 400, 'Insufficient balance. Bid cannot be placed.');
 
@@ -674,7 +674,7 @@ export const createBid = async (req, res) => {
     const betAmount = bidType === 'Back' ? value : mainValue;
 
     const updateUserBalanceQuery = `
-      UPDATE User SET balance = ?, exposure = ?, marketListExposure = ? WHERE id = ?;
+      UPDATE User SET balance = ?, exposure = ROUND(?, 2), marketListExposure = ? WHERE id = ?;
     `;
     const walletData = wallet !== undefined ? wallet : null;
     const exposureData = exposure !== undefined ? exposure : null;
@@ -794,4 +794,156 @@ export const currentOrderHistory = async (req, res) => {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 }
+// done
+export const calculateProfitLoss = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 5;
+    const startDate = req.query.startDate + ' 00:00:00';
+    const endDate = req.query.endDate + ' 23:59:59';
+    const query = `
+      SELECT
+        gameId,
+        SUM(profitLoss) AS totalProfitLoss
+      FROM ProfitLoss
+      WHERE userId = ? AND date >= ? AND date <= ?
+      GROUP BY gameId
+    `;
+
+    const parameters = [userId, startDate, endDate];
+    const [rows] = await database.execute(query, parameters);
+
+    if (rows.length === 0) {
+      throw apiResponseErr(null, 404, false, 'No profit/loss data found for the given date range.');
+    }
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const profitLossData = rows.slice(startIndex, endIndex);
+    const totalItems = rows.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const paginationData = {
+      page: page,
+      totalPages: totalPages,
+      totalItems: totalItems
+    };
+
+    return res.status(200).send(apiResponseSuccess(profitLossData, true, 200, 'Success', paginationData));
+
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+// done
+export const marketProfitLoss = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const gameId = req.params.gameId;
+    const { startDate, endDate } = req.query;
+
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    endDateObj.setHours(23, 59, 59, 999);
+
+    const query = `
+    SELECT
+    ProfitLoss.marketId,
+    Market.marketName,
+    SUM(ProfitLoss.profitLoss) AS totalProfitLoss
+FROM ProfitLoss
+JOIN Market ON ProfitLoss.marketId = Market.marketId
+WHERE ProfitLoss.userId = ? AND ProfitLoss.gameId = ? AND ProfitLoss.date >= ? AND ProfitLoss.date <= ?
+GROUP BY ProfitLoss.marketId
+
+    `;
+
+    const parameters = [userId, gameId, startDateObj, endDateObj];
+    const [rows] = await database.execute(query, parameters);
+
+    if (rows.length === 0) {
+      throw apiResponseErr(null, false, 400, 'No profit/loss data found for the given date range.');
+    }
+
+    const marketsProfitLoss = rows.map(row => ({
+      marketId: row.marketId,
+      marketName: row.marketName,
+      totalProfitLoss: row.totalProfitLoss
+    }));
+
+    const totalItemsQuery = `
+      SELECT COUNT(DISTINCT marketId) AS totalItems
+      FROM ProfitLoss
+      WHERE userId = ? AND gameId = ? AND date >= ? AND date <= ?
+    `;
+    const [totalItemsRows] = await database.execute(totalItemsQuery, [userId, gameId, startDateObj, endDateObj]);
+    const totalItems = totalItemsRows[0].totalItems;
+
+    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, 200, 'Success', { totalItems }));
+
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
+export const runnerProfitLoss = async (req, res) => {
+  try {
+
+    const userId = req.user.id;
+    const marketId = req.params.marketId;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 5;
+    const { startDate, endDate } = req.query
+
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    endDateObj.setHours(23, 59, 59, 999);
+
+    const query = `
+      SELECT
+          g.gameName,
+          m.marketName,
+          r.runnerName,
+          r.runnerId,
+          SUM(pl.profitLoss) AS totalProfitLoss
+      FROM
+          ProfitLoss pl
+      JOIN
+          Market m ON pl.marketId = m.marketId
+      JOIN
+          Runner r ON pl.runnerId = r.runnerId
+      JOIN
+          Game g ON pl.gameId = g.gameId
+      WHERE
+          pl.userId = ? AND
+          pl.marketId = ? AND
+          pl.date >= ? AND
+          pl.date <= ?
+      GROUP BY
+          g.gameName, m.marketName, r.runnerName, r.runnerId
+    `;
+
+    const parameters = [userId, marketId, startDateObj, endDateObj];
+    const [rows] = await database.execute(query, parameters);
+
+    if (rows.length === 0) {
+      throw apiResponseErr(null, false, 400, 'No profit/loss data found for the given date range.');
+    }
+
+    const runnersProfitLoss = rows.map(row => ({
+      gameName: row.gameName,
+      marketName: row.marketName,
+      runnerName: row.runnerName,
+      runnerId: row.runnerId,
+      profitLoss: row.totalProfitLoss
+    }));
+
+    return res.status(200).send(apiResponseSuccess( { runnersProfitLoss: runnersProfitLoss }, true, 200, 'Success'));
+  } catch (error) {
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+
+  }
+}
+
+
 

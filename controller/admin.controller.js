@@ -363,22 +363,23 @@ export const afterWining = async (req, res) => {
         u.marketListExposure = ?
       WHERE mb.marketId = ?;
     `;
-    
+
     const marketListExposure = {};
     marketListExposure[marketId] = 0;
-    
+
     const exposureIncrement = isWin ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
     const exposureDecrement = isWin ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
-    
+
     await database.execute(updateUserBalancesQuery, [runnerId, exposureIncrement, exposureDecrement, JSON.stringify([marketListExposure]), marketId]);
 
     const insertProfitLossQuery = `
-      INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
-      SELECT userId, ?, ?, ?, bal, NOW() 
-      FROM MarketBalance 
-      WHERE marketId = ?;
-    `;
-    await database.execute(insertProfitLossQuery, [gameId, marketId, runnerId, marketId]);
+    INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
+    SELECT userId, ?, ?, ?, bal, NOW() 
+    FROM MarketBalance 
+    WHERE marketId = ? AND runnerId = ?;
+  `;
+
+    await database.execute(insertProfitLossQuery, [gameId, marketId, runnerId, marketId, runnerId]);
 
     if (isWin) {
       const deleteOrdersQuery = `

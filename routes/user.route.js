@@ -1,6 +1,6 @@
-import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, getUserBetHistory, currentOrderHistory, } from '../controller/user.controller.js';
+import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, getUserBetHistory, currentOrderHistory, calculateProfitLoss, marketProfitLoss, runnerProfitLoss, } from '../controller/user.controller.js';
 import { Authorize } from "../middleware/auth.js";
-import { bidHistorySchema, bidTypeSchema, currentOrderSchema } from '../schema/commonSchema.js';
+import { bidHistorySchema, bidTypeSchema, calculateProfitLossSchema, currentOrderSchema } from '../schema/commonSchema.js';
 import customErrorHandler from '../middleware/customErrorHandler.js'
 
 export const UserRoute = (app) => {
@@ -30,13 +30,17 @@ export const UserRoute = (app) => {
   app.get('/api/user/view-wallet/:userId', Authorize(['User']), getUserWallet)
   // done
   app.get('/api/transactionDetails/:userId', Authorize(['User']), transactionDetails);
-  // 80%
+  // done
   app.post('/api/user-filter-marketData/:marketId', filterMarketData);
-  // testing after done from frontend
+  // Not getting correct balance but exposure is done
   app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, Authorize(['User']), createBid)
   // done
   app.get('/api/user-betHistory/:marketId', bidHistorySchema, customErrorHandler, Authorize(['User']), getUserBetHistory)
   // done
   app.get('/api/user-currentOrderHistory/:marketId', currentOrderSchema, customErrorHandler, Authorize(['User']), currentOrderHistory);
-
+  // done
+  app.get('/api/profit_loss', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), calculateProfitLoss)
+  // done
+  app.get('/api/profit_loss_market/:gameId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), marketProfitLoss)
+  app.get('/api/profit_loss_runner/:marketId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), runnerProfitLoss)
 }
