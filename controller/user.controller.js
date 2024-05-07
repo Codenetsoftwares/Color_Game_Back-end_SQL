@@ -522,6 +522,7 @@ export const filterMarketData = async (req, res) => {
 
     const marketQuery = `
       SELECT 
+        R.id,
         M.marketId,
         M.marketName,
         M.participants,
@@ -556,6 +557,7 @@ export const filterMarketData = async (req, res) => {
 
     marketDataRows.forEach(row => {
       marketDataObj.runners.push({
+        id: row.id, 
         runnerName: {
           runnerId: row.runnerId,
           name: row.runnerName,
@@ -651,22 +653,22 @@ export const filterMarketData = async (req, res) => {
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
   try {
-    if (!userId) throw apiResponseErr(null, false, 400,'User ID is required');
-    if (value < 0) throw apiResponseErr(null, false, 400,'Bid value cannot be negative');
-    
+    if (!userId) throw apiResponseErr(null, false, 400, 'User ID is required');
+    if (value < 0) throw apiResponseErr(null, false, 400, 'Bid value cannot be negative');
+
     const [balanceData] = await database.execute('SELECT balance FROM User WHERE id = ?', [userId]);
     const userBalance = balanceData[0].balance;
-    if (userBalance < value) throw apiResponseErr(null, false, 400,'Insufficient balance. Bid cannot be placed.');
-    
+    if (userBalance < value) throw apiResponseErr(null, false, 400, 'Insufficient balance. Bid cannot be placed.');
+
     const [gameData] = await database.execute('SELECT * FROM Game WHERE gameId = ?', [gameId]);
-    if (gameData.length === 0) throw apiResponseErr(null, false, 400,'Game not found');
-    
+    if (gameData.length === 0) throw apiResponseErr(null, false, 400, 'Game not found');
+
     const [marketData] = await database.execute('SELECT * FROM Market WHERE marketId = ?', [marketId]);
-    if (marketData.length === 0) throw apiResponseErr(null, false, 400,'Market not found');
-    
+    if (marketData.length === 0) throw apiResponseErr(null, false, 400, 'Market not found');
+
     const [runnerData] = await database.execute('SELECT * FROM Runner WHERE runnerId = ?', [runnerId]);
-    if (runnerData.length === 0) throw apiResponseErr(null, false, 400,'Runner not found');
-    
+    if (runnerData.length === 0) throw apiResponseErr(null, false, 400, 'Runner not found');
+
     const adjustedRate = bidType === 'Back' ? runnerData[0].Back - 1 : runnerData[0].Lay - 1;
     const mainValue = Math.round(adjustedRate * value);
     const betAmount = bidType === 'Back' ? value : mainValue;
@@ -685,7 +687,7 @@ export const createBid = async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `;
     await database.execute(insertCurrentOrderQuery, [userId, gameId, gameData[0].gameName, marketId, marketData[0].marketName, runnerId, runnerData[0].runnerName, bidType, value, runnerData[0][bidType], currentDate, mainValue, exposure]);
-    
+
     return res.status(200).send(apiResponseSuccess(null, true, 200, 'Bid placed successfully'));
   } catch (error) {
     res
@@ -693,7 +695,6 @@ export const createBid = async (req, res) => {
       .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
 // done
 export const getUserBetHistory = async (req, res) => {
   try {

@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 export const announcements = async (req, res) => {
     const { typeOfAnnouncement, announcement } = req.body;
     try {
-
         const gameQuery = 'SELECT * FROM Game WHERE gameName = ?';
         const [gameResult] = await database.execute(gameQuery, [typeOfAnnouncement]);
         const game = gameResult[0];
@@ -22,20 +21,19 @@ export const announcements = async (req, res) => {
 
         if (!announce) {
             const announceId = uuidv4();
-            const announcementString = Array.isArray(announcement) ? announcement.join('') : announcement; // Convert array of characters to string
             const insertAnnouncementQuery = `
                 INSERT INTO Announcement (gameId, announceId, typeOfAnnouncement, announcement)
                 VALUES (?, ?, ?, ?)
             `;
-            await database.execute(insertAnnouncementQuery, [game.gameId, announceId, typeOfAnnouncement, announcementString]);
+            await database.execute(insertAnnouncementQuery, [game.gameId, announceId, typeOfAnnouncement, announcement]);
 
             const newAnnouncementQuery = 'SELECT * FROM Announcement WHERE announceId = ?';
             const [newAnnouncementResult] = await database.execute(newAnnouncementQuery, [announceId]);
             announce = newAnnouncementResult[0];
         } else {
-            const updatedAnnouncement = [...announce.announcement, announcement];
             const updateAnnouncementQuery = 'UPDATE Announcement SET announcement = ? WHERE announceId = ?';
-            await database.execute(updateAnnouncementQuery, [JSON.stringify(updatedAnnouncement), announce.announceId]);
+            await database.execute(updateAnnouncementQuery, [announcement, announce.announceId]);
+            announce.announcement = announcement;
         }
 
         return res.status(201).json(apiResponseSuccess(announce, true, 201, 'Announcement created successfully'));
