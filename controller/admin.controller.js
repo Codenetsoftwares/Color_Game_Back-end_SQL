@@ -342,51 +342,65 @@ export const deleteRunner = async (req, res) => {
 export const afterWining = async (req, res) => {
   const { marketId, runnerId, isWin } = req.body;
   try {
-    const runnerUpdateQuery = `UPDATE Runner 
-                               SET isWin = ? 
-                               WHERE marketId = ? AND runnerId = ?`;
-    await database.execute(runnerUpdateQuery, [isWin ? 1 : 0, marketId, runnerId]);
+    const updateRunnerQuery = `
+      UPDATE Runner 
+      SET isWin = ? 
+      WHERE marketId = ? AND runnerId = ?;
+    `;
+    await database.execute(updateRunnerQuery, [isWin, marketId, runnerId]);
 
-    const userQuery = `SELECT * FROM User WHERE JSON_CONTAINS(marketListExposure, ?)`;
-    const [users] = await database.execute(userQuery, [{ [marketId]: { "$exists": true } }]);
+    const [gameData] = await database.execute('SELECT gameId FROM Market WHERE marketId = ?', [marketId]);
+    const gameId = gameData[0].gameId;
 
-    for (const user of users) {
-      const marketBalanceQuery = `SELECT * FROM MarketBalance WHERE userId = ? AND marketId = ? AND runnerId = ?`;
-      const [marketBalances] = await database.execute(marketBalanceQuery, [user.id, marketId, runnerId]);
+    const updateUserBalancesQuery = `
+      UPDATE User u
+      INNER JOIN MarketBalance mb ON u.id = mb.userId
+      INNER JOIN Runner r ON mb.runnerId = r.runnerId
+      SET u.balance = CASE
+          WHEN r.runnerId = ? THEN u.balance + mb.bal + ?
+          ELSE u.balance + mb.bal - ?
+        END,
+        u.marketListExposure = ?
+      WHERE mb.marketId = ?;
+    `;
+    
+    const marketListExposure = {};
+    marketListExposure[marketId] = 0;
+    
+    const exposureIncrement = isWin ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
+    const exposureDecrement = isWin ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
+    
+    await database.execute(updateUserBalancesQuery, [runnerId, exposureIncrement, exposureDecrement, JSON.stringify([marketListExposure]), marketId]);
 
-      if (marketBalances.length > 0) {
-        const marketExposureQuery = `SELECT JSON_UNQUOTE(JSON_EXTRACT(wallet, '$.marketListExposure.${marketId}')) AS marketExposure 
-                                     FROM User 
-                                     WHERE id = ?`;
-        const [marketExposureResult] = await database.execute(marketExposureQuery, [user.id]);
-        const marketExposureValue = marketExposureResult[0].marketExposure || 0;
-
-        if (isWin) {
-          const newBalance = user.balance + marketBalances[0].bal + marketExposureValue;
-          const updateUserBalanceQuery = `UPDATE User SET balance = ? WHERE id = ?`;
-          await database.execute(updateUserBalanceQuery, [newBalance, user.id]);
-        } else {
-          const newBalance = user.balance + marketBalances[0].bal;
-          const updateUserBalanceQuery = `UPDATE User SET balance = ?, 
-                                           marketListExposure = JSON_REMOVE(marketListExposure, '$."${marketId}"') 
-                                           WHERE id = ?`;
-          await database.execute(updateUserBalanceQuery, [newBalance, user.id]);
-        }
-
-        const profitLossEntryQuery = `INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
-                                      VALUES (?, ?, ?, ?, ?, NOW())`;
-        await database.execute(profitLossEntryQuery, [user.id, null, marketId, runnerId, marketBalances[0].bal]);
-      }
-    }
+    const insertProfitLossQuery = `
+      INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
+      SELECT userId, ?, ?, ?, bal, NOW() 
+      FROM MarketBalance 
+      WHERE marketId = ?;
+    `;
+    await database.execute(insertProfitLossQuery, [gameId, marketId, runnerId, marketId]);
 
     if (isWin) {
-      const deleteOrdersQuery = `DELETE FROM currentOrder WHERE marketId = ?`;
+      const deleteOrdersQuery = `
+        DELETE FROM currentOrder 
+        WHERE marketId = ?;
+      `;
       await database.execute(deleteOrdersQuery, [marketId]);
-    }
 
+      const insertBetHistoryQuery = `
+        INSERT INTO betHistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss) 
+        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, ?, profitLoss
+        FROM currentOrder 
+        WHERE marketId = ?;
+      `;
+      await database.execute(insertBetHistoryQuery, [isWin, marketId]);
+    }
     return res.status(200).send(apiResponseSuccess(null, true, 200, 'success'));
   } catch (error) {
     res.status(error.responseCode ?? 500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
+
+
 
