@@ -389,15 +389,16 @@ export const getAllRunners = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
     const searchQuery = req.query.search || '';
-
-    const runnersQuery = `
-      SELECT Runner.runnerId, Runner.runnerName, Rate.Back, Rate.Lay
-      FROM Runner
-      LEFT JOIN Rate ON Runner.runnerId = Rate.runnerId
-      WHERE Runner.marketId = ?
-    `;
-    const [runnersResult] = await database.execute(runnersQuery, [marketId]);
-
+    // Old Code
+    // const runnersQuery = `
+    //   SELECT Runner.runnerId, Runner.runnerName, Rate.Back, Rate.Lay
+    //   FROM Runner
+    //   LEFT JOIN Rate ON Runner.runnerId = Rate.runnerId
+    //   WHERE Runner.marketId = ?
+    // `;
+    // const [runnersResult] = await database.execute(runnersQuery, [marketId]);
+    const [runnersResult] = await database.execute(`SELECT * FROM Runner WHERE marketId = (?)`, [marketId]);
+      console.log("runnersResult", runnersResult);
     const runners = runnersResult.map(row => ({
       runnerId: row.runnerId,
       runnerName: row.runnerName,
