@@ -955,11 +955,9 @@ export const runnerProfitLoss = async (req, res) => {
 //Done
 export const userMarketData = async (req, res) => {
   try {
-    console.log('Request user:', req.user); 
     const userId = req.user ? req.user.id : null;
 
     if (!userId) {
-      console.log('User ID not provided');
       return res.status(400).send(apiResponseErr(null, false, 400, 'User ID not provided'));
     }
     const getCurrentMarketQuery = `
@@ -980,7 +978,6 @@ export const userMarketData = async (req, res) => {
     };
     res.status(200).send(apiResponseSuccess(responseData, true, 200, 'Success'));
   } catch (error) {
-    console.error('Error:', error); 
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 }
