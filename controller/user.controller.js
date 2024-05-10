@@ -841,25 +841,28 @@ export const marketProfitLoss = async (req, res) => {
   try {
     const userId = req.user.id;
     const gameId = req.params.gameId;
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, page, pageSize } = req.query;
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
+    const offset = (parseInt(page) - 1) * parseInt(pageSize);
+    const limit = parseInt(pageSize);
 
     const query = `
-    SELECT
-    ProfitLoss.marketId,
-    Market.marketName,
-    SUM(ProfitLoss.profitLoss) AS totalProfitLoss
-FROM ProfitLoss
-JOIN Market ON ProfitLoss.marketId = Market.marketId
-WHERE ProfitLoss.userId = ? AND ProfitLoss.gameId = ? AND ProfitLoss.date >= ? AND ProfitLoss.date <= ?
-GROUP BY ProfitLoss.marketId
-
+      SELECT
+        ProfitLoss.marketId,
+        Market.marketName,
+        SUM(ProfitLoss.profitLoss) AS totalProfitLoss
+      FROM ProfitLoss
+      JOIN Market ON ProfitLoss.marketId = Market.marketId
+      WHERE ProfitLoss.userId = ? AND ProfitLoss.gameId = ? AND ProfitLoss.date >= ? AND ProfitLoss.date <= ?
+      GROUP BY ProfitLoss.marketId
+      ORDER BY ProfitLoss.marketId
+      LIMIT ?, ?
     `;
 
-    const parameters = [userId, gameId, startDateObj, endDateObj];
+    const parameters = [userId, gameId, startDateObj, endDateObj, offset, limit];
     const [rows] = await database.execute(query, parameters);
 
     if (rows.length === 0) {
@@ -880,21 +883,22 @@ GROUP BY ProfitLoss.marketId
     const [totalItemsRows] = await database.execute(totalItemsQuery, [userId, gameId, startDateObj, endDateObj]);
     const totalItems = totalItemsRows[0].totalItems;
 
-    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, 200, 'Success'));
+    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss, totalItems: totalItems }, true, 200, 'Success'));
 
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
 // done
 export const runnerProfitLoss = async (req, res) => {
   try {
-
     const userId = req.user.id;
     const marketId = req.params.marketId;
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 5;
-    const { startDate, endDate } = req.query
+    let { page, limit, startDate, endDate } = req.query;
+    page = page ? parseInt(page) : 1;
+    limit = limit ? parseInt(limit) : 5;
+    const offset = (page - 1) * limit;
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
@@ -922,9 +926,12 @@ export const runnerProfitLoss = async (req, res) => {
           pl.date <= ?
       GROUP BY
           g.gameName, m.marketName, r.runnerName, r.runnerId
+      ORDER BY
+          totalProfitLoss DESC
+      LIMIT ?, ?
     `;
 
-    const parameters = [userId, marketId, startDateObj, endDateObj];
+    const parameters = [userId, marketId, startDateObj, endDateObj, offset, limit];
     const [rows] = await database.execute(query, parameters);
 
     if (rows.length === 0) {
@@ -939,12 +946,51 @@ export const runnerProfitLoss = async (req, res) => {
       profitLoss: row.totalProfitLoss
     }));
 
-    return res.status(200).send(apiResponseSuccess( { runnersProfitLoss: runnersProfitLoss }, true, 200, 'Success'));
+    return res.status(200).send(apiResponseSuccess({ runnersProfitLoss: runnersProfitLoss }, true, 200, 'Success'));
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+  }
+};
 
+//Done
+export const userMarketData = async (req, res) => {
+  try {
+    console.log('Request user:', req.user); 
+    const userId = req.user ? req.user.id : null;
+
+    if (!userId) {
+      console.log('User ID not provided');
+      return res.status(400).send(apiResponseErr(null, false, 400, 'User ID not provided'));
+    }
+    const getCurrentMarketQuery = `
+      SELECT DISTINCT marketId, marketName
+      FROM currentOrder
+      WHERE userId = ?
+    `;
+    const [currentMarketResults] = await database.execute(getCurrentMarketQuery, [userId]);
+    const getBetHistoryQuery = `
+      SELECT DISTINCT marketId, marketName
+      FROM betHistory
+      WHERE userId = ?
+    `;
+    const [betHistoryResults] = await database.execute(getBetHistoryQuery, [userId]);
+    const responseData = {
+      currentMarket: currentMarketResults,
+      betHistory: betHistoryResults
+    };
+    res.status(200).send(apiResponseSuccess(responseData, true, 200, 'Success'));
+  } catch (error) {
+    console.error('Error:', error); 
+    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 }
+
+
+
+
+
+
+
 
 
 

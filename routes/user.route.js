@@ -1,4 +1,4 @@
-import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, getUserBetHistory, currentOrderHistory, calculateProfitLoss, marketProfitLoss, runnerProfitLoss, } from '../controller/user.controller.js';
+import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, getUserBetHistory, currentOrderHistory, calculateProfitLoss, marketProfitLoss, runnerProfitLoss, userMarketData, } from '../controller/user.controller.js';
 import { Authorize } from "../middleware/auth.js";
 import { bidHistorySchema, bidTypeSchema, calculateProfitLossSchema, currentOrderSchema } from '../schema/commonSchema.js';
 import customErrorHandler from '../middleware/customErrorHandler.js'
@@ -44,4 +44,6 @@ export const UserRoute = (app) => {
   app.get('/api/profit_loss_market/:gameId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), marketProfitLoss)
   // done
   app.get('/api/profit_loss_runner/:marketId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), runnerProfitLoss)
+
+  app.get('/api/user-market-data', customErrorHandler, Authorize(['User']), userMarketData);
 }
