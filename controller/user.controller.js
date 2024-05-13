@@ -699,11 +699,10 @@ export const createBid = async (req, res) => {
 export const getUserBetHistory = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log("userId", userId)
     const marketId = req.params.marketId;
+    const { startDate, endDate } = req.query;
     const page = req.query.page || 1;
     const limit = req.query.limit || 5;
-    const { startDate, endDate } = req.query;
 
     let start = null;
     let end = null;
@@ -754,11 +753,30 @@ export const getUserBetHistory = async (req, res) => {
       type: row.type,
       date: row.date
     }));
-    res.status(200).send(apiResponseSuccess(betDetails, true, 200, 'Success'));
+
+    
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedBetDetails = betDetails.slice(startIndex, endIndex);
+
+    const paginationData = {
+      totalItems: betDetails.length,
+      totalPages: Math.ceil(betDetails.length / limit),
+      currentPage: page
+    };
+
+    const response = {
+      data: paginatedBetDetails,
+      pagination: paginationData
+    };
+
+    res.status(200).send(apiResponseSuccess(response, true, 200, 'Success'));
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
+       
 // done
 export const currentOrderHistory = async (req, res) => {
   try {
@@ -841,13 +859,11 @@ export const marketProfitLoss = async (req, res) => {
   try {
     const userId = req.user.id;
     const gameId = req.params.gameId;
-    const { startDate, endDate, page, pageSize } = req.query;
+    const { startDate, endDate, page, limit } = req.query;
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
-    const offset = (parseInt(page) - 1) * parseInt(pageSize);
-    const limit = parseInt(pageSize);
 
     const query = `
       SELECT
@@ -859,10 +875,9 @@ export const marketProfitLoss = async (req, res) => {
       WHERE ProfitLoss.userId = ? AND ProfitLoss.gameId = ? AND ProfitLoss.date >= ? AND ProfitLoss.date <= ?
       GROUP BY ProfitLoss.marketId
       ORDER BY ProfitLoss.marketId
-      LIMIT ?, ?
     `;
 
-    const parameters = [userId, gameId, startDateObj, endDateObj, offset, limit];
+    const parameters = [userId, gameId, startDateObj, endDateObj];
     const [rows] = await database.execute(query, parameters);
 
     if (rows.length === 0) {
@@ -875,30 +890,37 @@ export const marketProfitLoss = async (req, res) => {
       totalProfitLoss: row.totalProfitLoss
     }));
 
-    const totalItemsQuery = `
-      SELECT COUNT(DISTINCT marketId) AS totalItems
-      FROM ProfitLoss
-      WHERE userId = ? AND gameId = ? AND date >= ? AND date <= ?
-    `;
-    const [totalItemsRows] = await database.execute(totalItemsQuery, [userId, gameId, startDateObj, endDateObj]);
-    const totalItems = totalItemsRows[0].totalItems;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedMarketsProfitLoss = marketsProfitLoss.slice(startIndex, endIndex);
 
-    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss, totalItems: totalItems }, true, 200, 'Success'));
+    const totalItems = marketsProfitLoss.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const paginationData = {
+      currentPage: parseInt(page),
+      pageSize: parseInt(limit),
+      totalItems,
+      totalPages
+    };
+
+    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: paginatedMarketsProfitLoss, pagination: paginationData }, true, 200, 'Success'));
 
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 
+
+
+
 // done
 export const runnerProfitLoss = async (req, res) => {
   try {
     const userId = req.user.id;
     const marketId = req.params.marketId;
-    let { page, limit, startDate, endDate } = req.query;
-    page = page ? parseInt(page) : 1;
-    limit = limit ? parseInt(limit) : 5;
-    const offset = (page - 1) * limit;
+    let {startDate, endDate } = req.query;
+   
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
@@ -928,17 +950,16 @@ export const runnerProfitLoss = async (req, res) => {
           g.gameName, m.marketName, r.runnerName, r.runnerId
       ORDER BY
           totalProfitLoss DESC
-      LIMIT ?, ?
     `;
 
-    const parameters = [userId, marketId, startDateObj, endDateObj, offset, limit];
+    const parameters = [userId, marketId, startDateObj, endDateObj];
     const [rows] = await database.execute(query, parameters);
 
     if (rows.length === 0) {
       throw apiResponseErr(null, false, 400, 'No profit/loss data found for the given date range.');
     }
 
-    const runnersProfitLoss = rows.map(row => ({
+    const runnersProfitLoss = paginatedRows.map(row => ({
       gameName: row.gameName,
       marketName: row.marketName,
       runnerName: row.runnerName,
@@ -946,11 +967,14 @@ export const runnerProfitLoss = async (req, res) => {
       profitLoss: row.totalProfitLoss
     }));
 
-    return res.status(200).send(apiResponseSuccess({ runnersProfitLoss: runnersProfitLoss }, true, 200, 'Success'));
+
+
+    return res.status(200).send(apiResponseSuccess({ runnersProfitLoss}, true, 200, 'Success'));
   } catch (error) {
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
 
 //Done
 export const userMarketData = async (req, res) => {
@@ -958,6 +982,7 @@ export const userMarketData = async (req, res) => {
     const userId = req.user ? req.user.id : null;
 
     if (!userId) {
+      console.log('User ID not provided');
       return res.status(400).send(apiResponseErr(null, false, 400, 'User ID not provided'));
     }
     const getCurrentMarketQuery = `
@@ -978,6 +1003,7 @@ export const userMarketData = async (req, res) => {
     };
     res.status(200).send(apiResponseSuccess(responseData, true, 200, 'Success'));
   } catch (error) {
+    console.error('Error:', error); 
     res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 }
