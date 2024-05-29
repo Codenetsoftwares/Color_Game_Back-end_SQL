@@ -1,6 +1,6 @@
-import { database } from '../controller/database.controller.js'
+import { database } from '../controller/database.controller.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../middleware/serverError.js';
 import moment from 'moment';
 
@@ -8,7 +8,7 @@ import moment from 'moment';
 export const loginUser = async (req, res) => {
   try {
     const { userName, password } = req.body;
-    console.log("req", req.body)
+    console.log('req', req.body);
     if (!userName || !password) {
       return res.status(400).send(apiResponseErr(null, false, 400, 'Required'));
     }
@@ -19,10 +19,10 @@ export const loginUser = async (req, res) => {
     if (!existingUser || !existingUser.password) {
       return res.status(401).send(apiResponseErr(null, false, 401, 'User not found'));
     }
-    console.log("existingUser.password", existingUser.password)
-    console.log("pass", password)
+    console.log('existingUser.password', existingUser.password);
+    console.log('pass', password);
     const isPasswordValid = await bcrypt.compare(password, existingUser.password);
-    console.log('isPassword', isPasswordValid)
+    console.log('isPassword', isPasswordValid);
 
     if (!isPasswordValid) {
       return res.status(401).send(apiResponseErr(null, false, 401, 'Invalid username or password..'));
@@ -33,21 +33,28 @@ export const loginUser = async (req, res) => {
       userName: existingUser.userName,
       isEighteen: existingUser.eligibilityCheck,
       UserType: existingUser.userType || 'User',
-      wallet: existingUser.wallet
+      wallet: existingUser.wallet,
     };
 
     const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
       expiresIn: '1d',
     });
 
-    res.status(200).send(apiResponseSuccess({
-      accessToken, id: existingUser.id,
-      userName: existingUser.userName,
-      isEighteen: existingUser.eligibilityCheck,
-      UserType: existingUser.userType || 'User',
-      wallet: existingUser.wallet
-    }, true, 200, 'Login successful'));
-
+    res.status(200).send(
+      apiResponseSuccess(
+        {
+          accessToken,
+          id: existingUser.id,
+          userName: existingUser.userName,
+          isEighteen: existingUser.eligibilityCheck,
+          UserType: existingUser.userType || 'User',
+          wallet: existingUser.wallet,
+        },
+        true,
+        200,
+        'Login successful',
+      ),
+    );
   } catch (error) {
     res
       .status(500)
@@ -124,7 +131,7 @@ export const userGame = async (req, res) => {
       return res.status(400).json(apiResponseErr(null, false, 400, 'Data Not Found'));
     }
 
-    const gameData = fetchGameDataResult.map(row => ({
+    const gameData = fetchGameDataResult.map((row) => ({
       gameId: row.gameId,
       gameName: row.gameName,
       description: row.description,
@@ -147,7 +154,9 @@ export const userGame = async (req, res) => {
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
     return res.status(200).send(apiResponseSuccess(paginatedGameData, true, 200, 'Success', paginationData));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -177,12 +186,14 @@ export const userMarket = async (req, res) => {
     const paginationData = {
       currentPage: page,
       totalPages: totalPages,
-      totalItems: totalItems
+      totalItems: totalItems,
     };
 
     return res.status(200).send(apiResponseSuccess(paginatedMarkets, true, 200, 'Success', paginationData));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -201,17 +212,19 @@ export const userRunners = async (req, res) => {
     `;
     const [runnersResult] = await database.execute(runnersQuery, [marketId]);
 
-    const runners = runnersResult.map(row => ({
+    const runners = runnersResult.map((row) => ({
       runnerId: row.runnerId,
       runnerName: row.runnerName,
-      rates: [{
-        Back: row.Back,
-        Lay: row.Lay
-      }]
+      rates: [
+        {
+          Back: row.Back,
+          Lay: row.Lay,
+        },
+      ],
     }));
 
-    const filteredRunners = runners.filter(runner =>
-      runner.runnerName.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredRunners = runners.filter((runner) =>
+      runner.runnerName.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
     const totalItems = filteredRunners.length;
@@ -223,7 +236,9 @@ export const userRunners = async (req, res) => {
 
     res.status(200).send(apiResponseSuccess(paginatedRunners, true, 200, 'success', paginationData));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -254,19 +269,19 @@ export const getAllGameData = async (req, res) => {
     const [gameDataRows] = await database.execute(gameDataQuery);
 
     const allGameData = gameDataRows.reduce((acc, row) => {
-      let gameIndex = acc.findIndex(game => game.gameId === row.gameId);
+      let gameIndex = acc.findIndex((game) => game.gameId === row.gameId);
       if (gameIndex === -1) {
         acc.push({
           gameId: row.gameId,
           gameName: row.gameName,
           description: row.description,
           isBlink: row.isBlink,
-          markets: []
+          markets: [],
         });
         gameIndex = acc.length - 1;
       }
 
-      let marketIndex = acc[gameIndex].markets.findIndex(market => market.marketId === row.marketId);
+      let marketIndex = acc[gameIndex].markets.findIndex((market) => market.marketId === row.marketId);
       if (marketIndex === -1) {
         acc[gameIndex].markets.push({
           marketId: row.marketId,
@@ -275,7 +290,7 @@ export const getAllGameData = async (req, res) => {
           timeSpan: row.timeSpan,
           announcementResult: row.announcementResult,
           isActive: row.isActive,
-          runners: []
+          runners: [],
         });
         marketIndex = acc[gameIndex].markets.length - 1;
       }
@@ -290,9 +305,9 @@ export const getAllGameData = async (req, res) => {
           rate: [
             {
               Back: row.BackRate,
-              Lay: row.LayRate
-            }
-          ]
+              Lay: row.LayRate,
+            },
+          ],
         });
       }
 
@@ -301,7 +316,9 @@ export const getAllGameData = async (req, res) => {
 
     res.status(200).send(apiResponseSuccess(allGameData, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -355,7 +372,7 @@ export const filteredGameData = async (req, res) => {
           timeSpan: row.timeSpan,
           announcementResult: row.announcementResult,
           isActive: row.isActive,
-          runners: []
+          runners: [],
         };
       }
       acc.markets[row.marketId].runners.push({
@@ -368,18 +385,21 @@ export const filteredGameData = async (req, res) => {
         rate: [
           {
             Back: row.Back,
-            Lay: row.Lay
-          }
-        ]
-
+            Lay: row.Lay,
+          },
+        ],
       });
 
       return acc;
     }, {});
     const marketsArray = Object.values(gameData.markets);
-    res.status(200).send(apiResponseSuccess({ gameId, gameName, description, markets: marketsArray }, true, 200, 'Success'));
+    res
+      .status(200)
+      .send(apiResponseSuccess({ gameId, gameName, description, markets: marketsArray }, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -403,14 +423,22 @@ export const getAnnouncementUser = async (req, res) => {
       }
       return latest;
     });
-    res.status(200).send(apiResponseSuccess({
-      announcementId: latestAnnouncement.announceId,
-      typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
-      announcement: [latestAnnouncement.announcement],
-    }, true, 200, 'success'));
-
+    res.status(200).send(
+      apiResponseSuccess(
+        {
+          announcementId: latestAnnouncement.announceId,
+          typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
+          announcement: [latestAnnouncement.announcement],
+        },
+        true,
+        200,
+        'success',
+      ),
+    );
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -426,9 +454,10 @@ export const getAnnouncementTypes = async (req, res) => {
       typeOfAnnouncement: announcement.typeOfAnnouncement,
     }));
     res.status(200).send(apiResponseSuccess(announcementTypes, true, 200, 'Success'));
-
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 export const userGif = async (req, res) => {
@@ -449,9 +478,10 @@ export const userGif = async (req, res) => {
     }));
 
     res.status(200).send(apiResponseSuccess(formattedGif, true, 200));
-
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -478,7 +508,9 @@ export const getUserWallet = async (req, res) => {
 
     res.status(200).send(apiResponseSuccess(getBalance, true, 200, 'success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -521,24 +553,25 @@ export const filterMarketData = async (req, res) => {
     const userId = req.body?.userId;
 
     const marketQuery = `
-      SELECT 
-        R.id,
-        M.marketId,
-        M.marketName,
-        M.participants,
-        M.timeSpan,
-        M.announcementResult,
-        M.isActive,
-        R.runnerId,
-        R.runnerName,
-        R.isWin,
-        R.bal,
-        R.Back AS BackRate,
-        R.Lay AS LayRate
-      FROM Market M
-      LEFT JOIN Runner R ON M.marketId = R.marketId
-      WHERE M.marketId = ?
-    `;
+    SELECT 
+      R.id,
+      M.marketId,
+      M.marketName,
+      M.participants,
+      M.timeSpan,
+      M.announcementResult, 
+      M.isActive,
+      R.runnerId,
+      R.runnerName,
+      R.isWin,
+      R.bal,
+      R.Back AS BackRate,
+      R.Lay AS LayRate
+    FROM market M
+    LEFT JOIN runner R ON M.marketId = R.marketId
+    WHERE M.marketId = ?
+  `;
+
     const [marketDataRows] = await database.execute(marketQuery, [marketId]);
 
     if (marketDataRows.length === 0) {
@@ -552,24 +585,24 @@ export const filterMarketData = async (req, res) => {
       timeSpan: marketDataRows[0].timeSpan,
       announcementResult: marketDataRows[0].announcementResult,
       isActive: marketDataRows[0].isActive,
-      runners: []
+      runners: [],
     };
 
-    marketDataRows.forEach(row => {
+    marketDataRows.forEach((row) => {
       marketDataObj.runners.push({
         id: row.id,
         runnerName: {
           runnerId: row.runnerId,
           name: row.runnerName,
           isWin: row.isWin,
-          bal: Math.round(parseFloat(row.bal))
+          bal: Math.round(parseFloat(row.bal)),
         },
         rate: [
           {
             Back: row.BackRate,
-            Lay: row.LayRate
-          }
-        ]
+            Lay: row.LayRate,
+          },
+        ],
       });
     });
 
@@ -588,11 +621,11 @@ export const filterMarketData = async (req, res) => {
       const userMarketBalance = {
         userId: userId,
         marketId: marketId,
-        runnerBalance: []
+        runnerBalance: [],
       };
 
-      marketDataObj.runners.forEach(runner => {
-        currentOrdersRows.forEach(order => {
+      marketDataObj.runners.forEach((runner) => {
+        currentOrdersRows.forEach((order) => {
           if (order.type === 'Back') {
             if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
               runner.runnerName.bal += Number(order.bidAmount);
@@ -610,7 +643,7 @@ export const filterMarketData = async (req, res) => {
 
         userMarketBalance.runnerBalance.push({
           runnerId: runner.runnerName.runnerId,
-          bal: runner.runnerName.bal
+          bal: runner.runnerName.bal,
         });
       });
 
@@ -624,7 +657,11 @@ export const filterMarketData = async (req, res) => {
           FROM MarketBalance
           WHERE userId = ? AND marketId = ? AND runnerId = ?
         `;
-        const [userMarketBalanceRows] = await database.execute(userMarketBalanceQuery, [userId, marketId, balance.runnerId]);
+        const [userMarketBalanceRows] = await database.execute(userMarketBalanceQuery, [
+          userId,
+          marketId,
+          balance.runnerId,
+        ]);
 
         if (userMarketBalanceRows.length > 0) {
           const updateUserMarketBalanceQuery = `
@@ -643,21 +680,27 @@ export const filterMarketData = async (req, res) => {
       }
     }
 
-
     res.status(200).send(apiResponseSuccess(marketDataObj, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // Not getting correct balance but exposure is done
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
   try {
+    console.log('req.body', userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure);
+
     if (!userId) throw apiResponseErr(null, false, 400, 'User ID is required');
     if (value < 0) throw apiResponseErr(null, false, 400, 'Bid value cannot be negative');
 
-    const [balanceData] = await database.execute('SELECT ROUND(balance, 2) AS balance FROM User WHERE id = ?', [userId]);
-    const userBalance = balanceData[0].balance;
+    const [balanceData] = await database.execute('SELECT ROUND(balance, 2) AS balance FROM User WHERE id = ?', [
+      userId,
+    ]);
+    const userBalance = balanceData[0]?.balance;
+    if (userBalance === undefined) throw apiResponseErr(null, false, 400, 'User balance not found');
     if (userBalance < value) throw apiResponseErr(null, false, 400, 'Insufficient balance. Bid cannot be placed.');
 
     const [gameData] = await database.execute('SELECT * FROM Game WHERE gameId = ?', [gameId]);
@@ -669,7 +712,13 @@ export const createBid = async (req, res) => {
     const [runnerData] = await database.execute('SELECT * FROM Runner WHERE runnerId = ?', [runnerId]);
     if (runnerData.length === 0) throw apiResponseErr(null, false, 400, 'Runner not found');
 
-    const adjustedRate = bidType === 'Back' ? runnerData[0].Back - 1 : runnerData[0].Lay - 1;
+    const rate = bidType === 'Back' ? runnerData[0]?.back : runnerData[0]?.lay;
+    if (rate === undefined || rate === null) {
+      console.log('runnerData', runnerData);
+      throw apiResponseErr(null, false, 400, `Rate for bid type ${bidType} not found`);
+    }
+
+    const adjustedRate = parseFloat(rate) - 1;
     const mainValue = Math.round(adjustedRate * value);
     const betAmount = bidType === 'Back' ? value : mainValue;
 
@@ -686,7 +735,21 @@ export const createBid = async (req, res) => {
       INSERT INTO currentOrder (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, type, value, rate, date, bidAmount, exposure) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `;
-    await database.execute(insertCurrentOrderQuery, [userId, gameId, gameData[0].gameName, marketId, marketData[0].marketName, runnerId, runnerData[0].runnerName, bidType, value, runnerData[0][bidType], currentDate, mainValue, exposure]);
+    await database.execute(insertCurrentOrderQuery, [
+      userId,
+      gameId,
+      gameData[0].gameName,
+      marketId,
+      marketData[0].marketName,
+      runnerId,
+      runnerData[0].runnerName,
+      bidType,
+      value,
+      parseFloat(rate),
+      currentDate,
+      betAmount,
+      exposure,
+    ]);
 
     return res.status(200).send(apiResponseSuccess(null, true, 200, 'Bid placed successfully'));
   } catch (error) {
@@ -744,17 +807,16 @@ export const getUserBetHistory = async (req, res) => {
 
     const [rows] = await database.execute(betHistoryQuery, queryParams);
 
-    const betDetails = rows.map(row => ({
+    const betDetails = rows.map((row) => ({
       gameName: row.gameName,
       marketName: row.marketName,
       runnerName: row.runnerName,
       rate: row.rate,
       value: row.value,
       type: row.type,
-      date: row.date
+      date: row.date,
     }));
 
-    
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
     const paginatedBetDetails = betDetails.slice(startIndex, endIndex);
@@ -762,21 +824,21 @@ export const getUserBetHistory = async (req, res) => {
     const paginationData = {
       totalItems: betDetails.length,
       totalPages: Math.ceil(betDetails.length / limit),
-      currentPage: page
+      currentPage: page,
     };
 
     const response = {
       data: paginatedBetDetails,
-      pagination: paginationData
+      pagination: paginationData,
     };
 
     res.status(200).send(apiResponseSuccess(response, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.successCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-       
 // done
 export const currentOrderHistory = async (req, res) => {
   try {
@@ -796,22 +858,26 @@ export const currentOrderHistory = async (req, res) => {
     const [orders] = await database.execute(orderQuery, [userId, marketId]);
 
     if (orders.length === 0) {
-      return res.status(404).send(apiResponseErr(null, 404, false, 'Orders not found for the specified user and market'));
+      return res
+        .status(404)
+        .send(apiResponseErr(null, 404, false, 'Orders not found for the specified user and market'));
     }
 
-    const result = orders.map(order => ({
+    const result = orders.map((order) => ({
       runnerName: order.runnerName,
       rate: order.rate,
       value: order.value,
       type: order.type,
-      bidAmount: order.bidAmount
+      bidAmount: order.bidAmount,
     }));
 
     res.status(200).send(apiResponseSuccess(result, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
-}
+};
 // done
 export const calculateProfitLoss = async (req, res) => {
   try {
@@ -845,13 +911,14 @@ export const calculateProfitLoss = async (req, res) => {
     const paginationData = {
       page: page,
       totalPages: totalPages,
-      totalItems: totalItems
+      totalItems: totalItems,
     };
 
     return res.status(200).send(apiResponseSuccess(profitLossData, true, 200, 'Success', paginationData));
-
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -884,10 +951,10 @@ export const marketProfitLoss = async (req, res) => {
       throw apiResponseErr(null, false, 400, 'No profit/loss data found for the given date range.');
     }
 
-    const marketsProfitLoss = rows.map(row => ({
+    const marketsProfitLoss = rows.map((row) => ({
       marketId: row.marketId,
       marketName: row.marketName,
-      totalProfitLoss: row.totalProfitLoss
+      totalProfitLoss: row.totalProfitLoss,
     }));
 
     const startIndex = (page - 1) * limit;
@@ -901,26 +968,31 @@ export const marketProfitLoss = async (req, res) => {
       currentPage: parseInt(page),
       pageSize: parseInt(limit),
       totalItems,
-      totalPages
+      totalPages,
     };
 
-    return res.status(200).send(apiResponseSuccess({ marketsProfitLoss: paginatedMarketsProfitLoss, pagination: paginationData }, true, 200, 'Success'));
-
+    return res
+      .status(200)
+      .send(
+        apiResponseSuccess(
+          { marketsProfitLoss: paginatedMarketsProfitLoss, pagination: paginationData },
+          true,
+          200,
+          'Success',
+        ),
+      );
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-
-
-
 // done
 export const runnerProfitLoss = async (req, res) => {
   try {
     const userId = req.user.id;
     const marketId = req.params.marketId;
-    let {startDate, endDate } = req.query;
-   
+    let { startDate, endDate } = req.query;
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
@@ -959,23 +1031,21 @@ export const runnerProfitLoss = async (req, res) => {
       throw apiResponseErr(null, false, 400, 'No profit/loss data found for the given date range.');
     }
 
-    const runnersProfitLoss = paginatedRows.map(row => ({
+    const runnersProfitLoss = paginatedRows.map((row) => ({
       gameName: row.gameName,
       marketName: row.marketName,
       runnerName: row.runnerName,
       runnerId: row.runnerId,
-      profitLoss: row.totalProfitLoss
+      profitLoss: row.totalProfitLoss,
     }));
 
-
-
-    return res.status(200).send(apiResponseSuccess({ runnersProfitLoss}, true, 200, 'Success'));
+    return res.status(200).send(apiResponseSuccess({ runnersProfitLoss }, true, 200, 'Success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-
 //Done
 export const userMarketData = async (req, res) => {
   try {
@@ -999,21 +1069,13 @@ export const userMarketData = async (req, res) => {
     const [betHistoryResults] = await database.execute(getBetHistoryQuery, [userId]);
     const responseData = {
       currentMarket: currentMarketResults,
-      betHistory: betHistoryResults
+      betHistory: betHistoryResults,
     };
     res.status(200).send(apiResponseSuccess(responseData, true, 200, 'Success'));
   } catch (error) {
-    console.error('Error:', error); 
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    console.error('Error:', error);
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
-}
-
-
-
-
-
-
-
-
-
-
+};

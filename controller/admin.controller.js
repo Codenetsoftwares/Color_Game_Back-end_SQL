@@ -1,4 +1,4 @@
-import { database } from '../controller/database.controller.js'
+import { database } from '../controller/database.controller.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -15,25 +15,30 @@ export const createAdmin = async (req, res) => {
 
     if (existingAdmin.length > 0) apiResponseErr(null, 400, false, 'Admin already exists');
 
-
     const saltRounds = 10;
     const encryptedPassword = await bcrypt.hash(password, saltRounds);
 
     const adminId = uuidv4();
 
     const insertAdminQuery = 'INSERT INTO Admin (adminId, userName, password, roles) VALUES (?, ?, ?, ?)';
-    const [result] = await database.execute(insertAdminQuery, [adminId, userName, encryptedPassword, JSON.stringify(roles)]);
+    const [result] = await database.execute(insertAdminQuery, [
+      adminId,
+      userName,
+      encryptedPassword,
+      JSON.stringify(roles),
+    ]);
 
     const newAdmin = {
       id: result.insertId,
       userName,
       password: encryptedPassword,
-      roles
+      roles,
     };
     return res.status(201).json(apiResponseSuccess(newAdmin, 201, true, 'Admin created successfully'));
-
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -62,13 +67,20 @@ export const generateAccessToken = async (req, res) => {
       expiresIn: '1d',
     });
 
-    return res.status(200).send(apiResponseSuccess({ accessToken, adminId: admin.adminId, userName: admin.userName, UserType: admin.userType || 'Admin' },
-      true,
-      200,
-      'Admin login successfully',
-    ));
+    return res
+      .status(200)
+      .send(
+        apiResponseSuccess(
+          { accessToken, adminId: admin.adminId, userName: admin.userName, UserType: admin.userType || 'Admin' },
+          true,
+          200,
+          'Admin login successfully',
+        ),
+      );
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -93,7 +105,9 @@ export const createUser = async (req, res) => {
 
     return res.status(201).send(apiResponseSuccess(existingUser, true, 201, 'User created successfully'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -114,7 +128,9 @@ export const checkMarketStatus = async (req, res) => {
     const statusMessage = status ? 'Market is active.' : 'Market is suspended.';
     res.status(200).send(apiResponseSuccess(statusMessage, true, 200, 'success'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -141,7 +157,9 @@ export const getAllUsers = async (req, res) => {
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
     return res.status(200).send(apiResponseSuccess(users, true, 200, paginationData));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -166,11 +184,13 @@ export const deposit = async (req, res) => {
     const newAdmin = {
       adminId,
       walletId,
-      balance: updatedAdmin[0].balance
+      balance: updatedAdmin[0].balance,
     };
     return res.status(201).json(apiResponseSuccess(newAdmin, true, 201, 'Deposit balance successful'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -224,7 +244,9 @@ export const sendBalance = async (req, res) => {
     return res.status(201).json(apiResponseSuccess(successResponse, true, 201, 'Send balance to User successful'));
   } catch (error) {
     console.error('Error sending balance:', error);
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
 // done
@@ -277,7 +299,8 @@ export const deleteGame = async (req, res) => {
     if (!gameId) {
       return res.status(400).send(apiResponseErr(null, false, 400, 'Game ID cannot be empty'));
     }
-    const deleteRateQuery = 'DELETE FROM Rate WHERE runnerId IN (SELECT runnerId FROM Runner WHERE marketId IN (SELECT marketId FROM Market WHERE gameId = ?))';
+    const deleteRateQuery =
+      'DELETE FROM Rate WHERE runnerId IN (SELECT runnerId FROM Runner WHERE marketId IN (SELECT marketId FROM Market WHERE gameId = ?))';
     await database.execute(deleteRateQuery, [gameId]);
 
     const deleteRunnerQuery = 'DELETE FROM Runner WHERE marketId IN (SELECT marketId FROM Market WHERE gameId = ?)';
@@ -294,7 +317,6 @@ export const deleteGame = async (req, res) => {
     }
 
     res.status(200).send(apiResponseSuccess(null, true, 200, 'Game deleted successfully'));
-
   } catch (error) {
     res.status(500).send(apiResponseErr(null, false, 500, error.message));
   }
@@ -335,73 +357,135 @@ export const deleteRunner = async (req, res) => {
 
     res.status(200).send(apiResponseSuccess(null, true, 200, 'Runner deleted successfully'));
   } catch (error) {
-    res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res
+      .status(500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
+
 
 export const afterWining = async (req, res) => {
   const { marketId, runnerId, isWin } = req.body;
   try {
-    const updateRunnerQuery = `
-      UPDATE Runner 
-      SET isWin = ? 
-      WHERE marketId = ? AND runnerId = ?;
+    // Find the runner in the market
+    let query = `
+      SELECT g.gameId
+      FROM game g
+      JOIN market m ON g.gameId = m.gameId
+      JOIN runner r ON m.marketId = r.marketId
+      WHERE r.runnerId = ? AND m.marketId = ?
     `;
-    await database.execute(updateRunnerQuery, [isWin, marketId, runnerId]);
+    let [rows] = await database.execute(query, [runnerId, marketId]);
 
-    const [gameData] = await database.execute('SELECT gameId FROM Market WHERE marketId = ?', [marketId]);
-    const gameId = gameData[0].gameId;
-
-    const updateUserBalancesQuery = `
-      UPDATE User u
-      INNER JOIN MarketBalance mb ON u.id = mb.userId
-      INNER JOIN Runner r ON mb.runnerId = r.runnerId
-      SET u.balance = CASE
-          WHEN r.runnerId = ? THEN u.balance + mb.bal + ?
-          ELSE u.balance + mb.bal - ?
-        END,
-        u.marketListExposure = ?
-      WHERE mb.marketId = ?;
-    `;
-
-    const marketListExposure = {};
-    marketListExposure[marketId] = 0;
-
-    const exposureIncrement = isWin ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
-    const exposureDecrement = isWin ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
-
-    await database.execute(updateUserBalancesQuery, [runnerId, exposureIncrement, exposureDecrement, JSON.stringify([marketListExposure]), marketId]);
-
-    const insertProfitLossQuery = `
-    INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
-    SELECT userId, ?, ?, ?, bal, NOW() 
-    FROM MarketBalance 
-    WHERE marketId = ? AND runnerId = ?;
-  `;
-
-    await database.execute(insertProfitLossQuery, [gameId, marketId, runnerId, marketId, runnerId]);
-
-    if (isWin) {
-      const deleteOrdersQuery = `
-        DELETE FROM currentOrder 
-        WHERE marketId = ?;
-      `;
-      await database.execute(deleteOrdersQuery, [marketId]);
-
-      const insertBetHistoryQuery = `
-        INSERT INTO betHistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss) 
-        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, ?, profitLoss
-        FROM currentOrder 
-        WHERE marketId = ?;
-      `;
-      await database.execute(insertBetHistoryQuery, [isWin, marketId]);
+    if (rows.length === 0) {
+      throw new Error('Runner not found');
     }
+
+    let gameId = rows[0].gameId;
+
+    // Update runner isWin in market
+    query = `
+      UPDATE runner
+      SET isWin = CASE WHEN runnerId = ? THEN ? ELSE 0 END
+      WHERE marketId = ?;
+    `;
+    await database.execute(query, [runnerId, isWin ? 1 : 0, marketId]);
+
+    // Update user balances
+    query = `
+      SELECT u.id, ub.runnerId, ub.bal, u.marketListExposure
+      FROM user u
+      JOIN marketbalance ub ON u.id = ub.userId
+      WHERE ub.marketId = ? AND ub.runnerId = ?;
+    `;
+    [rows] = await database.execute(query, [marketId, runnerId]);
+
+    for (const row of rows) {
+      const { id, runnerId, bal, marketListExposure } = row;
+      let marketExposure = null;
+      try {
+        marketExposure = JSON.parse(marketListExposure);
+      } catch (error) {
+        throw new Error(`Failed to parse marketListExposure JSON for user id ${id}: ${error.message}`);
+      }
+
+      // Find the market exposure for the current marketId
+      const exposureIndex = marketExposure.findIndex(item => Object.keys(item)[0] === marketId);
+
+      if (exposureIndex !== -1) {
+        const exposureValue = Number(Object.values(marketExposure[exposureIndex])[0]);
+
+        if (!isNaN(exposureValue)) {
+          if (isWin) {
+            query = `
+              UPDATE user
+              SET balance = balance + ?
+              WHERE id = ?;
+            `;
+            await database.execute(query, [bal + exposureValue, id]);
+          } else {
+            query = `
+              UPDATE marketbalance
+              SET bal = bal - ?
+              WHERE userId = ? AND marketId = ? AND runnerId = ?;
+            `;
+            await database.execute(query, [exposureValue, id, marketId, runnerId]);
+
+            query = `
+              UPDATE user
+              SET balance = balance + ?
+              WHERE id = ?;
+            `;
+            await database.execute(query, [bal, id]);
+          }
+
+          query = `
+            INSERT INTO profitloss (userId, gameId, marketId, runnerId, date, profitLoss)
+            VALUES (?, ?, ?, ?, ?, ?);
+          `;
+          const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
+          await database.execute(query, [id, gameId, marketId, runnerId, date, bal]);
+
+          query = `
+            UPDATE user
+            SET marketListExposure = JSON_REMOVE(marketListExposure, CONCAT('$[', ? ,']'))
+            WHERE id = ?;
+          `;
+          await database.execute(query, [exposureIndex, id]);
+        }
+      }
+    }
+
+    // Update announcement result in market
+    if (isWin) {
+      query = `
+        UPDATE market
+        SET announcementResult = 1
+        WHERE marketId = ?;
+      `;
+      await database.execute(query, [marketId]);
+
+      query = `
+        INSERT INTO bethistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss)
+        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, ?, bidAmount, isWin, profitLoss
+        FROM currentorder
+        WHERE marketId = ?;
+      `;
+      const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await database.execute(query, [date, marketId]);
+
+      query = `
+        DELETE FROM currentorder
+        WHERE marketId = ?;
+      `;
+      await database.execute(query, [marketId]);
+    }
+
     return res.status(200).send(apiResponseSuccess(null, true, 200, 'success'));
   } catch (error) {
-    res.status(error.responseCode ?? 500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    console.error("Error:", error);
+    return res
+      .status(error.responseCode ?? 500)
+      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
-
-
-
-

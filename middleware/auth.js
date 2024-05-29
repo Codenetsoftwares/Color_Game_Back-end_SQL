@@ -34,7 +34,7 @@ export const Authorize = (roles) => {
       if (!existingUser) {
         return res.status(401).send(apiResponseErr(null, false, 401, 'Unauthorized access'));
       }
-      
+
       const rolesArray = existingUser[0].roles.replace(/['"]+/g, '').split(',');
 
       if (roles && roles.length > 0) {
@@ -51,7 +51,7 @@ export const Authorize = (roles) => {
         }
       }
 
-      req.user = existingUser[0]; 
+      req.user = existingUser[0];
       next();
     } catch (err) {
       console.error('Authorization Error:', err.message);
