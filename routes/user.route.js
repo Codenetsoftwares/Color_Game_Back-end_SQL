@@ -1,49 +1,21 @@
-import {
-  loginUser,
-  eligibilityCheck,
-  resetPassword,
-  userGame,
-  userMarket,
-  userRunners,
-  getAllGameData,
-  filteredGameData,
-  getAnnouncementUser,
-  getAnnouncementTypes,
-  userGif,
-  getUserWallet,
-  transactionDetails,
-  createBid,
-  filterMarketData,
-  getUserBetHistory,
-  currentOrderHistory,
-  calculateProfitLoss,
-  marketProfitLoss,
-  runnerProfitLoss,
-  userMarketData,
-} from '../controller/user.controller.js';
-import { Authorize } from '../middleware/auth.js';
-import {
-  bidHistorySchema,
-  bidTypeSchema,
-  calculateProfitLossSchema,
-  currentOrderSchema,
-  validateMarketData,
-} from '../schema/commonSchema.js';
-import customErrorHandler from '../middleware/customErrorHandler.js';
+import { loginUser, eligibilityCheck, resetPassword, userGame, userMarket, userRunners, getAllGameData, filteredGameData, getAnnouncementUser, getAnnouncementTypes, userGif, getUserWallet, transactionDetails, createBid, filterMarketData, getUserBetHistory, currentOrderHistory, calculateProfitLoss, marketProfitLoss, runnerProfitLoss, } from '../controller/user.controller.js';
+import { Authorize } from "../middleware/auth.js";
+import { bidHistorySchema, bidTypeSchema, calculateProfitLossSchema, currentOrderSchema } from '../schema/commonSchema.js';
+import customErrorHandler from '../middleware/customErrorHandler.js'
 
 export const UserRoute = (app) => {
   // done
   app.post('/api/user-login', loginUser);
   // done
-  app.post('/api/eligibilityCheck/:userId', Authorize(['User']), eligibilityCheck);
+  app.post('/api/eligibilityCheck/:userId', Authorize(["User"]), eligibilityCheck);
   // done
-  app.post('/api/user/resetpassword', Authorize(['User']), resetPassword);
+  app.post('/api/user/resetpassword', Authorize(["User"]), resetPassword);
   // done
-  app.get('/api/user-games', userGame);
+  app.get('/api/user-games', userGame)
   // done
-  app.get('/api/user-markets/:gameId', Authorize(['User']), userMarket);
+  app.get('/api/user-markets/:gameId', Authorize(['User']), userMarket)
   // done
-  app.get('/api/user-runners/:marketId', Authorize(['User']), userRunners);
+  app.get('/api/user-runners/:marketId', Authorize(['User']), userRunners)
   // done
   app.get('/api/user-all-gameData', getAllGameData);
   // done
@@ -55,47 +27,21 @@ export const UserRoute = (app) => {
   // done
   app.get('/api/user/gif', userGif);
   // done
-  app.get('/api/user/view-wallet/:userId', Authorize(['User']), getUserWallet);
+  app.get('/api/user/view-wallet/:userId', Authorize(['User']), getUserWallet)
   // done
   app.get('/api/transactionDetails/:userId', Authorize(['User']), transactionDetails);
   // done
-  app.post('/api/user-filter-marketData/:marketId', validateMarketData, customErrorHandler, filterMarketData);
+  app.post('/api/user-filter-marketData/:marketId', filterMarketData);
+  // Not getting correct balance but exposure is done
+  app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, Authorize(['User']), createBid)
   // done
-  app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, Authorize(['User']), createBid);
+  app.get('/api/user-betHistory/:marketId', bidHistorySchema, customErrorHandler, Authorize(['User']), getUserBetHistory)
   // done
-  app.get(
-    '/api/user-betHistory/:marketId',
-    bidHistorySchema,
-    customErrorHandler,
-    Authorize(['User']),
-    getUserBetHistory,
-  );
+  app.get('/api/user-currentOrderHistory/:marketId', currentOrderSchema, customErrorHandler, Authorize(['User']), currentOrderHistory);
   // done
-  app.get(
-    '/api/user-currentOrderHistory/:marketId',
-    currentOrderSchema,
-    customErrorHandler,
-    Authorize(['User']),
-    currentOrderHistory,
-  );
+  app.get('/api/profit_loss', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), calculateProfitLoss)
   // done
-  app.get('/api/profit_loss', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), calculateProfitLoss);
+  app.get('/api/profit_loss_market/:gameId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), marketProfitLoss)
   // done
-  app.get(
-    '/api/profit_loss_market/:gameId',
-    calculateProfitLossSchema,
-    customErrorHandler,
-    Authorize(['User']),
-    marketProfitLoss,
-  );
-  // done
-  app.get(
-    '/api/profit_loss_runner/:marketId',
-    calculateProfitLossSchema,
-    customErrorHandler,
-    Authorize(['User']),
-    runnerProfitLoss,
-  );
-  // done
-  app.get('/api/user-market-data', customErrorHandler, Authorize(['User']), userMarketData);
-};
+  app.get('/api/profit_loss_runner/:marketId', calculateProfitLossSchema, customErrorHandler, Authorize(['User']), runnerProfitLoss)
+}

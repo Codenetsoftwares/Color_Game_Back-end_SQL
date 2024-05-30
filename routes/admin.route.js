@@ -13,7 +13,7 @@ import {
   deleteMarket,
   deleteRunner,
   generateAccessToken,
-  afterWining,
+  afterWining
 } from '../controller/admin.controller.js';
 import {
   createdUserSchema,
@@ -25,7 +25,7 @@ import {
   userUpdateSchema,
   validateMarketId,
   validateDeleteRunner,
-  suspendedMarketSchema,
+  suspendedMarketSchema
 } from '../schema/commonSchema.js';
 
 dotenv.config();
@@ -36,7 +36,7 @@ export const AdminRoute = (app) => {
   // done
   app.post('/api/admin-login', loginSchema, customErrorHandler, generateAccessToken);
   // done
-  app.post('/api/user-create', createdUserSchema, customErrorHandler, Authorize(['Admin']), createUser);
+  app.post('/api/user-create', createdUserSchema, customErrorHandler, Authorize(["Admin"]), createUser);
   // done
   app.post('/api/update-market-status/:marketId', suspendedMarketSchema, customErrorHandler, checkMarketStatus);
   // done
@@ -52,13 +52,9 @@ export const AdminRoute = (app) => {
   // done
   app.delete('/api/market-delete/:marketId', validateMarketId, customErrorHandler, Authorize(['Admin']), deleteMarket);
   // done
-  app.delete(
-    '/api/runner-delete/:runnerId',
-    validateDeleteRunner,
-    customErrorHandler,
-    Authorize(['Admin']),
-    deleteRunner,
-  );
+  app.delete('/api/runner-delete/:runnerId', validateDeleteRunner, customErrorHandler, Authorize(['Admin']), deleteRunner);
 
   app.post('/api/afterWining', winningSchema, customErrorHandler, Authorize(['Admin']), afterWining);
+
 };
+

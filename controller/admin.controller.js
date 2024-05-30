@@ -363,129 +363,65 @@ export const deleteRunner = async (req, res) => {
   }
 };
 
-
 export const afterWining = async (req, res) => {
   const { marketId, runnerId, isWin } = req.body;
   try {
-    // Find the runner in the market
-    let query = `
-      SELECT g.gameId
-      FROM game g
-      JOIN market m ON g.gameId = m.gameId
-      JOIN runner r ON m.marketId = r.marketId
-      WHERE r.runnerId = ? AND m.marketId = ?
+    const updateRunnerQuery = `
+      UPDATE Runner 
+      SET isWin = ? 
+      WHERE marketId = ? AND runnerId = ?;
     `;
-    let [rows] = await database.execute(query, [runnerId, marketId]);
+    await database.execute(updateRunnerQuery, [isWin, marketId, runnerId]);
 
-    if (rows.length === 0) {
-      throw new Error('Runner not found');
-    }
+    const [gameData] = await database.execute('SELECT gameId FROM Market WHERE marketId = ?', [marketId]);
+    const gameId = gameData[0].gameId;
 
-    let gameId = rows[0].gameId;
-
-    // Update runner isWin in market
-    query = `
-      UPDATE runner
-      SET isWin = CASE WHEN runnerId = ? THEN ? ELSE 0 END
-      WHERE marketId = ?;
+    const updateUserBalancesQuery = `
+      UPDATE User u
+      INNER JOIN MarketBalance mb ON u.id = mb.userId
+      INNER JOIN Runner r ON mb.runnerId = r.runnerId
+      SET u.balance = CASE
+          WHEN r.runnerId = ? THEN u.balance + mb.bal + ?
+          ELSE u.balance + mb.bal - ?
+        END,
+        u.marketListExposure = ?
+      WHERE mb.marketId = ?;
     `;
-    await database.execute(query, [runnerId, isWin ? 1 : 0, marketId]);
 
-    // Update user balances
-    query = `
-      SELECT u.id, ub.runnerId, ub.bal, u.marketListExposure
-      FROM user u
-      JOIN marketbalance ub ON u.id = ub.userId
-      WHERE ub.marketId = ? AND ub.runnerId = ?;
-    `;
-    [rows] = await database.execute(query, [marketId, runnerId]);
+    const marketListExposure = {};
+    marketListExposure[marketId] = 0;
 
-    for (const row of rows) {
-      const { id, runnerId, bal, marketListExposure } = row;
-      let marketExposure = null;
-      try {
-        marketExposure = JSON.parse(marketListExposure);
-      } catch (error) {
-        throw new Error(`Failed to parse marketListExposure JSON for user id ${id}: ${error.message}`);
-      }
+    const exposureIncrement = isWin ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
+    const exposureDecrement = isWin ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
 
-      // Find the market exposure for the current marketId
-      const exposureIndex = marketExposure.findIndex(item => Object.keys(item)[0] === marketId);
+    await database.execute(updateUserBalancesQuery, [runnerId, exposureIncrement, exposureDecrement, JSON.stringify([marketListExposure]), marketId]);
 
-      if (exposureIndex !== -1) {
-        const exposureValue = Number(Object.values(marketExposure[exposureIndex])[0]);
+    const insertProfitLossQuery = `
+    INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
+    SELECT userId, ?, ?, ?, bal, NOW() 
+    FROM MarketBalance 
+    WHERE marketId = ? AND runnerId = ?;
+  `;
 
-        if (!isNaN(exposureValue)) {
-          if (isWin) {
-            query = `
-              UPDATE user
-              SET balance = balance + ?
-              WHERE id = ?;
-            `;
-            await database.execute(query, [bal + exposureValue, id]);
-          } else {
-            query = `
-              UPDATE marketbalance
-              SET bal = bal - ?
-              WHERE userId = ? AND marketId = ? AND runnerId = ?;
-            `;
-            await database.execute(query, [exposureValue, id, marketId, runnerId]);
+    await database.execute(insertProfitLossQuery, [gameId, marketId, runnerId, marketId, runnerId]);
 
-            query = `
-              UPDATE user
-              SET balance = balance + ?
-              WHERE id = ?;
-            `;
-            await database.execute(query, [bal, id]);
-          }
-
-          query = `
-            INSERT INTO profitloss (userId, gameId, marketId, runnerId, date, profitLoss)
-            VALUES (?, ?, ?, ?, ?, ?);
-          `;
-          const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
-          await database.execute(query, [id, gameId, marketId, runnerId, date, bal]);
-
-          query = `
-            UPDATE user
-            SET marketListExposure = JSON_REMOVE(marketListExposure, CONCAT('$[', ? ,']'))
-            WHERE id = ?;
-          `;
-          await database.execute(query, [exposureIndex, id]);
-        }
-      }
-    }
-
-    // Update announcement result in market
     if (isWin) {
-      query = `
-        UPDATE market
-        SET announcementResult = 1
+      const deleteOrdersQuery = `
+        DELETE FROM currentOrder 
         WHERE marketId = ?;
       `;
-      await database.execute(query, [marketId]);
+      await database.execute(deleteOrdersQuery, [marketId]);
 
-      query = `
-        INSERT INTO bethistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss)
-        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, ?, bidAmount, isWin, profitLoss
-        FROM currentorder
+      const insertBetHistoryQuery = `
+        INSERT INTO betHistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss) 
+        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, ?, profitLoss
+        FROM currentOrder 
         WHERE marketId = ?;
       `;
-      const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      await database.execute(query, [date, marketId]);
-
-      query = `
-        DELETE FROM currentorder
-        WHERE marketId = ?;
-      `;
-      await database.execute(query, [marketId]);
+      await database.execute(insertBetHistoryQuery, [isWin, marketId]);
     }
-
     return res.status(200).send(apiResponseSuccess(null, true, 200, 'success'));
   } catch (error) {
-    console.error("Error:", error);
-    return res
-      .status(error.responseCode ?? 500)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+    res.status(error.responseCode ?? 500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
   }
 };
