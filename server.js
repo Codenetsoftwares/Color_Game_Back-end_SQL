@@ -9,6 +9,7 @@ import { GameRoute } from "./routes/game.route.js";
 import { SliderRoute } from "./routes/slider.route.js";
 import cors from "cors";
 import { AnnouncementRoute } from "./routes/announcement.route.js";
+import sequelize from './db.js';
 
 dotenv.config();
 const app = express();
@@ -50,6 +51,14 @@ GameRoute(app);
 AnnouncementRoute(app);
 SliderRoute(app);
 
-app.listen(8080, () => {
-  console.log("App is running on - http://localhost:8080");
+sequelize.sync({ alter: true })
+  .then(() => {
+    console.log('Database & tables created!');
+  })
+  .catch(err => {
+    console.error('Unable to create tables:', err);
+  });
+
+app.listen(process.env.PORT, () => {
+  console.log(`App is running on  - http://localhost:${process.env.PORT || 8080}`);
 });
