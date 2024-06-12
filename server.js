@@ -1,4 +1,3 @@
-// server.js
 import mysql from "mysql2";
 import express from "express";
 import bodyParser from "body-parser";
@@ -10,15 +9,18 @@ import { SliderRoute } from "./routes/slider.route.js";
 import cors from "cors";
 import { AnnouncementRoute } from "./routes/announcement.route.js";
 import sequelize from './db.js';
+import gameSchema from "./models/game.model.js";
+import marketSchema from "./models/market.model.js";
+
 
 dotenv.config();
 const app = express();
 
 app.use(bodyParser.json());
-
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.urlencoded({ extended: true }));
+
 const allowedOrigins = process.env.FRONTEND_URI.split(",");
 app.use(cors({ origin: allowedOrigins }));
 
@@ -51,14 +53,14 @@ GameRoute(app);
 AnnouncementRoute(app);
 SliderRoute(app);
 
+
 sequelize.sync({ alter: true })
   .then(() => {
     console.log('Database & tables created!');
+    app.listen(process.env.PORT, () => {
+      console.log(`App is running on  - http://localhost:${process.env.PORT || 8080}`);
+    });
   })
   .catch(err => {
     console.error('Unable to create tables:', err);
   });
-
-app.listen(process.env.PORT, () => {
-  console.log(`App is running on  - http://localhost:${process.env.PORT || 8080}`);
-});

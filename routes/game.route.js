@@ -26,26 +26,26 @@ import {
 
 export const GameRoute = (app) =>{
 // done
-app.post('/api/create-games', createdGameSchema, customErrorHandler, Authorize(['Admin']), createGame);
+app.post('/api/create-games', createdGameSchema, customErrorHandler, createGame);
 // done
-app.get('/api/All-Games', customErrorHandler, Authorize(['Admin']), getAllGames);
+app.get('/api/all-games', customErrorHandler, getAllGames);
 // done
-app.put('/api/update/game', updateGameSchema, customErrorHandler, Authorize(['Admin']), updateGame);
+app.put('/api/update/game', updateGameSchema, customErrorHandler, updateGame);
 // done
-app.post('/api/create-markets/:gameId', createdMarketSchema, customErrorHandler, Authorize(['Admin']), createMarket);
+app.post('/api/create-markets/:gameId', createdMarketSchema, customErrorHandler, createMarket);
 // done
-app.get('/api/All-Markets/:gameId', customErrorHandler, Authorize(['Admin']), getAllMarkets);
+app.get('/api/all-markets/:gameId', customErrorHandler, getAllMarkets);
 // done
-app.put('/api/update/market', updateMarketSchema, customErrorHandler, Authorize(['Admin']), updateMarket);
+app.put('/api/update/market', updateMarketSchema, customErrorHandler, updateMarket);
 // done
-app.post('/api/create-runners/:marketId', createdRunnerSchema, customErrorHandler, Authorize(['Admin']), createRunner);
+app.post('/api/create-runners/:marketId', createdRunnerSchema, customErrorHandler, createRunner);
 // done
-app.put('/api/update/runner', updateRunnerSchema, customErrorHandler, Authorize(['Admin']), updateRunner);
+app.put('/api/update/runner', updateRunnerSchema, customErrorHandler, updateRunner);
+
+app.get('/api/all-runners/:marketId', customErrorHandler, getAllRunners);
 // done
-app.get('/api/All-Runners/:marketId', customErrorHandler, Authorize(['Admin']), getAllRunners);
+app.post('/api/create-Rate/:runnerId', createdRateSchema, customErrorHandler, createRate);
 // done
-app.post('/api/create-Rate/:runnerId', createdRateSchema, customErrorHandler, Authorize(['Admin']), createRate);
-// done
-app.put('/api/update/rate', updateRateSchema, customErrorHandler, Authorize(['Admin']), updateRate);
+app.put('/api/update/rate', updateRateSchema, customErrorHandler,  updateRate);
 
 }
