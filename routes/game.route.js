@@ -41,7 +41,7 @@ app.put('/api/update/market', updateMarketSchema, customErrorHandler, updateMark
 app.post('/api/create-runners/:marketId', createdRunnerSchema, customErrorHandler, createRunner);
 // done
 app.put('/api/update/runner', updateRunnerSchema, customErrorHandler, updateRunner);
-
+// done
 app.get('/api/all-runners/:marketId', customErrorHandler, getAllRunners);
 // done
 app.post('/api/create-Rate/:runnerId', createdRateSchema, customErrorHandler, createRate);

@@ -396,7 +396,7 @@ export const updateRate = async (req, res) => {
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
-
+// done
 export const getAllRunners = async (req, res) => {
   try {
     const marketId = req.params.marketId;
