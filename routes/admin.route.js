@@ -1,60 +1,41 @@
-import { Authorize } from '../middleware/auth.js';
+import { authorize } from '../middleware/auth.js';
 import dotenv from 'dotenv';
 import customErrorHandler from '../middleware/customErrorHandler.js';
 import {
   createAdmin,
-  createUser,
   checkMarketStatus,
   deposit,
   sendBalance,
   getAllUsers,
-  userUpdate,
-  deleteGame,
-  deleteMarket,
-  deleteRunner,
-  generateAccessToken,
+  adminLogin,
   afterWining
 } from '../controller/admin.controller.js';
 import {
-  createdUserSchema,
   depositSchema,
   loginSchema,
   sendBalanceSchema,
-  gameIdValidate,
   winningSchema,
-  userUpdateSchema,
-  validateMarketId,
-  validateDeleteRunner,
   suspendedMarketSchema
 } from '../schema/commonSchema.js';
+import { string } from '../constructor/string.js';
 
 dotenv.config();
 
 export const AdminRoute = (app) => {
   // done
-  app.post('/api/admin-create', customErrorHandler, createAdmin);
+  app.post('/api/admin-create', customErrorHandler, authorize([string.Admin]), createAdmin);
   // done
-  app.post('/api/admin-login', loginSchema, customErrorHandler, generateAccessToken);
+  app.post('/api/admin-login', loginSchema, customErrorHandler, authorize([string.Admin]), adminLogin);
   // done
-  app.post('/api/user-create', createdUserSchema, customErrorHandler, Authorize(["Admin"]), createUser);
+  app.post('/api/update-market-status/:marketId', suspendedMarketSchema, customErrorHandler, authorize([string.Admin]), checkMarketStatus);
   // done
-  app.post('/api/update-market-status/:marketId', suspendedMarketSchema, customErrorHandler, checkMarketStatus);
+  app.get('/api/All-User', customErrorHandler, authorize([string.Admin]), getAllUsers);
   // done
-  app.get('/api/All-User', customErrorHandler, getAllUsers);
+  app.post('/api/deposit-amount', depositSchema, customErrorHandler, authorize([string.Admin]), deposit);
   // done
-  app.post('/api/deposit-amount', depositSchema, customErrorHandler, Authorize(['Admin']), deposit);
-  // done
-  app.post('/api/sendBalance-user', sendBalanceSchema, customErrorHandler, Authorize(['Admin']), sendBalance);
-  // done
-  app.put('/api/users-update/:userId', userUpdateSchema, customErrorHandler, Authorize(['Admin']), userUpdate);
-  // done
-  app.delete('/api/game-delete/:gameId', gameIdValidate, customErrorHandler, Authorize(['Admin']), deleteGame);
-  // done
-  app.delete('/api/market-delete/:marketId', validateMarketId, customErrorHandler, Authorize(['Admin']), deleteMarket);
-  // done
-  app.delete('/api/runner-delete/:runnerId', validateDeleteRunner, customErrorHandler, Authorize(['Admin']), deleteRunner);
+  app.post('/api/sendBalance-user', sendBalanceSchema, customErrorHandler, authorize([string.Admin]), sendBalance);
 
-  app.post('/api/afterWining', winningSchema, customErrorHandler, Authorize(['Admin']), afterWining);
+  app.post('/api/afterWining', winningSchema, customErrorHandler, authorize([string.Admin]), afterWining);
 
 };
 

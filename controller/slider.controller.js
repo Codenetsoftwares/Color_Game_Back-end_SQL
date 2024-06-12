@@ -61,23 +61,23 @@ export const createSlider = async (req, res) => {
     const insertedSliders = rows;
 
     return res
-      .status(201)
+      .status(statusCode.create)
       .send(
         apiResponseSuccess(
           insertedSliders,
           true,
-          201,
+          statusCode.create,
           "Slider created successfully."
         )
       );
   } catch (error) {
     res
-      .status(500)
+      .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           error.data ?? null,
           false,
-          error.responseCode ?? 500,
+          error.responseCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message
         )
       );
@@ -90,15 +90,15 @@ export const getSliderTextImg = async (req, res) => {
     const [rows] = await database.execute(
       "SELECT imageId, image, text, headingText, isActive FROM Slider"
     );
-    return res.status(200).send(apiResponseSuccess(rows, true, 200, "success"));
+    return res.status(statusCode.success).send(apiResponseSuccess(rows, true, statusCode.success, "success"));
   } catch (error) {
     return res
-      .status(500)
+      .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           error.data ?? null,
           false,
-          error.responseCode ?? 500,
+          error.responseCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message
         )
       );
@@ -117,8 +117,8 @@ export const activeSlider = async (req, res) => {
 
     if (updateResult.affectedRows === 0) {
       return res
-        .status(404)
-        .send(apiResponseErr(null, false, 404, "Image not found"));
+        .status(statusCode.notFound)
+        .send(apiResponseErr(null, false, statusCode.notFound, "Image not found"));
     }
     const [sliderData] = await database.execute(
       "SELECT * FROM Slider WHERE imageId = ?",
@@ -126,16 +126,16 @@ export const activeSlider = async (req, res) => {
     );
 
     return res
-      .status(200)
-      .send(apiResponseSuccess(sliderData, true, 200, "success"));
+      .status(statusCode.success)
+      .send(apiResponseSuccess(sliderData, true, statusCode.success, "success"));
   } catch (error) {
     return res
-      .status(500)
+      .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           error.data ?? null,
           false,
-          error.responseCode ?? 500,
+          error.responseCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message
         )
       );
@@ -159,16 +159,16 @@ export const updateSliderImage = async (req, res) => {
     const updatedSlider = rows[0];
 
     return res
-      .status(200)
-      .send(apiResponseSuccess(updatedSlider, true, 200, "success"));
+      .status(statusCode.success)
+      .send(apiResponseSuccess(updatedSlider, true, statusCode.success, "success"));
   } catch (error) {
     return res
-      .status(500)
+      .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           error.data ?? null,
           false,
-          error.responseCode ?? 500,
+          error.responseCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message
         )
       );
@@ -216,18 +216,18 @@ export const createGif = async (req, res) => {
     const insertedData = rows;
 
     return res
-      .status(201)
+      .status(statusCode.create)
       .send(
-        apiResponseSuccess(insertedData, true, 201, "Create Gif Successfully")
+        apiResponseSuccess(insertedData, true, statusCode.create, "Create Gif Successfully")
       );
   } catch (error) {
     return res
-      .status(500)
+      .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           error.data ?? null,
           false,
-          error.responseCode ?? 500,
+          error.responseCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message
         )
       );
@@ -245,23 +245,23 @@ export const deleteGifData = async (req, res) => {
 
     if (!gifData)
       return res
-        .status(404)
-        .send(apiResponseErr(null, false, 404, "Gif not found"));
+        .status(statusCode.notFound)
+        .send(apiResponseErr(null, false, statusCode.notFound, "Gif not found"));
 
     const deleteQuery = "DELETE FROM Gif WHERE imageId = ?";
     await database.execute(deleteQuery, [imageId]);
 
     return res
-      .status(201)
-      .send(apiResponseSuccess(gifData, true, 201, "Delete Gif Successfully"));
+      .status(statusCode.create)
+      .send(apiResponseSuccess(gifData, true, statusCode.create, "Delete Gif Successfully"));
   } catch (error) {
     return res
-      .status(500)
+      .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           error.data ?? null,
           false,
-          error.responseCode ?? 500,
+          error.responseCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message
         )
       );

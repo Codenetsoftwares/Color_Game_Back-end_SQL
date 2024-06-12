@@ -1,4 +1,4 @@
-import { Authorize } from "../middleware/auth.js";
+import { authorize } from "../middleware/auth.js";
 import { errorHandler } from "../middleware/ErrorHandling.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
 import {
@@ -14,7 +14,7 @@ export const SliderRoute = (app) => {
   app.post(
     "/api/admin/slider-text-img/dynamic",
     customErrorHandler,
-    Authorize(["Admin"]),
+    authorize(["Admin"]),
     createSlider
   );
 
@@ -36,14 +36,14 @@ export const SliderRoute = (app) => {
     "/api/admin/gif-dynamic",
     customErrorHandler,
     errorHandler,
-    Authorize(["Admin"]),
+    authorize(["Admin"]),
     createGif
   );
 
   app.delete(
     "/api/delete/gif/:imageId",
     customErrorHandler,
-    Authorize(["Admin"]),
+    authorize(["Admin"]),
     deleteGifData
   );
 };

@@ -434,11 +434,143 @@ export const getAllRunners = async (req, res) => {
 
     res.status(statusCode.success).send(apiResponseSuccess(transformedRunners, true, statusCode.success, 'success', paginationData));
   } catch (error) {
-    console.error('Error fetching runners:', error); 
+    console.error('Error fetching runners:', error);
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+// done
+export const deleteGame = async (req, res) => {
+  const gameId = req.params.gameId;
+  try {
+    if (!gameId) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Game ID cannot be empty'));
+    }
 
+    const markets = await marketSchema.findAll({
+      where: {
+        gameId: gameId,
+      },
+    });
+
+    const marketIds = markets.map(market => market.marketId);
+
+    const runners = await runnerSchema.findAll({
+      where: {
+        marketId: {
+          [Op.in]: marketIds,
+        },
+      },
+    });
+
+    const runnerIds = runners.map(runner => runner.runnerId);
+
+    await rateSchema.destroy({
+      where: {
+        runnerId: {
+          [Op.in]: runnerIds,
+        },
+      },
+    });
+
+    await runnerSchema.destroy({
+      where: {
+        marketId: {
+          [Op.in]: marketIds,
+        },
+      },
+    });
+
+    await marketSchema.destroy({
+      where: {
+        gameId: gameId,
+      },
+    });
+
+    const deletedGameCount = await gameSchema.destroy({
+      where: {
+        gameId: gameId,
+      },
+    });
+
+    if (deletedGameCount === 0) {
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Game not found'));
+    }
+
+    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Game deleted successfully'));
+  } catch (error) {
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+
+  }
+};
+// done
+export const deleteMarket = async (req, res) => {
+  try {
+    const { marketId } = req.params;
+
+    const runners = await runnerSchema.findAll({
+      where: {
+        marketId: marketId,
+      },
+    });
+
+    const runnerIds = runners.map(runner => runner.runnerId);
+
+    await rateSchema.destroy({
+      where: {
+        runnerId: {
+          [Op.in]: runnerIds,
+        },
+      },
+    });
+
+    await runnerSchema.destroy({
+      where: {
+        marketId: marketId,
+      },
+    });
+
+    const deletedMarketCount = await marketSchema.destroy({
+      where: {
+        marketId: marketId,
+      },
+    });
+
+    if (deletedMarketCount === 0) {
+      res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    }
+
+    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Market deleted successfully'));
+  } catch (error) {
+    console.error('Error deleting market:', error);
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+// done
+export const deleteRunner = async (req, res) => {
+  try {
+    const { runnerId } = req.params;
+
+    await rateSchema.destroy({
+      where: {
+        runnerId: runnerId,
+      },
+    });
+
+    const deletedRunnerCount = await runnerSchema.destroy({
+      where: {
+        runnerId: runnerId,
+      },
+    });
+
+    if (deletedRunnerCount === 0) {
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Runner not found'));
+    }
+
+    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Runner deleted successfully'));
+  } catch (error) {
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+  }
+};
 
 
 

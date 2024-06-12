@@ -36,9 +36,9 @@ export const announcements = async (req, res) => {
             announce.announcement = announcement;
         }
 
-        return res.status(201).json(apiResponseSuccess(announce, true, 201, 'Announcement created successfully'));
+        return res.status(statusCode.create).json(apiResponseSuccess(announce, true, statusCode.create, 'Announcement created successfully'));
     } catch (error) {
-        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
 // done
@@ -59,7 +59,7 @@ export const getAnnouncement = async (req, res) => {
 
         const announcementText = announcement.announcement;
 
-        return res.status(201).json(
+        return res.status(statusCode.create).json(
             apiResponseSuccess(
                 {
                     announceId: announcement.announceId,
@@ -67,14 +67,14 @@ export const getAnnouncement = async (req, res) => {
                     announcement: [announcementText],
                 },
                 true,
-                201,
+                statusCode.create,
                 'Success',
             ),
         );
     } catch (error) {
         res
-            .status(500)
-            .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+            .status(statusCode.internalServerError)
+            .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
 // done
@@ -115,9 +115,9 @@ export const updateAnnouncement = async (req, res) => {
             await database.execute(updateAnnouncementQuery, [announcement, announceId]);
         }
 
-        return res.status(201).json(apiResponseSuccess(null, true, 201, 'Announcement updated successfully'));
+        return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Announcement updated successfully'));
     } catch (error) {
-        res.status(500).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? 500, error.errMessage ?? error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
     }
 };
 
