@@ -153,3 +153,75 @@ export const updateAnnouncement = async (req, res) => {
       );
   }
 };
+
+export const getAnnouncementUser = async (req, res) => {
+  try {
+    const announceId = req.params.announceId;
+    const announceIdString = String(announceId);
+    const announcementQuery = `
+      SELECT *
+      FROM Announcement
+      WHERE announceId = ?
+    `;
+    const [announcementData] = await database.execute(announcementQuery, [announceIdString]);
+
+    if (announcementData.length === 0) {
+      throw apiResponseErr(null, false, statusCode.badRequest, 'Announcement not found');
+    }
+    const latestAnnouncement = announcementData.reduce((latest, current) => {
+      if (latest.announceId < current.announceId) {
+        return current;
+      }
+      return latest;
+    });
+    res.status(statusCode.success).send(
+      apiResponseSuccess(
+        {
+          announcementId: latestAnnouncement.announceId,
+          typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
+          announcement: [latestAnnouncement.announcement],
+        },
+        true,
+        statusCode.success,
+        'success',
+      ),
+    );
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
+  }
+};
+
+export const getAnnouncementTypes = async (req, res) => {
+  try {
+    const announcementTypesQuery = `
+      SELECT announceId, typeOfAnnouncement
+      FROM Announcement
+    `;
+    const [announcementTypesData] = await database.execute(announcementTypesQuery);
+    const announcementTypes = announcementTypesData.map((announcement) => ({
+      announceId: announcement.announceId,
+      typeOfAnnouncement: announcement.typeOfAnnouncement,
+    }));
+    res.status(statusCode.success).send(apiResponseSuccess(announcementTypes, true, statusCode.success, 'Success'));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
+  }
+};

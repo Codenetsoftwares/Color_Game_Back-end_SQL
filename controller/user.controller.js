@@ -31,7 +31,7 @@ export const createUser = async (req, res) => {
 
     return res
       .status(statusCode.create)
-      .send(apiResponseSuccess(newUser, true, statusCode.create, 'User created successfully'));
+      .send(apiResponseSuccess(null, true, statusCode.create, 'User created successfully'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -86,18 +86,18 @@ export const userUpdate = async (req, res) => {
       );
   }
 };
-
+// done
 export const loginUser = async (req, res) => {
  const { userName, password } = req.body;
   try {
-    const existingAdmin = await admins.findOne({ where: { userName } });
+    const existingUser = await userSchema.findOne({ where: { userName } });
 
-    if (!existingAdmin) {
+    if (!existingUser) {
       console.log('Admin not found');
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User Does Not Exist'));
     }
 
-    const isPasswordValid = await existingAdmin.validPassword(password);
+    const isPasswordValid = await existingUser.validPassword(password);
 
     if (!isPasswordValid) {
       console.log('Invalid password');
@@ -116,23 +116,14 @@ export const loginUser = async (req, res) => {
       expiresIn: '1d',
     });
 
- 
-    res.status(statusCode.success).send(apiResponseSuccess({
-      accessToken, id: existingUser.id,
-      userName: existingUser.userName,
-      isEighteen: existingUser.eligibilityCheck,
-      UserType: existingUser.userType || 'user',
-      wallet: existingUser.wallet
-    }, true, statusCode.success, 'Login successful'));
-
     res.status(statusCode.success).send(
       apiResponseSuccess(
         {
           accessToken,
-          id: existingUser.id,
+          userId: existingUser.userId,
           userName: existingUser.userName,
           isEighteen: existingUser.eligibilityCheck,
-          UserType: existingUser.userType || 'User',
+          userType: existingUser.userType || 'user',
           wallet: existingUser.wallet,
         },
         true,
@@ -154,13 +145,13 @@ export const loginUser = async (req, res) => {
       );
   }
 };
+// done
 export const eligibilityCheck = async (req, res) => {
   try {
-    const id = req.params.userId;
+    const userId = req.params.userId;
     const { eligibilityCheck } = req.body;
 
-    const userQuery = 'SELECT * FROM User WHERE id = ?';
-    const [user] = await database.execute(userQuery, [id]);
+    const user = await userSchema.findOne({ where: { userId } });
 
     if (!user) {
       return res
@@ -168,18 +159,12 @@ export const eligibilityCheck = async (req, res) => {
         .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
     }
 
-    const updateQuery = 'UPDATE User SET eligibilityCheck = ? WHERE id = ?';
-    const [updatedRows] = await database.execute(updateQuery, [eligibilityCheck ? 1 : 0, id]);
+    user.eligibilityCheck = eligibilityCheck;
+    await user.save();
 
-    if (updatedRows.affectedRows > 0) {
-      return res.status(statusCode.success).send({
-        message: eligibilityCheck ? 'User Eligible' : 'User Not Eligible',
-      });
-    } else {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update user eligibility'));
-    }
+    return res.status(200).json({
+      message: eligibilityCheck ? 'User Eligible' : 'User Not Eligible',
+    });
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -193,6 +178,7 @@ export const eligibilityCheck = async (req, res) => {
       );
   }
 };
+
 export const resetPassword = async (req, res) => {
   try {
     const { oldPassword, password, confirmPassword } = req.body;
@@ -562,76 +548,8 @@ export const filteredGameData = async (req, res) => {
       );
   }
 };
-export const getAnnouncementUser = async (req, res) => {
-  try {
-    const announceId = req.params.announceId;
-    const announceIdString = String(announceId);
-    const announcementQuery = `
-      SELECT *
-      FROM Announcement
-      WHERE announceId = ?
-    `;
-    const [announcementData] = await database.execute(announcementQuery, [announceIdString]);
 
-    if (announcementData.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Announcement not found');
-    }
-    const latestAnnouncement = announcementData.reduce((latest, current) => {
-      if (latest.announceId < current.announceId) {
-        return current;
-      }
-      return latest;
-    });
-    res.status(statusCode.success).send(
-      apiResponseSuccess(
-        {
-          announcementId: latestAnnouncement.announceId,
-          typeOfAnnouncement: latestAnnouncement.typeOfAnnouncement,
-          announcement: [latestAnnouncement.announcement],
-        },
-        true,
-        statusCode.success,
-        'success',
-      ),
-    );
-  } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
-  }
-};
-export const getAnnouncementTypes = async (req, res) => {
-  try {
-    const announcementTypesQuery = `
-      SELECT announceId, typeOfAnnouncement
-      FROM Announcement
-    `;
-    const [announcementTypesData] = await database.execute(announcementTypesQuery);
-    const announcementTypes = announcementTypesData.map((announcement) => ({
-      announceId: announcement.announceId,
-      typeOfAnnouncement: announcement.typeOfAnnouncement,
-    }));
-    res.status(statusCode.success).send(apiResponseSuccess(announcementTypes, true, statusCode.success, 'Success'));
-  } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
-  }
-};
+
 export const userGif = async (req, res) => {
   try {
     const gifQuery = `

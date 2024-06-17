@@ -7,8 +7,6 @@ import {
   userRunners,
   getAllGameData,
   filteredGameData,
-  getAnnouncementUser,
-  getAnnouncementTypes,
   userGif,
   getUserWallet,
   transactionDetails,
@@ -42,7 +40,7 @@ export const UserRoute = (app) => {
   // done
   app.post('/api/user-login', loginUser);
   // done
-  app.post('/api/eligibilityCheck/:userId', authorize(['User']), eligibilityCheck);
+  app.post('/api/eligibilityCheck/:userId', authorize([string.User]), eligibilityCheck);
   // done
   app.post('/api/user/resetpassword', authorize(['User']), resetPassword);
   // done
@@ -55,10 +53,6 @@ export const UserRoute = (app) => {
   app.get('/api/user-all-gameData', getAllGameData);
   // done
   app.get('/api/user-filter-gameData/:gameId', filteredGameData);
-  // done
-  app.get('/api/user/announcements/:announceId', getAnnouncementUser);
-  // done
-  app.get('/api/user/game-typeOfAnnouncement', getAnnouncementTypes);
   // done
   app.get('/api/user/gif', userGif);
   // done
