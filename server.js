@@ -1,27 +1,26 @@
-import mysql from "mysql2";
-import express from "express";
-import bodyParser from "body-parser";
-import dotenv from "dotenv";
-import { AdminRoute } from "./routes/admin.route.js";
-import { UserRoute } from "./routes/user.route.js";
-import { GameRoute } from "./routes/game.route.js";
-import { SliderRoute } from "./routes/slider.route.js";
-import cors from "cors";
-import { AnnouncementRoute } from "./routes/announcement.route.js";
+import mysql from 'mysql2';
+import express from 'express';
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
+import { AdminRoute } from './routes/admin.route.js';
+import { UserRoute } from './routes/user.route.js';
+import { GameRoute } from './routes/game.route.js';
+import { SliderRoute } from './routes/slider.route.js';
+import cors from 'cors';
+import { AnnouncementRoute } from './routes/announcement.route.js';
 import sequelize from './db.js';
-import gameSchema from "./models/game.model.js";
-import marketSchema from "./models/market.model.js";
-
+import gameSchema from './models/game.model.js';
+import marketSchema from './models/market.model.js';
 
 dotenv.config();
 const app = express();
 
 app.use(bodyParser.json());
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.urlencoded({ extended: true }));
 
-const allowedOrigins = process.env.FRONTEND_URI.split(",");
+const allowedOrigins = process.env.FRONTEND_URI.split(',');
 app.use(cors({ origin: allowedOrigins }));
 
 const pool = mysql.createPool({
@@ -36,15 +35,15 @@ const pool = mysql.createPool({
 
 pool.getConnection((err, connection) => {
   if (err) {
-    console.log("Error to connecting Database: " + err.message);
+    console.log('Error to connecting Database: ' + err.message);
   } else {
-    console.log("Database connection successfully");
+    console.log('Database connection successfully');
     connection.release();
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
+app.get('/', (req, res) => {
+  res.send('Hello World!');
 });
 
 AdminRoute(app);
@@ -53,14 +52,14 @@ GameRoute(app);
 AnnouncementRoute(app);
 SliderRoute(app);
 
-
-sequelize.sync({ alter: true })
+sequelize
+  .sync({ alter: true })
   .then(() => {
     console.log('Database & tables created!');
     app.listen(process.env.PORT, () => {
       console.log(`App is running on  - http://localhost:${process.env.PORT || 8080}`);
     });
   })
-  .catch(err => {
+  .catch((err) => {
     console.error('Unable to create tables:', err);
   });

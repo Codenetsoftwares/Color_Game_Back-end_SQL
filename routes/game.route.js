@@ -1,4 +1,4 @@
-import { string } from "../constructor/string.js";
+import { string } from '../constructor/string.js';
 import {
   createGame,
   createMarket,
@@ -14,9 +14,9 @@ import {
   deleteGame,
   deleteMarket,
   deleteRunner,
-} from "../controller/game.controller.js";
-import { authorize } from "../middleware/auth.js";
-import customErrorHandler from "../middleware/customErrorHandler.js";
+} from '../controller/game.controller.js';
+import { authorize } from '../middleware/auth.js';
+import customErrorHandler from '../middleware/customErrorHandler.js';
 import {
   createdGameSchema,
   createdMarketSchema,
@@ -29,7 +29,7 @@ import {
   gameIdValidate,
   validateMarketId,
   validateDeleteRunner,
-} from "../schema/commonSchema.js";
+} from '../schema/commonSchema.js';
 
 export const GameRoute = (app) => {
   // done
@@ -39,13 +39,25 @@ export const GameRoute = (app) => {
   // done
   app.put('/api/update/game', updateGameSchema, customErrorHandler, authorize([string.Admin]), updateGame);
   // done
-  app.post('/api/create-markets/:gameId', createdMarketSchema, customErrorHandler, authorize([string.Admin]), createMarket);
+  app.post(
+    '/api/create-markets/:gameId',
+    createdMarketSchema,
+    customErrorHandler,
+    authorize([string.Admin]),
+    createMarket,
+  );
   // done
   app.get('/api/all-markets/:gameId', customErrorHandler, authorize([string.Admin]), getAllMarkets);
   // done
   app.put('/api/update/market', updateMarketSchema, customErrorHandler, authorize([string.Admin]), updateMarket);
   // done
-  app.post('/api/create-runners/:marketId', createdRunnerSchema, customErrorHandler, authorize([string.Admin]), createRunner);
+  app.post(
+    '/api/create-runners/:marketId',
+    createdRunnerSchema,
+    customErrorHandler,
+    authorize([string.Admin]),
+    createRunner,
+  );
   // done
   app.put('/api/update/runner', updateRunnerSchema, customErrorHandler, authorize([string.Admin]), updateRunner);
   // done
@@ -57,8 +69,19 @@ export const GameRoute = (app) => {
   // done
   app.delete('/api/game-delete/:gameId', gameIdValidate, customErrorHandler, authorize([string.Admin]), deleteGame);
   // done
-  app.delete('/api/market-delete/:marketId', validateMarketId, customErrorHandler, authorize([string.Admin]), deleteMarket);
+  app.delete(
+    '/api/market-delete/:marketId',
+    validateMarketId,
+    customErrorHandler,
+    authorize([string.Admin]),
+    deleteMarket,
+  );
   // done
-  app.delete('/api/runner-delete/:runnerId', validateDeleteRunner, customErrorHandler, authorize([string.Admin]), deleteRunner);
-
-}
+  app.delete(
+    '/api/runner-delete/:runnerId',
+    validateDeleteRunner,
+    customErrorHandler,
+    authorize([string.Admin]),
+    deleteRunner,
+  );
+};

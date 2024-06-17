@@ -7,6 +7,10 @@ import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../mi
 import { statusCode } from '../helper/statusCodes.js';
 import admins from '../models/admin.model.js';
 import { string } from '../constructor/string.js';
+import marketSchema from '../models/market.model.js';
+import userSchema from '../models/user.model.js';
+import Sequelize from '../db.js';
+import transactionRecord from '../models/transactionRecord.model.js';
 
 dotenv.config();
 // done
@@ -16,21 +20,32 @@ export const createAdmin = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { userName } });
 
     if (existingAdmin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
     }
 
     const newAdmin = await admins.create({
       adminId: uuidv4(),
       userName,
-      password,  
+      password,
       roles: string.Admin,
     });
 
-    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, 'Admin created successfully'));
+    return res
+      .status(statusCode.create)
+      .json(apiResponseSuccess(null, true, statusCode.create, 'Admin created successfully'));
   } catch (error) {
     return res
       .status(statusCode.internalServerError)
-      .json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .json(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -41,98 +56,139 @@ export const adminLogin = async (req, res) => {
 
     if (!existingAdmin) {
       console.log('Admin not found');
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
     }
 
     const isPasswordValid = await existingAdmin.validPassword(password);
 
     if (!isPasswordValid) {
       console.log('Invalid password');
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
     }
 
     const accessTokenResponse = {
       id: existingAdmin.id,
       adminId: existingAdmin.adminId,
       userName: existingAdmin.userName,
-      UserType: existingAdmin.userType || 'admin',
+      userType: existingAdmin.userType || 'admin',
     };
 
     const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
       expiresIn: '1d',
     });
 
-    return res.status(statusCode.success).send(
-      apiResponseSuccess(
-        { accessToken, adminId: existingAdmin.adminId, userName: existingAdmin.userName, UserType: existingAdmin.userType || 'admin' },
-        true,
-        statusCode.success,
-        'Admin login successfully'
-      )
-    );
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          {
+            accessToken,
+            adminId: existingAdmin.adminId,
+            userName: existingAdmin.userName,
+            userType: existingAdmin.userType || 'admin',
+          },
+          true,
+          statusCode.success,
+          'Admin login successfully',
+        ),
+      );
   } catch (error) {
     console.error('Error in adminLogin:', error.message);
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
-
+// done
 export const checkMarketStatus = async (req, res) => {
   const marketId = req.params.marketId;
   const { status } = req.body;
 
   try {
-    const [market] = await database.execute('SELECT * FROM Market WHERE marketId = ?', [marketId]);
+    const market = await marketSchema.findOne({ where: { marketId } });
 
     if (!market) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Market not found.'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Market not found'));
     }
 
-    const updateMarketQuery = 'UPDATE Market SET isActive = ? WHERE marketId = ?';
-    await database.execute(updateMarketQuery, [status, marketId]);
+    market.isActive = status;
+    await market.save();
 
-    const statusMessage = status ? 'Market is active.' : 'Market is suspended.';
+    const statusMessage = status ? 'Market is active' : 'Market is suspended';
     res.status(statusCode.success).send(apiResponseSuccess(statusMessage, true, statusCode.success, 'success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
+// done
 export const getAllUsers = async (req, res) => {
   try {
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
 
-    const countQuery = `SELECT COUNT(*) AS total FROM User WHERE LOWER(userName) LIKE '%${searchQuery}%'`;
-    const [countResult] = await database.execute(countQuery);
-    const totalItems = countResult[0].total;
+    const countQuery = await userSchema.count({
+      where: {
+        userName: { [Sequelize.Op.like]: `%${searchQuery}%` },
+      },
+    });
+    const totalItems = countQuery;
 
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
 
-    const getUsersQuery = `SELECT * FROM User WHERE LOWER(userName) LIKE '%${searchQuery}%' LIMIT ${offset}, ${pageSize}`;
-    const [users] = await database.execute(getUsersQuery);
+    const users = await userSchema.findAll({
+      where: {
+        userName: { [Sequelize.Op.like]: `%${searchQuery}%` },
+      },
+      limit: pageSize,
+      offset: offset,
+    });
 
     if (!users || users.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'User not found');
+      throw new Error('User not found');
     }
 
-    const paginationData = apiResponsePagination(page, totalPages, totalItems);
-    return res.status(statusCode.success).send(apiResponseSuccess(users, true, statusCode.success, paginationData));
+    const paginationData = {
+      page,
+      totalPages,
+      totalItems,
+    };
+
+    res.status(statusCode.success).json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
   } catch (error) {
+    console.error('Error fetching users:', error);
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+// Done
 export const deposit = async (req, res) => {
   try {
     const { adminId, depositAmount } = req.body;
-    const existingAdminQuery = 'SELECT * FROM Admin WHERE adminId = ?';
-    const [existingAdmin] = await database.execute(existingAdminQuery, [adminId]);
+
+    const existingAdmin = await admins.findOne({ where: { adminId } });
 
     if (!existingAdmin) {
       return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Admin Not Found'));
@@ -140,77 +196,97 @@ export const deposit = async (req, res) => {
 
     const parsedDepositAmount = parseFloat(depositAmount);
 
-    const updateAdminQuery = 'UPDATE Admin SET balance = COALESCE(balance, 0) + ?, walletId = ? WHERE adminId = ?';
-    const walletId = uuidv4();
-    await database.execute(updateAdminQuery, [parsedDepositAmount, walletId, adminId]);
+    await existingAdmin.increment('balance', { by: parsedDepositAmount });
 
-    const updatedAdminQuery = 'SELECT * FROM Admin WHERE adminId = ?';
-    const [updatedAdmin] = await database.execute(updatedAdminQuery, [adminId]);
+    const updatedAdmin = await admins.findOne({ where: { adminId } });
+
+    if (!updatedAdmin) {
+      throw new Error('Failed to fetch updated admin');
+    }
+
     const newAdmin = {
-      adminId,
-      walletId,
-      balance: updatedAdmin[0].balance,
+      adminId: updatedAdmin.adminId,
+      walletId: updatedAdmin.walletId,
+      balance: updatedAdmin.balance,
     };
-    return res.status(statusCode.create).json(apiResponseSuccess(newAdmin, true, statusCode.create, 'Deposit balance successful'));
+
+    return res
+      .status(statusCode.create)
+      .json(apiResponseSuccess(newAdmin, true, statusCode.create, 'Deposit balance successful'));
   } catch (error) {
+    console.error('Error depositing balance:', error);
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+// done
 export const sendBalance = async (req, res) => {
   try {
     const { balance, adminId, userId } = req.body;
-    const adminQuery = 'SELECT * FROM Admin WHERE adminId = ?';
-    const [admin] = await database.execute(adminQuery, [adminId]);
-    if (!admin.length) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin Not Found'));
+
+    const admin = await admins.findOne({ where: { adminId } });
+    if (!admin) {
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Admin Not Found'));
     }
 
-    const userQuery = 'SELECT * FROM User WHERE id = ?';
-    const [user] = await database.execute(userQuery, [userId]);
-    if (!user.length) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
-    }
-
-    if (isNaN(balance)) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid Balance'));
+    const user = await userSchema.findOne({ where: { userId } });
+    if (!user) {
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
     }
 
     const parsedDepositAmount = parseFloat(balance);
-
-    if (admin[0].balance < parsedDepositAmount) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
+    if (isNaN(parsedDepositAmount)) {
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Invalid Balance'));
     }
 
-    const updateAdminBalanceQuery = 'UPDATE Admin SET balance = balance - ? WHERE adminId = ?';
-    await database.execute(updateAdminBalanceQuery, [parsedDepositAmount, adminId]);
+    if (admin.balance < parsedDepositAmount) {
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient Balance For Transfer'));
+    }
 
-    const updateUserBalanceQuery = 'UPDATE User SET balance = balance + ? WHERE id = ?';
-    await database.execute(updateUserBalanceQuery, [parsedDepositAmount, userId]);
+    await Sequelize.transaction(async (t) => {
+      await admins.update(
+        { balance: Sequelize.literal(`balance - ${parsedDepositAmount}`) },
+        { where: { adminId }, transaction: t },
+      );
 
-    const newUserWalletId = uuidv4();
-    const updateUserWalletIdQuery = 'UPDATE User SET walletId = ? WHERE id = ?';
-    await database.execute(updateUserWalletIdQuery, [newUserWalletId, userId]);
+      await userSchema.update(
+        { balance: Sequelize.literal(`balance + ${parsedDepositAmount}`), walletId: user.walletId },
+        { where: { userId }, transaction: t },
+      );
 
-    const transactionRecordQuery = `
-      INSERT INTO TransactionRecord (userId, transactionType, amount, date)
-      VALUES (?, 'Credit', ?, ?)
-    `;
-    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await database.execute(transactionRecordQuery, [userId, parsedDepositAmount, currentDate]);
+      await transactionRecord.create(
+        {
+          userId,
+          transactionType: 'Credit',
+          amount: parsedDepositAmount,
+          date: Date.now(),
+        },
+        { transaction: t },
+      );
+    });
 
     const successResponse = {
       userId,
-      balance: user[0].balance,
-      walletId: newUserWalletId,
+      balance: user.balance,
+      walletId: user.walletId,
     };
-    return res.status(statusCode.create).json(apiResponseSuccess(successResponse, true, statusCode.create, 'Send balance to User successful'));
+    return res
+      .status(statusCode.create)
+      .json(apiResponseSuccess(null, true, statusCode.create, 'Send balance to User successful'));
   } catch (error) {
     console.error('Error sending balance:', error);
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -242,10 +318,20 @@ export const afterWining = async (req, res) => {
     const marketListExposure = {};
     marketListExposure[marketId] = 0;
 
-    const exposureIncrement = isWin ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
-    const exposureDecrement = isWin ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)` : 0;
+    const exposureIncrement = isWin
+      ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)`
+      : 0;
+    const exposureDecrement = isWin
+      ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)`
+      : 0;
 
-    await database.execute(updateUserBalancesQuery, [runnerId, exposureIncrement, exposureDecrement, JSON.stringify([marketListExposure]), marketId]);
+    await database.execute(updateUserBalancesQuery, [
+      runnerId,
+      exposureIncrement,
+      exposureDecrement,
+      JSON.stringify([marketListExposure]),
+      marketId,
+    ]);
 
     const insertProfitLossQuery = `
     INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
@@ -273,6 +359,15 @@ export const afterWining = async (req, res) => {
     }
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'success'));
   } catch (error) {
-    res.status(error.responseCode ?? statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(error.responseCode ?? statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };

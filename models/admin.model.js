@@ -1,8 +1,11 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../db.js';
 import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 
-const admins = sequelize.define('admins', {
+const admins = sequelize.define(
+  'admins',
+  {
     id: {
       type: DataTypes.BIGINT,
       autoIncrement: true,
@@ -15,7 +18,7 @@ const admins = sequelize.define('admins', {
     userName: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: false, 
+      unique: false,
     },
     password: {
       type: DataTypes.STRING,
@@ -26,14 +29,16 @@ const admins = sequelize.define('admins', {
       allowNull: true,
     },
     walletId: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
+      defaultValue: uuidv4(),
       allowNull: true,
     },
     balance: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-  }, {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+  },
+  {
     timestamps: false,
     hooks: {
       beforeCreate: async (admin) => {
@@ -43,10 +48,11 @@ const admins = sequelize.define('admins', {
         }
       },
     },
-  });
+  },
+);
 
-  admins.prototype.validPassword = async function(password) {
-    return await bcrypt.compare(password, this.password);
-  };
-  
-  export default admins;
+admins.prototype.validPassword = async function (password) {
+  return await bcrypt.compare(password, this.password);
+};
+
+export default admins;

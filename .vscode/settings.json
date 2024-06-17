@@ -1,9 +1,4 @@
 {
-  "cSpell.ignoreWords": [
-    "uuidv"
-  ],
-  "cSpell.words": [
-    "DBNAME",
-    "TINYINT"
-  ]
+  "cSpell.ignoreWords": ["uuidv"],
+  "cSpell.words": ["DBNAME", "TINYINT"]
 }

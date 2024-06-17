@@ -8,14 +8,14 @@ import {
   sendBalance,
   getAllUsers,
   adminLogin,
-  afterWining
+  afterWining,
 } from '../controller/admin.controller.js';
 import {
   depositSchema,
   loginSchema,
   sendBalanceSchema,
   winningSchema,
-  suspendedMarketSchema
+  suspendedMarketSchema,
 } from '../schema/commonSchema.js';
 import { string } from '../constructor/string.js';
 
@@ -25,17 +25,21 @@ export const AdminRoute = (app) => {
   // done
   app.post('/api/admin-create', customErrorHandler, authorize([string.Admin]), createAdmin);
   // done
-  app.post('/api/admin-login', loginSchema, customErrorHandler, authorize([string.Admin]), adminLogin);
+  app.post('/api/admin-login', loginSchema, customErrorHandler, adminLogin);
   // done
-  app.post('/api/update-market-status/:marketId', suspendedMarketSchema, customErrorHandler, authorize([string.Admin]), checkMarketStatus);
+  app.post(
+    '/api/update-market-status/:marketId',
+    suspendedMarketSchema,
+    customErrorHandler,
+    authorize([string.Admin]),
+    checkMarketStatus,
+  );
   // done
-  app.get('/api/All-User', customErrorHandler, authorize([string.Admin]), getAllUsers);
+  app.get('/api/all-user', customErrorHandler, authorize([string.Admin]), getAllUsers);
   // done
   app.post('/api/deposit-amount', depositSchema, customErrorHandler, authorize([string.Admin]), deposit);
   // done
   app.post('/api/sendBalance-user', sendBalanceSchema, customErrorHandler, authorize([string.Admin]), sendBalance);
 
   app.post('/api/afterWining', winningSchema, customErrorHandler, authorize([string.Admin]), afterWining);
-
 };
-

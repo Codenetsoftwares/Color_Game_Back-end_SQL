@@ -1,8 +1,8 @@
 class stringConst {
-    constructor() {
-        this.Admin = 'admin';
-        this.User = 'user';
-    }
+  constructor() {
+    this.Admin = 'admin';
+    this.User = 'user';
+  }
 }
 
 export const string = new stringConst();

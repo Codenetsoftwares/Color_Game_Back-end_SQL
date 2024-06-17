@@ -1,5 +1,5 @@
 import { apiResponseSuccess, apiResponseErr, apiResponsePagination } from '../middleware/serverError.js';
-import { database } from '../controller/database.controller.js'
+import { database } from '../controller/database.controller.js';
 import { v4 as uuidv4 } from 'uuid';
 import gameSchema from '../models/game.model.js';
 import { statusCode } from '../helper/statusCodes.js';
@@ -17,19 +17,32 @@ export const createGame = async (req, res) => {
     const existingGame = await gameSchema.findOne({ where: { gameName } });
 
     if (existingGame) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Game name already exists'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Game name already exists'));
     }
 
     const newGame = await gameSchema.create({
       gameId,
       gameName,
       description,
-      isBlink
+      isBlink,
     });
 
-    return res.status(statusCode.create).send(apiResponseSuccess(newGame, true, statusCode.create, 'Game created successfully'));
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(newGame, true, statusCode.create, 'Game created successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -43,18 +56,20 @@ export const getAllGames = async (req, res) => {
       attributes: ['gameId', 'gameName', 'description'],
       where: {
         gameName: {
-          [Op.like]: `%${searchQuery}%`
-        }
+          [Op.like]: `%${searchQuery}%`,
+        },
       },
       offset: (page - 1) * pageSize,
-      limit: pageSize
+      limit: pageSize,
     });
 
     if (!rows || rows.length === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
     }
 
-    const gameData = rows.map(game => ({
+    const gameData = rows.map((game) => ({
       gameId: game.gameId,
       gameName: game.gameName,
       description: game.description,
@@ -64,10 +79,21 @@ export const getAllGames = async (req, res) => {
 
     const paginationData = apiResponsePagination(page, totalPages, count);
 
-    return res.status(statusCode.success).json(apiResponseSuccess(gameData, true, statusCode.success, 'Success', paginationData));
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(gameData, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
     console.error('Error fetching games:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -76,8 +102,8 @@ export const updateGame = async (req, res) => {
   try {
     const game = await gameSchema.findOne({
       where: {
-        gameId: gameId
-      }
+        gameId: gameId,
+      },
     });
 
     if (!game) {
@@ -96,14 +122,25 @@ export const updateGame = async (req, res) => {
 
     const updatedGame = await gameSchema.findOne({
       where: {
-        gameId: gameId
-      }
+        gameId: gameId,
+      },
     });
 
-    return res.status(statusCode.success).json(apiResponseSuccess(updatedGame, true, statusCode.success, 'Game updated successfully.'));
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(updatedGame, true, statusCode.success, 'Game updated successfully.'));
   } catch (error) {
     console.error('Error updating game:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -115,22 +152,26 @@ export const createMarket = async (req, res) => {
     const existingMarket = await marketSchema.findOne({
       where: {
         gameId: gameId,
-        marketName: marketName
-      }
+        marketName: marketName,
+      },
     });
 
     if (existingMarket) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(existingMarket, false, statusCode.badRequest, 'Market already exists for this game'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(existingMarket, false, statusCode.badRequest, 'Market already exists for this game'));
     }
 
     const game = await gameSchema.findOne({
       where: {
-        gameId: gameId
-      }
+        gameId: gameId,
+      },
     });
 
     if (!game) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found'));
     }
 
     const marketId = uuidv4();
@@ -141,20 +182,31 @@ export const createMarket = async (req, res) => {
       participants: participants,
       timeSpan: timeSpan,
       announcementResult: 0,
-      isActive: 1
+      isActive: 1,
     });
 
     // Fetch all markets for the game
     const marketList = await marketSchema.findAll({
       where: {
-        gameId: gameId
-      }
+        gameId: gameId,
+      },
     });
 
-    return res.status(statusCode.create).json(apiResponseSuccess({ marketList: marketList }, true, statusCode.create, 'Market created successfully'));
+    return res
+      .status(statusCode.create)
+      .json(apiResponseSuccess({ marketList: marketList }, true, statusCode.create, 'Market created successfully'));
   } catch (error) {
     console.error('Error creating market:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -190,10 +242,21 @@ export const getAllMarkets = async (req, res) => {
       totalItems: count,
     };
 
-    return res.status(statusCode.success).send(apiResponseSuccess(rows, true, statusCode.success, 'Success', paginationData));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(rows, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
     console.error('Error fetching markets:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -202,12 +265,14 @@ export const updateMarket = async (req, res) => {
   try {
     const market = await marketSchema.findOne({
       where: {
-        marketId: marketId
-      }
+        marketId: marketId,
+      },
     });
 
     if (!market) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Market not found.'));
+      return res
+        .status(statusCode.notFound)
+        .json(apiResponseErr(null, false, statusCode.notFound, 'Market not found.'));
     }
 
     if (marketName !== undefined) {
@@ -226,14 +291,25 @@ export const updateMarket = async (req, res) => {
 
     const updatedMarket = await marketSchema.findOne({
       where: {
-        marketId: marketId
-      }
+        marketId: marketId,
+      },
     });
 
-    return res.status(statusCode.success).json(apiResponseSuccess(updatedMarket, true, statusCode.success, 'Market updated successfully.'));
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(updatedMarket, true, statusCode.success, 'Market updated successfully.'));
   } catch (error) {
     console.error('Error updating market:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -248,8 +324,8 @@ export const createRunner = async (req, res) => {
 
     const market = await marketSchema.findOne({
       where: {
-        marketId: marketId
-      }
+        marketId: marketId,
+      },
     });
 
     if (!market) {
@@ -259,11 +335,11 @@ export const createRunner = async (req, res) => {
     const existingRunners = await runnerSchema.findAll({
       attributes: ['runnerName'],
       where: {
-        marketId: marketId
-      }
+        marketId: marketId,
+      },
     });
 
-    const existingRunnerNames = existingRunners.map(runner => runner.runnerName.toLowerCase());
+    const existingRunnerNames = existingRunners.map((runner) => runner.runnerName.toLowerCase());
 
     for (const runnerName of runnerNames) {
       const lowerCaseRunnerName = runnerName.toLowerCase();
@@ -274,25 +350,41 @@ export const createRunner = async (req, res) => {
 
     const maxParticipants = market.participants;
     if (runnerNames.length !== maxParticipants) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Number of runners exceeds the maximum allowed participants');
+      throw apiResponseErr(
+        null,
+        false,
+        statusCode.badRequest,
+        'Number of runners exceeds the maximum allowed participants',
+      );
     }
 
-    const runnersToInsert = runnerNames.map(runnerName => ({
+    const runnersToInsert = runnerNames.map((runnerName) => ({
       marketId: marketId,
       runnerId: uuidv4(),
       runnerName: runnerName,
       isWin: 0,
       bal: 0,
       back: null,
-      lay: null
+      lay: null,
     }));
 
     await runnerSchema.bulkCreate(runnersToInsert);
 
-    return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, 'Runner created successfully'));
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(null, true, statusCode.create, 'Runner created successfully'));
   } catch (error) {
     console.error('Error creating runner:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -300,18 +392,28 @@ export const updateRunner = async (req, res) => {
   try {
     const { runnerId, runnerName } = req.body;
 
-    const [rowsAffected] = await runnerSchema.update(
-      { runnerName: runnerName },
-      { where: { runnerId: runnerId } }
-    );
+    const [rowsAffected] = await runnerSchema.update({ runnerName: runnerName }, { where: { runnerId: runnerId } });
 
     if (rowsAffected === 0) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Runner not found.'));
+      return res
+        .status(statusCode.notFound)
+        .json(apiResponseErr(null, false, statusCode.notFound, 'Runner not found.'));
     }
 
-    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Runner updated successfully.'));
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(null, true, statusCode.success, 'Runner updated successfully.'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -337,15 +439,23 @@ export const createRate = async (req, res) => {
       });
     }
 
-    await runnerSchema.update(
-      { back: back, lay: lay },
-      { where: { runnerId: runnerId } }
-    );
+    await runnerSchema.update({ back: back, lay: lay }, { where: { runnerId: runnerId } });
 
-    return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, 'Rate created successfully'));
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(null, true, statusCode.create, 'Rate created successfully'));
   } catch (error) {
     console.error('Error creating rate:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -376,7 +486,9 @@ export const updateRate = async (req, res) => {
     }
 
     if (Object.keys(updateFields).length === 0) {
-      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'No changes detected. Runner rate remains the same.'));
+      return res
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, 'No changes detected. Runner rate remains the same.'));
     }
 
     const [updatedRows] = await runnerSchema.update(updateFields, {
@@ -390,10 +502,21 @@ export const updateRate = async (req, res) => {
     const runnerAfterUpdate = await runnerSchema.findOne({ where: { runnerId } });
     console.log('Runner after update:', runnerAfterUpdate.toJSON());
 
-    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Rate updated successfully.'));
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(null, true, statusCode.success, 'Rate updated successfully.'));
   } catch (error) {
     console.error('Error updating rate:', error); // Log the error for debugging
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -419,23 +542,36 @@ export const getAllRunners = async (req, res) => {
       limit: pageSize,
     });
 
-    const transformedRunners = runners.map(runner => ({
+    const transformedRunners = runners.map((runner) => ({
       runnerId: runner.runnerId,
       runnerName: runner.runnerName,
-      rates: [{
-        Back: runner.back,
-        Lay: runner.lay,
-      }],
+      rates: [
+        {
+          Back: runner.back,
+          Lay: runner.lay,
+        },
+      ],
     }));
 
     const totalPages = Math.ceil(totalItems / pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
 
-    res.status(statusCode.success).send(apiResponseSuccess(transformedRunners, true, statusCode.success, 'success', paginationData));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(transformedRunners, true, statusCode.success, 'success', paginationData));
   } catch (error) {
     console.error('Error fetching runners:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -443,7 +579,9 @@ export const deleteGame = async (req, res) => {
   const gameId = req.params.gameId;
   try {
     if (!gameId) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Game ID cannot be empty'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Game ID cannot be empty'));
     }
 
     const markets = await marketSchema.findAll({
@@ -452,7 +590,7 @@ export const deleteGame = async (req, res) => {
       },
     });
 
-    const marketIds = markets.map(market => market.marketId);
+    const marketIds = markets.map((market) => market.marketId);
 
     const runners = await runnerSchema.findAll({
       where: {
@@ -462,7 +600,7 @@ export const deleteGame = async (req, res) => {
       },
     });
 
-    const runnerIds = runners.map(runner => runner.runnerId);
+    const runnerIds = runners.map((runner) => runner.runnerId);
 
     await rateSchema.destroy({
       where: {
@@ -496,10 +634,20 @@ export const deleteGame = async (req, res) => {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Game not found'));
     }
 
-    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Game deleted successfully'));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Game deleted successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
-
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -513,7 +661,7 @@ export const deleteMarket = async (req, res) => {
       },
     });
 
-    const runnerIds = runners.map(runner => runner.runnerId);
+    const runnerIds = runners.map((runner) => runner.runnerId);
 
     await rateSchema.destroy({
       where: {
@@ -536,13 +684,26 @@ export const deleteMarket = async (req, res) => {
     });
 
     if (deletedMarketCount === 0) {
-      res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+      res
+        .status(statusCode.internalServerError)
+        .send(
+          apiResponseErr(
+            error.data ?? null,
+            false,
+            error.responseCode ?? statusCode.internalServerError,
+            error.errMessage ?? error.message,
+          ),
+        );
     }
 
-    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Market deleted successfully'));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Market deleted successfully'));
   } catch (error) {
     console.error('Error deleting market:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 // done
@@ -566,11 +727,19 @@ export const deleteRunner = async (req, res) => {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Runner not found'));
     }
 
-    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Runner deleted successfully'));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Runner deleted successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
-
-
-
