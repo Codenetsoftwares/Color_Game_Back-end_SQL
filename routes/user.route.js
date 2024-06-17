@@ -5,7 +5,9 @@ import customErrorHandler from '../middleware/customErrorHandler.js'
 import { string } from '../constructor/string.js';
 
 export const UserRoute = (app) => {
+  // done
   app.post('/api/user-create', createdUserSchema, customErrorHandler, authorize([string.Admin]), createUser);
+  // done
   app.put('/api/users-update/:userId', userUpdateSchema, customErrorHandler, authorize([string.Admin]), userUpdate);
   // done
   app.post('/api/user-login', loginUser);
