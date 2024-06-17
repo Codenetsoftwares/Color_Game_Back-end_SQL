@@ -88,43 +88,42 @@ export const userUpdate = async (req, res) => {
 };
 
 export const loginUser = async (req, res) => {
+ const { userName, password } = req.body;
   try {
-    const { userName, password } = req.body;
-    console.log('req', req.body);
-    if (!userName || !password) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Required'));
+    const existingAdmin = await admins.findOne({ where: { userName } });
+
+    if (!existingAdmin) {
+      console.log('Admin not found');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
     }
 
-    const [rows] = await database.execute('SELECT * FROM User WHERE userName = ?', [userName]);
-    const existingUser = rows[0];
-
-    if (!existingUser || !existingUser.password) {
-      return res
-        .status(statusCode.unauthorize)
-        .send(apiResponseErr(null, false, statusCode.unauthorize, 'User not found'));
-    }
-    console.log('existingUser.password', existingUser.password);
-    console.log('pass', password);
-    const isPasswordValid = await bcrypt.compare(password, existingUser.password);
-    console.log('isPassword', isPasswordValid);
+    const isPasswordValid = await existingAdmin.validPassword(password);
 
     if (!isPasswordValid) {
-      return res
-        .status(statusCode.unauthorize)
-        .send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid username or password..'));
+      console.log('Invalid password');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
     }
 
     const accessTokenResponse = {
       id: existingUser.id,
       userName: existingUser.userName,
       isEighteen: existingUser.eligibilityCheck,
-      UserType: existingUser.userType || 'User',
-      wallet: existingUser.wallet,
+      UserType: existingUser.userType || 'user',
+      wallet: existingUser.wallet
     };
 
     const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
       expiresIn: '1d',
     });
+
+ 
+    res.status(statusCode.success).send(apiResponseSuccess({
+      accessToken, id: existingUser.id,
+      userName: existingUser.userName,
+      isEighteen: existingUser.eligibilityCheck,
+      UserType: existingUser.userType || 'user',
+      wallet: existingUser.wallet
+    }, true, statusCode.success, 'Login successful'));
 
     res.status(statusCode.success).send(
       apiResponseSuccess(
@@ -142,6 +141,7 @@ export const loginUser = async (req, res) => {
       ),
     );
   } catch (error) {
+    console.error('Error in adminLogin:', error.message);
     res
       .status(statusCode.internalServerError)
       .send(
