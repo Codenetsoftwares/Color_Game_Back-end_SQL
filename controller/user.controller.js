@@ -88,7 +88,7 @@ export const userUpdate = async (req, res) => {
 };
 // done
 export const loginUser = async (req, res) => {
- const { userName, password } = req.body;
+  const { userName, password } = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -178,27 +178,36 @@ export const eligibilityCheck = async (req, res) => {
       );
   }
 };
-
+// DONE
 export const resetPassword = async (req, res) => {
   try {
     const { oldPassword, password, confirmPassword } = req.body;
-    const userId = req.user[0].id;
-    const [userRows] = await database.execute('SELECT * FROM User WHERE id = ?', [userId]);
-    const user = userRows[0];
+    const userId = req.user.id;
+
+    if (password !== confirmPassword) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Confirm Password does not match with Password'));
+    }
+
+    const user = await userSchema.findByPk(userId);
+
     if (!user) {
       return res
         .status(statusCode.notFound)
         .send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
     }
-    const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, user.password);
+
+    const oldPasswordIsCorrect = await user.validPassword(oldPassword);
     if (!oldPasswordIsCorrect) {
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
     }
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(password, salt);
-    await database.execute('UPDATE User SET password = ? WHERE id = ?', [hashedPassword, userId]);
+
+    user.password = password;
+    await user.save();
+
     res
       .status(statusCode.success)
       .send(apiResponseSuccess(user, true, statusCode.success, 'Password Reset Successfully'));
@@ -215,6 +224,7 @@ export const resetPassword = async (req, res) => {
       );
   }
 };
+
 export const userGame = async (req, res) => {
   try {
     const page = req.query.page ? parseInt(req.query.page) : 1;

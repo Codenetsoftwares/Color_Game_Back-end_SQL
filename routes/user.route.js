@@ -28,6 +28,7 @@ import {
   createdUserSchema,
   currentOrderSchema,
   userUpdateSchema,
+  validateUserResetPassword,
 } from '../schema/commonSchema.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
 import { string } from '../constructor/string.js';
@@ -42,7 +43,7 @@ export const UserRoute = (app) => {
   // done
   app.post('/api/eligibilityCheck/:userId', authorize([string.User]), eligibilityCheck);
   // done
-  app.post('/api/user/resetpassword', authorize(['User']), resetPassword);
+  app.post('/api/user/resetpassword',validateUserResetPassword,customErrorHandler, authorize([string.User]), resetPassword);
   // done
   app.get('/api/user-games', userGame);
   // done
