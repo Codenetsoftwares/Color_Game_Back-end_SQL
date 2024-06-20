@@ -30,7 +30,7 @@ gameSchema.init(
   },
   {
     sequelize,
-    modelName: 'game',
+    modelName: 'gameSchema',
     tableName: 'game',
     timestamps: false,
     indexes: [

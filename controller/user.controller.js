@@ -7,6 +7,16 @@ import { string } from '../constructor/string.js';
 import userSchema from '../models/user.model.js';
 import { v4 as uuidv4 } from 'uuid';
 import { statusCode } from '../helper/statusCodes.js';
+import Market from '../models/market.model.js';
+import runnerSchema from '../models/runner.model.js';
+import rateSchema from '../models/rate.model.js';
+import Game from '../models/game.model.js';
+import { Op } from 'sequelize';
+import Runner from '../models/runner.model.js';
+import Rate from '../models/rate.model.js';
+import gameSchema from '../models/game.model.js';
+import marketSchema from '../models/market.model.js';
+
 
 // done
 export const createUser = async (req, res) => {
@@ -224,50 +234,45 @@ export const resetPassword = async (req, res) => {
       );
   }
 };
-
+// done
 export const userGame = async (req, res) => {
   try {
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
     const searchQuery = req.query.search || '';
 
-    const fetchGameDataQuery = `
-      SELECT gameId, gameName, description
-      FROM Game
-    `;
-    const [fetchGameDataResult] = await database.execute(fetchGameDataQuery);
+    const { count, rows } = await gameSchema.findAndCountAll({
+      attributes: ['gameId', 'gameName', 'description'],
+      where: {
+        gameName: {
+          [Op.like]: `%${searchQuery}%`,
+        },
+      },
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
+    });
 
-    if (!fetchGameDataResult || fetchGameDataResult.length === 0) {
+    if (!rows || rows.length === 0) {
       return res
         .status(statusCode.badRequest)
         .json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
     }
 
-    const gameData = fetchGameDataResult.map((row) => ({
-      gameId: row.gameId,
-      gameName: row.gameName,
-      description: row.description,
+    const gameData = rows.map((game) => ({
+      gameId: game.gameId,
+      gameName: game.gameName,
+      description: game.description,
     }));
 
-    const filteredGameData = gameData.filter(
-      (game) => game.gameName && game.gameName.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
+    const totalPages = Math.ceil(count / pageSize);
 
-    const totalItems = filteredGameData.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
+    const paginationData = apiResponsePagination(page, totalPages, count);
 
-    let paginatedGameData = [];
-    if (page && pageSize) {
-      paginatedGameData = filteredGameData.slice((page - 1) * pageSize, page * pageSize);
-    } else {
-      paginatedGameData = filteredGameData;
-    }
-
-    const paginationData = apiResponsePagination(page, totalPages, totalItems);
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(paginatedGameData, true, statusCode.success, 'Success', paginationData));
+      .json(apiResponseSuccess(gameData, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
+    console.error('Error fetching games:', error);
     res
       .status(statusCode.internalServerError)
       .send(
@@ -280,6 +285,7 @@ export const userGame = async (req, res) => {
       );
   }
 };
+// done
 export const userMarket = async (req, res) => {
   try {
     const gameId = req.params.gameId;
@@ -287,32 +293,36 @@ export const userMarket = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
 
-    const marketsQuery = `
-      SELECT Market.marketId, Market.marketName, Market.timeSpan, Market.participants, Market.isActive
-      FROM Market
-      WHERE Market.gameId = ?
-        AND LOWER(Market.marketName) LIKE CONCAT('%', ?, '%')
-    `;
+    const { count, rows } = await marketSchema.findAndCountAll({
+      where: {
+        gameId: gameId,
+        marketName: {
+          [Op.like]: `%${searchQuery}%`,
+        },
+      },
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
+      // include: [
+      //   {
+      //     model: Game,
+      //     attributes: ['gameId', 'gameName'],
+      //   },
+      // ],
+    });
 
-    const [markets] = await database.execute(marketsQuery, [gameId, searchQuery]);
-
-    const totalItems = markets.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = page * pageSize;
-
-    const paginatedMarkets = markets.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(count / pageSize);
 
     const paginationData = {
       currentPage: page,
       totalPages: totalPages,
-      totalItems: totalItems,
+      totalItems: count,
     };
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(paginatedMarkets, true, statusCode.success, 'Success', paginationData));
+      .send(apiResponseSuccess(rows, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
+    console.error('Error fetching markets:', error);
     res
       .status(statusCode.internalServerError)
       .send(
@@ -325,6 +335,7 @@ export const userMarket = async (req, res) => {
       );
   }
 };
+// done
 export const userRunners = async (req, res) => {
   try {
     const marketId = req.params.marketId;
@@ -332,40 +343,41 @@ export const userRunners = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const searchQuery = req.query.search || '';
 
-    const runnersQuery = `
-      SELECT Runner.runnerId, Runner.runnerName, Rate.Back, Rate.Lay
-      FROM Runner
-      LEFT JOIN Rate ON Runner.runnerId = Rate.runnerId
-      WHERE Runner.marketId = ?
-    `;
-    const [runnersResult] = await database.execute(runnersQuery, [marketId]);
+    const whereConditions = {
+      marketId: marketId,
+      ...(searchQuery && {
+        runnerName: {
+          [Op.like]: `%${searchQuery}%`,
+        },
+      }),
+    };
 
-    const runners = runnersResult.map((row) => ({
-      runnerId: row.runnerId,
-      runnerName: row.runnerName,
+    const { rows: runners, count: totalItems } = await runnerSchema.findAndCountAll({
+      where: whereConditions,
+      offset: (page - 1) * pageSize,
+      limit: pageSize,
+    });
+
+    const transformedRunners = runners.map((runner) => ({
+      runnerId: runner.runnerId,
+      runnerName: runner.runnerName,
       rates: [
         {
-          Back: row.Back,
-          Lay: row.Lay,
+          back: runner.back,
+          lay: runner.lay,
         },
       ],
     }));
 
-    const filteredRunners = runners.filter((runner) =>
-      runner.runnerName.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-
-    const totalItems = filteredRunners.length;
     const totalPages = Math.ceil(totalItems / pageSize);
-
-    const paginatedRunners = filteredRunners.slice((page - 1) * pageSize, page * pageSize);
 
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
 
     res
       .status(statusCode.success)
-      .send(apiResponseSuccess(paginatedRunners, true, statusCode.success, 'success', paginationData));
+      .send(apiResponseSuccess(transformedRunners, true, statusCode.success, 'success', paginationData));
   } catch (error) {
+    console.error('Error fetching runners:', error);
     res
       .status(statusCode.internalServerError)
       .send(
@@ -378,79 +390,59 @@ export const userRunners = async (req, res) => {
       );
   }
 };
+// done
 export const getAllGameData = async (req, res) => {
   try {
-    const gameDataQuery = `
-      SELECT
-        G.gameId,
-        G.gameName,
-        G.description,
-        G.isBlink,
-        M.marketId,
-        M.marketName,
-        M.participants,
-        M.timeSpan,
-        M.announcementResult,
-        M.isActive,
-        R.runnerId,
-        R.runnerName,
-        R.isWin,
-        R.bal,
-        R.Back AS BackRate,
-        R.Lay AS LayRate
-      FROM Game G
-      LEFT JOIN Market M ON G.gameId = M.gameId
-      LEFT JOIN Runner R ON M.marketId = R.marketId
-    `;
-    const [gameDataRows] = await database.execute(gameDataQuery);
+  const gameDataQuery = `SELECT G.gameId, G.gameName, G.description, G.isBlink, M.marketId, M.marketName, M.participants, M.timeSpan, M.announcementResult, M.isActive, R.runnerId, R.runnerName, R.isWin, R.bal, R.back AS BackRate, R.lay AS LayRate FROM game G LEFT JOIN market M ON G.gameId = M.gameId LEFT JOIN runner R ON M.marketId = R.marketId `;
+  const [gameDataRows] = await database.execute(gameDataQuery);
 
-    const allGameData = gameDataRows.reduce((acc, row) => {
-      let gameIndex = acc.findIndex((game) => game.gameId === row.gameId);
-      if (gameIndex === -1) {
-        acc.push({
-          gameId: row.gameId,
-          gameName: row.gameName,
-          description: row.description,
-          isBlink: row.isBlink,
-          markets: [],
-        });
-        gameIndex = acc.length - 1;
-      }
-
-      let marketIndex = acc[gameIndex].markets.findIndex((market) => market.marketId === row.marketId);
-      if (marketIndex === -1) {
-        acc[gameIndex].markets.push({
-          marketId: row.marketId,
-          marketName: row.marketName,
-          participants: row.participants,
-          timeSpan: row.timeSpan,
-          announcementResult: row.announcementResult,
-          isActive: row.isActive,
-          runners: [],
-        });
-        marketIndex = acc[gameIndex].markets.length - 1;
-      }
-      if (row.runnerId) {
-        acc[gameIndex].markets[marketIndex].runners.push({
-          runnerName: {
-            runnerId: row.runnerId,
-            name: row.runnerName,
-            isWin: row.isWin,
-            bal: row.bal,
+  const allGameData = gameDataRows.reduce((acc, row) => {
+    let gameIndex = acc.findIndex((game) => game.gameId === row.gameId);
+    if (gameIndex === -1) {
+      acc.push({
+        gameId: row.gameId,
+        gameName: row.gameName,
+        description: row.description,
+        isBlink: row.isBlink,
+        markets: [],
+      });
+      gameIndex = acc.length - 1;
+    }
+  
+    let marketIndex = acc[gameIndex].markets.findIndex((market) => market.marketId === row.marketId);
+    if (marketIndex === -1) {
+      acc[gameIndex].markets.push({
+        marketId: row.marketId,
+        marketName: row.marketName,
+        participants: row.participants,
+        timeSpan: row.timeSpan,
+        announcementResult: row.announcementResult,
+        isActive: row.isActive,
+        runners: [],
+      });
+      marketIndex = acc[gameIndex].markets.length - 1;
+    }
+    if (row.runnerId) {
+      acc[gameIndex].markets[marketIndex].runners.push({
+        runnerName: {
+          runnerId: row.runnerId,
+          name: row.runnerName,
+          isWin: row.isWin,
+          bal: row.bal,
+        },
+        rate: [
+          {
+            back: row.BackRate,
+            lay: row.LayRate,
           },
-          rate: [
-            {
-              Back: row.BackRate,
-              Lay: row.LayRate,
-            },
-          ],
-        });
-      }
-
-      return acc;
-    }, []);
-
-    res.status(statusCode.success).send(apiResponseSuccess(allGameData, true, statusCode.success, 'Success'));
+        ],
+      });
+    }
+  
+    return acc;
+  }, []);
+  
+  res.status(statusCode.success).send(apiResponseSuccess(allGameData, true, statusCode.success, 'Success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -464,6 +456,7 @@ export const getAllGameData = async (req, res) => {
       );
   }
 };
+// done
 export const filteredGameData = async (req, res) => {
   try {
     const gameId = req.params.gameId;
@@ -483,12 +476,12 @@ export const filteredGameData = async (req, res) => {
         R.runnerName,
         R.isWin,
         R.bal,
-        RA.Back,
-        RA.Lay
-      FROM Game G
-      LEFT JOIN Market M ON G.gameId = M.gameId
-      LEFT JOIN Runner R ON M.marketId = R.marketId
-      LEFT JOIN Rate RA ON R.runnerId = RA.runnerId
+        RA.back,
+        RA.lay
+      FROM game G
+      LEFT JOIN market M ON G.gameId = M.gameId
+      LEFT JOIN runner R ON M.marketId = R.marketId
+      LEFT JOIN rate RA ON R.runnerId = RA.runnerId
       WHERE G.gameId = ?
     `;
     const [gameDataRows] = await database.execute(gameDataQuery, [gameId]);
@@ -526,8 +519,8 @@ export const filteredGameData = async (req, res) => {
         },
         rate: [
           {
-            Back: row.Back,
-            Lay: row.Lay,
+            back: row.back,
+            lay: row.lay,
           },
         ],
       });
@@ -558,7 +551,6 @@ export const filteredGameData = async (req, res) => {
       );
   }
 };
-
 
 export const userGif = async (req, res) => {
   try {

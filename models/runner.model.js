@@ -50,7 +50,7 @@ runnerSchema.init(
   },
   {
     sequelize,
-    modelName: 'Runner',
+    modelName: 'runnerSchema',
     tableName: 'runner',
     timestamps: false,
     indexes: [

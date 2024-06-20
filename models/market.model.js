@@ -18,7 +18,6 @@ marketSchema.init(
     marketId: {
       type: DataTypes.CHAR(150),
       allowNull: false,
-      unique: true, // Ensure marketId is unique
     },
     marketName: {
       type: DataTypes.STRING(255),
@@ -45,7 +44,7 @@ marketSchema.init(
   },
   {
     sequelize,
-    modelName: 'market',
+    modelName: 'marketSchema',
     tableName: 'market',
     timestamps: false,
     indexes: [

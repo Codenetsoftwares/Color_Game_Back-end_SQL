@@ -11,6 +11,7 @@ import { AnnouncementRoute } from './routes/announcement.route.js';
 import sequelize from './db.js';
 import gameSchema from './models/game.model.js';
 import marketSchema from './models/market.model.js';
+import runnerSchema from './models/runner.model.js';
 
 dotenv.config();
 const app = express();
@@ -51,6 +52,11 @@ UserRoute(app);
 GameRoute(app);
 AnnouncementRoute(app);
 SliderRoute(app);
+gameSchema.hasMany(marketSchema, { foreignKey: 'gameId' });
+marketSchema.belongsTo(gameSchema, { foreignKey: 'gameId' });
+
+marketSchema.hasMany(runnerSchema, { foreignKey: 'marketId' });
+runnerSchema.belongsTo(marketSchema, { foreignKey: 'marketId' });
 
 sequelize
   .sync({ alter: true })
