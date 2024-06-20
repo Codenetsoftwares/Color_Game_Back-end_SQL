@@ -1,10 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
-import marketSchema from './market.model.js';
 
-class runnerSchema extends Model {}
+class Runner extends Model {}
 
-runnerSchema.init(
+Runner.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -50,18 +49,10 @@ runnerSchema.init(
   },
   {
     sequelize,
-    modelName: 'runnerSchema',
+    modelName: 'Runner',
     tableName: 'runner',
     timestamps: false,
-    indexes: [
-      {
-        name: 'runnerId_index',
-        fields: ['runnerId'],
-      },
-    ],
   },
 );
 
-runnerSchema.belongsTo(marketSchema, { foreignKey: 'marketId', targetKey: 'marketId' });
-
-export default runnerSchema;
+export default Runner;

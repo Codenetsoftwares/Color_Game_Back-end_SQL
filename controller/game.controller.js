@@ -1,11 +1,11 @@
 import { apiResponseSuccess, apiResponseErr, apiResponsePagination } from '../middleware/serverError.js';
 import { database } from '../controller/database.controller.js';
 import { v4 as uuidv4 } from 'uuid';
-import gameSchema from '../models/game.model.js';
+import Game from '../models/game.model.js';
 import { statusCode } from '../helper/statusCodes.js';
 import { Op } from 'sequelize';
-import marketSchema from '../models/market.model.js';
-import runnerSchema from '../models/runner.model.js';
+import Market from '../models/market.model.js';
+import Runner from '../models/runner.model.js';
 import rateSchema from '../models/rate.model.js';
 
 // done
@@ -14,7 +14,7 @@ export const createGame = async (req, res) => {
   try {
     const gameId = uuidv4();
 
-    const existingGame = await gameSchema.findOne({ where: { gameName } });
+    const existingGame = await Game.findOne({ where: { gameName } });
 
     if (existingGame) {
       return res
@@ -22,7 +22,7 @@ export const createGame = async (req, res) => {
         .json(apiResponseErr(null, false, statusCode.badRequest, 'Game name already exists'));
     }
 
-    const newGame = await gameSchema.create({
+    const newGame = await Game.create({
       gameId,
       gameName,
       description,
@@ -52,7 +52,7 @@ export const getAllGames = async (req, res) => {
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
     const searchQuery = req.query.search || '';
 
-    const { count, rows } = await gameSchema.findAndCountAll({
+    const { count, rows } = await Game.findAndCountAll({
       attributes: ['gameId', 'gameName', 'description'],
       where: {
         gameName: {
@@ -100,7 +100,7 @@ export const getAllGames = async (req, res) => {
 export const updateGame = async (req, res) => {
   const { gameId, gameName, description } = req.body;
   try {
-    const game = await gameSchema.findOne({
+    const game = await Game.findOne({
       where: {
         gameId: gameId,
       },
@@ -120,7 +120,7 @@ export const updateGame = async (req, res) => {
 
     await game.save();
 
-    const updatedGame = await gameSchema.findOne({
+    const updatedGame = await Game.findOne({
       where: {
         gameId: gameId,
       },
@@ -149,7 +149,7 @@ export const createMarket = async (req, res) => {
     const gameId = req.params.gameId;
     const { marketName, participants, timeSpan } = req.body;
 
-    const existingMarket = await marketSchema.findOne({
+    const existingMarket = await Market.findOne({
       where: {
         gameId: gameId,
         marketName: marketName,
@@ -162,7 +162,7 @@ export const createMarket = async (req, res) => {
         .json(apiResponseErr(existingMarket, false, statusCode.badRequest, 'Market already exists for this game'));
     }
 
-    const game = await gameSchema.findOne({
+    const game = await Game.findOne({
       where: {
         gameId: gameId,
       },
@@ -175,7 +175,7 @@ export const createMarket = async (req, res) => {
     }
 
     const marketId = uuidv4();
-    const newMarket = await marketSchema.create({
+    const newMarket = await Market.create({
       gameId: gameId,
       marketId: marketId,
       marketName: marketName,
@@ -186,7 +186,7 @@ export const createMarket = async (req, res) => {
     });
 
     // Fetch all markets for the game
-    const marketList = await marketSchema.findAll({
+    const marketList = await Market.findAll({
       where: {
         gameId: gameId,
       },
@@ -217,7 +217,7 @@ export const getAllMarkets = async (req, res) => {
     const pageSize = parseInt(req.query.pageSize) || 10;
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
 
-    const { count, rows } = await marketSchema.findAndCountAll({
+    const { count, rows } = await Market.findAndCountAll({
       where: {
         gameId: gameId,
         marketName: {
@@ -228,7 +228,7 @@ export const getAllMarkets = async (req, res) => {
       limit: pageSize,
       // include: [
       //   {
-      //     model: gameSchema,
+      //     model: Game,
       //     attributes: ['gameId', 'gameName'],
       //   },
       // ],
@@ -263,7 +263,7 @@ export const getAllMarkets = async (req, res) => {
 export const updateMarket = async (req, res) => {
   const { marketId, marketName, participants, timeSpan } = req.body;
   try {
-    const market = await marketSchema.findOne({
+    const market = await Market.findOne({
       where: {
         marketId: marketId,
       },
@@ -289,7 +289,7 @@ export const updateMarket = async (req, res) => {
 
     await market.save();
 
-    const updatedMarket = await marketSchema.findOne({
+    const updatedMarket = await Market.findOne({
       where: {
         marketId: marketId,
       },
@@ -322,7 +322,7 @@ export const createRunner = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.notFound, `RunnerName Required`);
     }
 
-    const market = await marketSchema.findOne({
+    const market = await Market.findOne({
       where: {
         marketId: marketId,
       },
@@ -332,7 +332,7 @@ export const createRunner = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
     }
 
-    const existingRunners = await runnerSchema.findAll({
+    const existingRunners = await Runner.findAll({
       attributes: ['runnerName'],
       where: {
         marketId: marketId,
@@ -368,7 +368,7 @@ export const createRunner = async (req, res) => {
       lay: null,
     }));
 
-    await runnerSchema.bulkCreate(runnersToInsert);
+    await Runner.bulkCreate(runnersToInsert);
 
     return res
       .status(statusCode.create)
@@ -392,7 +392,7 @@ export const updateRunner = async (req, res) => {
   try {
     const { runnerId, runnerName } = req.body;
 
-    const [rowsAffected] = await runnerSchema.update({ runnerName: runnerName }, { where: { runnerId: runnerId } });
+    const [rowsAffected] = await Runner.update({ runnerName: runnerName }, { where: { runnerId: runnerId } });
 
     if (rowsAffected === 0) {
       return res
@@ -439,7 +439,7 @@ export const createRate = async (req, res) => {
       });
     }
 
-    await runnerSchema.update({ back: back, lay: lay }, { where: { runnerId: runnerId } });
+    await Runner.update({ back: back, lay: lay }, { where: { runnerId: runnerId } });
 
     return res
       .status(statusCode.create)
@@ -467,7 +467,7 @@ export const updateRate = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Either Back or Lay field is required for update.');
     }
 
-    const runnerBeforeUpdate = await runnerSchema.findOne({ where: { runnerId } });
+    const runnerBeforeUpdate = await Runner.findOne({ where: { runnerId } });
 
     if (!runnerBeforeUpdate) {
       throw apiResponseErr(null, false, statusCode.notFound, 'Runner not found.');
@@ -491,7 +491,7 @@ export const updateRate = async (req, res) => {
         .json(apiResponseSuccess(null, true, statusCode.success, 'No changes detected. Runner rate remains the same.'));
     }
 
-    const [updatedRows] = await runnerSchema.update(updateFields, {
+    const [updatedRows] = await Runner.update(updateFields, {
       where: { runnerId },
     });
 
@@ -499,7 +499,7 @@ export const updateRate = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.notFound, 'Runner not found.');
     }
 
-    const runnerAfterUpdate = await runnerSchema.findOne({ where: { runnerId } });
+    const runnerAfterUpdate = await Runner.findOne({ where: { runnerId } });
     console.log('Runner after update:', runnerAfterUpdate.toJSON());
 
     return res
@@ -536,7 +536,7 @@ export const getAllRunners = async (req, res) => {
       }),
     };
 
-    const { rows: runners, count: totalItems } = await runnerSchema.findAndCountAll({
+    const { rows: runners, count: totalItems } = await Runner.findAndCountAll({
       where: whereConditions,
       offset: (page - 1) * pageSize,
       limit: pageSize,
@@ -584,7 +584,7 @@ export const deleteGame = async (req, res) => {
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Game ID cannot be empty'));
     }
 
-    const markets = await marketSchema.findAll({
+    const markets = await Market.findAll({
       where: {
         gameId: gameId,
       },
@@ -592,7 +592,7 @@ export const deleteGame = async (req, res) => {
 
     const marketIds = markets.map((market) => market.marketId);
 
-    const runners = await runnerSchema.findAll({
+    const runners = await Runner.findAll({
       where: {
         marketId: {
           [Op.in]: marketIds,
@@ -610,7 +610,7 @@ export const deleteGame = async (req, res) => {
       },
     });
 
-    await runnerSchema.destroy({
+    await Runner.destroy({
       where: {
         marketId: {
           [Op.in]: marketIds,
@@ -618,13 +618,13 @@ export const deleteGame = async (req, res) => {
       },
     });
 
-    await marketSchema.destroy({
+    await Market.destroy({
       where: {
         gameId: gameId,
       },
     });
 
-    const deletedGameCount = await gameSchema.destroy({
+    const deletedGameCount = await Game.destroy({
       where: {
         gameId: gameId,
       },
@@ -655,7 +655,7 @@ export const deleteMarket = async (req, res) => {
   try {
     const { marketId } = req.params;
 
-    const runners = await runnerSchema.findAll({
+    const runners = await Runner.findAll({
       where: {
         marketId: marketId,
       },
@@ -671,13 +671,13 @@ export const deleteMarket = async (req, res) => {
       },
     });
 
-    await runnerSchema.destroy({
+    await Runner.destroy({
       where: {
         marketId: marketId,
       },
     });
 
-    const deletedMarketCount = await marketSchema.destroy({
+    const deletedMarketCount = await Market.destroy({
       where: {
         marketId: marketId,
       },
@@ -717,7 +717,7 @@ export const deleteRunner = async (req, res) => {
       },
     });
 
-    const deletedRunnerCount = await runnerSchema.destroy({
+    const deletedRunnerCount = await Runner.destroy({
       where: {
         runnerId: runnerId,
       },

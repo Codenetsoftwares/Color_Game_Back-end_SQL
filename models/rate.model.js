@@ -1,6 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
-import runnerSchema from './runner.model.js';
+import Runner from './runner.model.js';
 
 class rateSchema extends Model {}
 
@@ -44,6 +44,6 @@ rateSchema.init(
   },
 );
 
-rateSchema.belongsTo(runnerSchema, { foreignKey: 'runnerId', targetKey: 'runnerId' });
+rateSchema.belongsTo(Runner, { foreignKey: 'runnerId', targetKey: 'runnerId' });
 
 export default rateSchema;

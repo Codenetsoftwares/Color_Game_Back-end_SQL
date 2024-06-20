@@ -1,9 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db.js';
+import sequelize from '../db.js'; 
 
-class gameSchema extends Model {}
+class Game extends Model {}
 
-gameSchema.init(
+Game.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -13,6 +13,7 @@ gameSchema.init(
     gameId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
+      unique: true,
     },
     gameName: {
       type: DataTypes.STRING(255),
@@ -30,16 +31,10 @@ gameSchema.init(
   },
   {
     sequelize,
-    modelName: 'gameSchema',
+    modelName: 'Game',
     tableName: 'game',
     timestamps: false,
-    indexes: [
-      {
-        unique: true,
-        fields: ['gameId'],
-      },
-    ],
   },
 );
 
-export default gameSchema;
+export default Game;

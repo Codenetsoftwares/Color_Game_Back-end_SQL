@@ -45,15 +45,15 @@ export const UserRoute = (app) => {
   // done
   app.post('/api/user/resetpassword',validateUserResetPassword,customErrorHandler, authorize([string.User]), resetPassword);
   // done
-  app.get('/api/user-games', userGame);
+  app.get('/api/user-games',customErrorHandler, userGame);
   // done
-  app.get('/api/user-markets/:gameId', authorize([string.User]), userMarket);
+  app.get('/api/user-markets/:gameId', customErrorHandler,authorize([string.User]), userMarket);
   // done
-  app.get('/api/user-runners/:marketId', authorize([string.User]), userRunners);
+  app.get('/api/user-runners/:marketId', customErrorHandler,authorize([string.User]), userRunners);
   // done
-  app.get('/api/user-all-gameData', getAllGameData);
+  app.get('/api/user-all-gameData', customErrorHandler,getAllGameData);
   // done
-  app.get('/api/user-filter-gameData/:gameId', filteredGameData);
+  app.get('/api/user-filter-gameData/:gameId',customErrorHandler, filteredGameData);
   // done
   app.get('/api/user/gif', userGif);
   // done

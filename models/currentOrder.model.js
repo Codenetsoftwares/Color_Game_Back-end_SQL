@@ -1,9 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
 
-class currentOrder extends Model {}
+class CurrentOrder extends Model {}
 
-currentOrder.init(
+CurrentOrder.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -15,15 +15,15 @@ currentOrder.init(
       allowNull: false,
     },
     gameId: {
-      type: DataTypes.CHAR(36),
-      allowNull: false,
+      type: DataTypes.INTEGER,
+      allowNull: true,
     },
     gameName: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     marketId: {
-      type: DataTypes.CHAR(150),
+      type: DataTypes.UUID,
       allowNull: false,
     },
     marketName: {
@@ -31,20 +31,20 @@ currentOrder.init(
       allowNull: true,
     },
     runnerId: {
-      type: DataTypes.CHAR(36),
-      allowNull: false,
+      type: DataTypes.UUID,
+      allowNull: true,
     },
     runnerName: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     rate: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      type: DataTypes.FLOAT,
+      allowNull: true,
     },
     value: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      type: DataTypes.FLOAT,
+      allowNull: true,
     },
     type: {
       type: DataTypes.STRING,
@@ -53,32 +53,35 @@ currentOrder.init(
     date: {
       type: DataTypes.DATE,
       allowNull: false,
+      defaultValue: DataTypes.NOW,
     },
     bidAmount: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.FLOAT,
       allowNull: false,
+      defaultValue: 0,
     },
     isWin: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
+      allowNull: true,
+      defaultValue: null,
     },
     profitLoss: {
-      type: DataTypes.BOOLEAN,
+      type: DataTypes.FLOAT,
       allowNull: false,
-      defaultValue: false,
+      defaultValue: 0,
     },
     exposure: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      type: DataTypes.FLOAT,
+      allowNull: true,
     },
   },
   {
     sequelize,
-    modelName: 'currentOrder',
+    modelName: 'CurrentOrder',
     tableName: 'currentOrder',
     timestamps: false,
-  },
+    underscored: true, // This will ensure that table name uses underscored format
+  }
 );
 
-export default currentOrder;
+export default CurrentOrder;

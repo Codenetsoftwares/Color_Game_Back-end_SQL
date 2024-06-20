@@ -1,9 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
 
-class betHistory extends Model {}
+class BetHistory extends Model {}
 
-betHistory.init(
+BetHistory .init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -75,10 +75,10 @@ betHistory.init(
   },
   {
     sequelize,
-    modelName: 'betHistory',
+    modelName: 'BetHistory',
     tableName: 'betHistory',
     timestamps: false,
   },
 );
 
-export default betHistory;
+export default BetHistory ;

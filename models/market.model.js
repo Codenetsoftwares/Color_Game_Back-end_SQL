@@ -1,10 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db.js'; 
-import gameSchema from './game.model.js';
+import sequelize from '../db.js';
 
-class marketSchema extends Model {}
+class Market extends Model {}
 
-marketSchema.init(
+Market.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -18,6 +17,7 @@ marketSchema.init(
     marketId: {
       type: DataTypes.CHAR(150),
       allowNull: false,
+      unique: true,
     },
     marketName: {
       type: DataTypes.STRING(255),
@@ -44,22 +44,10 @@ marketSchema.init(
   },
   {
     sequelize,
-    modelName: 'marketSchema',
+    modelName: 'Market',
     tableName: 'market',
     timestamps: false,
-    indexes: [
-      {
-        fields: ['gameId'],
-        name: 'market_gameId_idx',
-      },
-      {
-        unique: true,
-        fields: ['marketId'], 
-      },
-    ],
   },
 );
 
-marketSchema.belongsTo(gameSchema, { foreignKey: 'gameId', targetKey: 'gameId' });
-
-export default marketSchema;
+export default Market;
