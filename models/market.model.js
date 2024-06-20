@@ -1,6 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db.js';
-import Game from './game.model.js';
+import sequelize from '../db.js'; 
 import gameSchema from './game.model.js';
 
 class marketSchema extends Model {}
@@ -19,6 +18,7 @@ marketSchema.init(
     marketId: {
       type: DataTypes.CHAR(150),
       allowNull: false,
+      unique: true, // Ensure marketId is unique
     },
     marketName: {
       type: DataTypes.STRING(255),
@@ -52,6 +52,10 @@ marketSchema.init(
       {
         fields: ['gameId'],
         name: 'market_gameId_idx',
+      },
+      {
+        unique: true,
+        fields: ['marketId'], 
       },
     ],
   },

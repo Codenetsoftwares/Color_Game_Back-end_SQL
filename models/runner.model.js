@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db.js'; // Assuming your Sequelize instance is named 'sequelize'
+import sequelize from '../db.js';
 import marketSchema from './market.model.js';
 
 class runnerSchema extends Model {}
