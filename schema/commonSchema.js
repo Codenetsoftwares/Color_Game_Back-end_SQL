@@ -16,8 +16,8 @@ export const bidTypeSchema = [
     .withMessage('Bid Type is required.')
     .notEmpty()
     .withMessage('Bidding type must not be empty.')
-    .isIn(['Back', 'Lay'])
-    .withMessage('Bidding type must be either "Back" or "Lay".'),
+    .isIn(['back', 'lay'])
+    .withMessage('Bidding type must be either "back" or "lay".'),
 ];
 
 export const bidHistorySchema = [

@@ -17,7 +17,6 @@ Market.init(
     marketId: {
       type: DataTypes.CHAR(150),
       allowNull: false,
-      unique: true,
     },
     marketName: {
       type: DataTypes.STRING(255),
@@ -37,6 +36,11 @@ Market.init(
       defaultValue: false,
     },
     isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    isDisplay: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,

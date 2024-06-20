@@ -11,67 +11,65 @@ CurrentOrder.init(
       primaryKey: true,
     },
     userId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.CHAR(36),
       allowNull: false,
     },
     gameId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
+      type: DataTypes.CHAR(36),
+      allowNull: false,
     },
     gameName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     marketId: {
-      type: DataTypes.UUID,
+      type: DataTypes.CHAR(150),
       allowNull: false,
     },
     marketName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     runnerId: {
-      type: DataTypes.UUID,
-      allowNull: true,
+      type: DataTypes.CHAR(36),
+      allowNull: false,
     },
     runnerName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     rate: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
     },
     value: {
-      type: DataTypes.FLOAT,
-      allowNull: true,
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
     },
     type: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     date: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
     },
     bidAmount: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      defaultValue: 0,
     },
     isWin: {
       type: DataTypes.BOOLEAN,
-      allowNull: true,
-      defaultValue: null,
+      allowNull: false,
+      defaultValue: false,
     },
     profitLoss: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 0,
+      defaultValue: false,
     },
     exposure: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
   },
@@ -80,7 +78,6 @@ CurrentOrder.init(
     modelName: 'CurrentOrder',
     tableName: 'currentOrder',
     timestamps: false,
-    underscored: true, // This will ensure that table name uses underscored format
   }
 );
 

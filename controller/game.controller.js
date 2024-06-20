@@ -7,6 +7,7 @@ import { Op } from 'sequelize';
 import Market from '../models/market.model.js';
 import Runner from '../models/runner.model.js';
 import rateSchema from '../models/rate.model.js';
+import announcementSchema from '../models/announcement.model.js';
 
 // done
 export const createGame = async (req, res) => {
@@ -64,36 +65,53 @@ export const getAllGames = async (req, res) => {
     });
 
     if (!rows || rows.length === 0) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
     }
 
-    const gameData = rows.map((game) => ({
-      gameId: game.gameId,
-      gameName: game.gameName,
-      description: game.description,
+    const gameData = await Promise.all(rows.map(async (game) => {
+      const announcements = await announcementSchema.findAll({
+        attributes: ['announceId', 'announcement'],
+        where: {
+          gameId: game.gameId,
+        },
+      });
+
+      const formattedAnnouncements = announcements.map((announcement) => ({
+        announceId: announcement.announceId,
+        announcement: announcement.announcement,
+      }));
+
+      return formattedAnnouncements.map((announcement) => ({
+        gameId: game.gameId,
+        gameName: game.gameName,
+        description: game.description,
+        announceId: announcement.announceId,
+        announcement: announcement.announcement,
+      }));
     }));
 
-    const totalPages = Math.ceil(count / pageSize);
+    const flattenedGameData = gameData.flat();
 
+    const totalPages = Math.ceil(count / pageSize);
     const paginationData = apiResponsePagination(page, totalPages, count);
 
-    return res
-      .status(statusCode.success)
-      .json(apiResponseSuccess(gameData, true, statusCode.success, 'Success', paginationData));
+    const response = {
+      games: flattenedGameData,
+      pagination: paginationData,
+    };
+
+    return res.status(statusCode.success).json(apiResponseSuccess(response, true, statusCode.success, 'Success'));
+
   } catch (error) {
     console.error('Error fetching games:', error);
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
 // done
@@ -183,6 +201,7 @@ export const createMarket = async (req, res) => {
       timeSpan: timeSpan,
       announcementResult: 0,
       isActive: 1,
+      isDisplay: true
     });
 
     // Fetch all markets for the game
@@ -274,6 +293,11 @@ export const updateMarket = async (req, res) => {
         .status(statusCode.notFound)
         .json(apiResponseErr(null, false, statusCode.notFound, 'Market not found.'));
     }
+    await Runner.destroy({
+      where: {
+        marketId: marketId,
+      },
+    });
 
     if (marketName !== undefined) {
       market.marketName = marketName;
@@ -288,6 +312,15 @@ export const updateMarket = async (req, res) => {
     }
 
     await market.save();
+
+    await Market.update(
+      { isDisplay: true },
+      {
+        where: {
+          marketId: marketId,
+        },
+      }
+    );
 
     const updatedMarket = await Market.findOne({
       where: {
@@ -369,6 +402,15 @@ export const createRunner = async (req, res) => {
     }));
 
     await Runner.bulkCreate(runnersToInsert);
+
+    await Market.update(
+      { isDisplay: false },
+      {
+        where: {
+          marketId: marketId,
+        },
+      }
+    );
 
     return res
       .status(statusCode.create)

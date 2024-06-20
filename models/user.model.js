@@ -27,7 +27,7 @@ userSchema.init(
     userId: {
       type: DataTypes.STRING,
       allowNull: true,
-      primaryKey: true,
+      // primaryKey: true,
     },
     phoneNumber: {
       type: DataTypes.STRING,

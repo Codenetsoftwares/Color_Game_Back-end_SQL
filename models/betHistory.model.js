@@ -3,7 +3,7 @@ import sequelize from '../db.js';
 
 class BetHistory extends Model {}
 
-BetHistory .init(
+BetHistory.init(
   {
     id: {
       type: DataTypes.INTEGER,
