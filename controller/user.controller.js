@@ -97,62 +97,62 @@ export const userUpdate = async (req, res) => {
 // done
 export const loginUser = async (req, res) => {
   const { userName, password } = req.body;
-  try {
-    const existingUser = await userSchema.findOne({ where: { userName } });
-
-    if (!existingUser) {
-      console.log('Admin not found');
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User Does Not Exist'));
-    }
-
-    const isPasswordValid = await existingUser.validPassword(password);
-
-    if (!isPasswordValid) {
-      console.log('Invalid password');
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
-    }
-
-    const accessTokenResponse = {
-      id: existingUser.id,
-      userName: existingUser.userName,
-      isEighteen: existingUser.eligibilityCheck,
-      UserType: existingUser.userType || 'user',
-      wallet: existingUser.wallet
-    };
-
-    const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1d',
-    });
-
-    res.status(statusCode.success).send(
-      apiResponseSuccess(
-        {
-          accessToken,
-          userId: existingUser.userId,
-          userName: existingUser.userName,
-          isEighteen: existingUser.eligibilityCheck,
-          userType: existingUser.userType || 'user',
-          wallet: existingUser.wallet,
-        },
-        true,
-        statusCode.success,
-        'Login successful',
-      ),
-    );
-  } catch (error) {
-    console.error('Error in adminLogin:', error.message);
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
-  }
-};
+   try {
+     const existingUser = await userSchema.findOne({ where: { userName } });
+ 
+     if (!existingUser) {
+       console.log('Admin not found');
+       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User Does Not Exist'));
+     }
+ 
+     const isPasswordValid = await existingUser.validPassword(password);
+ 
+     if (!isPasswordValid) {
+       console.log('Invalid password');
+       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
+     }
+ 
+     const accessTokenResponse = {
+       id: existingUser.id,
+       userName: existingUser.userName,
+       isEighteen: existingUser.eligibilityCheck,
+       UserType: existingUser.userType || 'user',
+       wallet: existingUser.wallet
+     };
+ 
+     const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
+       expiresIn: '1d',
+     });
+ 
+     res.status(statusCode.success).send(
+       apiResponseSuccess(
+         {
+           accessToken,
+           userId: existingUser.userId,
+           userName: existingUser.userName,
+           isEighteen: existingUser.eligibilityCheck,
+           userType: existingUser.userType || 'user',
+           wallet: existingUser.wallet,
+         },
+         true,
+         statusCode.success,
+         'Login successful',
+       ),
+     );
+   } catch (error) {
+     console.error('Error in adminLogin:', error.message);
+     res
+       .status(statusCode.internalServerError)
+       .send(
+         apiResponseErr(
+           error.data ?? null,
+           false,
+           error.responseCode ?? statusCode.internalServerError,
+           error.errMessage ?? error.message,
+         ),
+       );
+   }
+ };
 // done
 export const eligibilityCheck = async (req, res) => {
   try {
@@ -507,55 +507,38 @@ export const filteredGameData = async (req, res) => {
 // done
 export const userGif = async (req, res) => {
   try {
-    const gifQuery = `
-      SELECT imageId, image, text, headingText, isActive
-      FROM Gif
-    `;
+    const gifData = await gifSchema.findAll({
+      attributes: ['imageId', 'image', 'text', 'headingText', 'isActive'],
+    });
 
-    const [gifData] = await database.execute(gifQuery);
-
-    const formattedGif = gifData.map((data) => ({
-      imageId: data.imageId,
-      image: data.image,
-      text: data.text,
-      headingText: data.headingText,
-      isActive: data.isActive,
-    }));
-
-    res.status(statusCode.success).send(apiResponseSuccess(formattedGif, true, statusCode.success));
+    res.status(statusCode.success).send(apiResponseSuccess(gifData, true, statusCode.success, 'success'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
 // done
 export const getUserWallet = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const getUserQuery = `
-          SELECT walletId, balance, exposure, marketListExposure
-          FROM User
-          WHERE id = ?
-      `;
-    const [userData] = await database.execute(getUserQuery, [userId]);
+
+    const userData = await userSchema.findOne({ where: { userId } });
 
     if (!userData || userData.length === 0) {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'User not found'));
     }
 
     const getBalance = {
-      walletId: userData[0].walletId,
-      balance: userData[0].balance,
-      exposure: userData[0].exposure,
-      marketListExposure: userData[0].marketListExposure,
+      walletId: userData.walletId,
+      balance: userData.balance,
+      exposure: userData.exposure,
+      marketListExposure: userData.marketListExposure,
     };
 
     res.status(statusCode.success).send(apiResponseSuccess(getBalance, true, statusCode.success, 'success'));
@@ -579,39 +562,31 @@ export const transactionDetails = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
 
-    const getUserQuery = `
-      SELECT * FROM TransactionRecord
-      WHERE userId = ?
-    `;
-    const [transactionData] = await database.execute(getUserQuery, [userId]);
+    const { count, rows: transactionData } = await transactionRecord.findAndCountAll({
+      where: { userId },
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      order: [['createdAt', 'DESC']],
+    });
 
-    if (!transactionData || transactionData.length === 0) {
+    if (count === 0) {
       throw apiResponseErr(null, statusCode.badRequest, false, 'User Not Found or No Transactions Found');
     }
 
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, transactionData.length);
-
-    const paginatedDetails = transactionData.slice(startIndex, endIndex);
-
-    const totalItems = transactionData.length;
+    const totalItems = count;
     const totalPages = Math.ceil(totalItems / pageSize);
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
 
-    res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(paginatedDetails, true, statusCode.success, 'Success', paginationData));
+    res.status(statusCode.success).send(apiResponseSuccess(transactionData, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
 // done
