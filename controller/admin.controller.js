@@ -11,6 +11,8 @@ import marketSchema from '../models/market.model.js';
 import userSchema from '../models/user.model.js';
 import Sequelize from '../db.js';
 import transactionRecord from '../models/transactionRecord.model.js';
+import Runner from '../models/runner.model.js';
+import Market from '../models/market.model.js';
 
 dotenv.config();
 // done
@@ -291,83 +293,119 @@ export const sendBalance = async (req, res) => {
 };
 
 export const afterWining = async (req, res) => {
-  const { marketId, runnerId, isWin } = req.body;
   try {
-    const updateRunnerQuery = `
-      UPDATE Runner 
-      SET isWin = ? 
-      WHERE marketId = ? AND runnerId = ?;
-    `;
-    await database.execute(updateRunnerQuery, [isWin, marketId, runnerId]);
+    const { marketId, runnerId, isWin } = req.body
+    const runner = await Runner.findOne({ where: { runnerId } });
+    if (!runner) {
+      throw new Error('Runner not found');
+    }
 
-    const [gameData] = await database.execute('SELECT gameId FROM Market WHERE marketId = ?', [marketId]);
-    const gameId = gameData[0].gameId;
+    let gameId = null;
+    let flag = false;
 
-    const updateUserBalancesQuery = `
-      UPDATE User u
-      INNER JOIN MarketBalance mb ON u.id = mb.userId
-      INNER JOIN Runner r ON mb.runnerId = r.runnerId
-      SET u.balance = CASE
-          WHEN r.runnerId = ? THEN u.balance + mb.bal + ?
-          ELSE u.balance + mb.bal - ?
-        END,
-        u.marketListExposure = ?
-      WHERE mb.marketId = ?;
-    `;
+    const markets = await Market.findAll({ where: { marketId } });
 
-    const marketListExposure = {};
-    marketListExposure[marketId] = 0;
+    for (const market of markets) {
+      if (!flag) {
+        gameId = market.gameId;
+        console.log("gameId1", gameId);
+      }
+      console.log("gameId", gameId);
 
-    const exposureIncrement = isWin
-      ? `mb.bal + COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)`
-      : 0;
-    const exposureDecrement = isWin
-      ? `COALESCE(JSON_UNQUOTE(JSON_EXTRACT(u.marketListExposure, CONCAT('$.', '${marketId}'))), 0)`
-      : 0;
+      const runners = await Runner.findAll({ where: { marketId } });
 
-    await database.execute(updateUserBalancesQuery, [
-      runnerId,
-      exposureIncrement,
-      exposureDecrement,
-      JSON.stringify([marketListExposure]),
-      marketId,
-    ]);
+      for (const runner of runners) {
+        if (String(runner.runnerId) === runnerId) {
+          await runner.update({ isWin });
+        } else {
+          await runner.update({ isWin: false });
+        }
+      }
 
-    const insertProfitLossQuery = `
-    INSERT INTO ProfitLoss (userId, gameId, marketId, runnerId, profitLoss, date) 
-    SELECT userId, ?, ?, ?, bal, NOW() 
-    FROM MarketBalance 
-    WHERE marketId = ? AND runnerId = ?;
-  `;
+      if (isWin) {
+        await market.update({ announcementResult: true });
+      }
 
-    await database.execute(insertProfitLossQuery, [gameId, marketId, runnerId, marketId, runnerId]);
+      flag = true;
+      break;
+    }
+
+    const users = await MarketBalance.findAll({ where: { marketId } });
+
+    for (const user of users) {
+      const runnerBalance = user.runnerBalance.find(item => String(item.runnerId) === runnerId);
+
+      if (runnerBalance) {
+        const marketExposure = user.wallet.marketListExposure.find(item => Object.keys(item)[0] === marketId);
+
+        if (marketExposure) {
+          const marketExposureValue = Number(marketExposure[marketId]);
+
+          if (isWin) {
+            user.wallet.balance += runnerBalance.bal + marketExposureValue;
+          } else {
+            runnerBalance.bal -= marketExposureValue;
+            user.wallet.balance += runnerBalance.bal;
+          }
+
+          const profitLossEntry = await ProfitLoss.create({
+            userId: user._id,
+            gameId,
+            marketId,
+            runnerId,
+            date: new Date(),
+            profitLoss: runnerBalance.bal
+          });
+
+          const marketIndex = user.wallet.marketListExposure.findIndex(item => Object.keys(item)[0] === marketId);
+          if (marketIndex !== -1) {
+            user.wallet.marketListExposure.splice(marketIndex, 1);
+          }
+
+          await user.save();
+        }
+      }
+    }
 
     if (isWin) {
-      const deleteOrdersQuery = `
-        DELETE FROM currentOrder 
-        WHERE marketId = ?;
-      `;
-      await database.execute(deleteOrdersQuery, [marketId]);
+      const market = await Market.findOne({ where: { marketId, announcementResult: true } });
 
-      const insertBetHistoryQuery = `
-        INSERT INTO betHistory (userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, isWin, profitLoss) 
-        SELECT userId, gameId, gameName, marketId, marketName, runnerId, runnerName, rate, value, type, date, bidAmount, ?, profitLoss
-        FROM currentOrder 
-        WHERE marketId = ?;
-      `;
-      await database.execute(insertBetHistoryQuery, [isWin, marketId]);
+      if (market) {
+        const orders = await CurrentOrder.findAll({ where: { marketId } });
+
+        for (const order of orders) {
+          const betHistoryEntry = {
+            userId: order.userId,
+            gameId: order.gameId,
+            gameName: order.gameName,
+            marketId: order.marketId,
+            marketName: order.marketName,
+            runnerId: order.runnerId,
+            runnerName: order.runnerName,
+            rate: order.rate,
+            value: order.value,
+            type: order.type,
+            date: new Date(),
+            bidAmount: order.bidAmount,
+            isWin: order.isWin,
+            profitLoss: order.profitLoss,
+          };
+
+          await BetHistory.create({ ...betHistoryEntry });
+        }
+
+        await CurrentOrder.destroy({ where: { marketId } });
+      }
     }
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'success'));
+
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(null, true, statusCode.success, 'success'));
+
   } catch (error) {
+    console.error('Error sending balance:', error);
     res
-      .status(error.responseCode ?? statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+      .status(statusCode.internalServerError)
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
