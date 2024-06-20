@@ -28,12 +28,12 @@ rateSchema.init(
   },
   {
     sequelize,
-    modelName: 'Rate',
-    tableName: 'Rate',
+    modelName: 'rateSchema',
+    tableName: 'rate',
     timestamps: false,
     sequelize,
-    modelName: 'Rate',
-    tableName: 'Rate',
+    modelName: 'rateSchema',
+    tableName: 'rate',
     timestamps: false,
     indexes: [
       {
