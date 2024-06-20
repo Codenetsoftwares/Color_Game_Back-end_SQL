@@ -1,3 +1,4 @@
+import { string } from '../constructor/string.js';
 import { announcements, getAnnouncement, updateAnnouncement, getAnnouncementUser, getAnnouncementTypes } from '../controller/announcement.controller.js';
 import { authorize } from '../middleware/auth.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
@@ -9,7 +10,7 @@ export const AnnouncementRoute = (app) => {
     '/api/admin/announcements-create',
     announcementsSchema,
     customErrorHandler,
-    authorize(['Admin']),
+    authorize([string.Admin]),
     announcements,
   );
   // done
@@ -19,10 +20,10 @@ export const AnnouncementRoute = (app) => {
     '/api/admin/update-announcement/:announceId',
     updateAnnouncementSchema,
     customErrorHandler,
-    authorize(['Admin']),
+    authorize([string.Admin]),
     updateAnnouncement,
   );
-
+  // done
   app.get('/api/user/announcements/:announceId', getAnnouncementUser);
   // done
   app.get('/api/user/game-typeOfAnnouncement', getAnnouncementTypes);

@@ -1,70 +1,57 @@
 import { apiResponseSuccess, apiResponseErr } from '../middleware/serverError.js';
 import { database } from '../controller/database.controller.js';
 import { v4 as uuidv4 } from 'uuid';
+import gameSchema from '../models/game.model.js';
+import announcementSchema from '../models/announcement.model.js';
+import { statusCode } from '../helper/statusCodes.js';
 
 // done
 export const announcements = async (req, res) => {
   const { typeOfAnnouncement, announcement } = req.body;
   try {
-    const gameQuery = 'SELECT * FROM Game WHERE gameName = ?';
-    const [gameResult] = await database.execute(gameQuery, [typeOfAnnouncement]);
-    const game = gameResult[0];
+    const game = await gameSchema.findOne({ where: { gameName: typeOfAnnouncement } });
 
     if (!game) {
       return res.status(400).json(apiResponseErr(null, false, 400, 'Game not found'));
     }
 
-    const existingAnnouncementQuery = 'SELECT * FROM Announcement WHERE gameId = ? AND typeOfAnnouncement = ?';
-    const [existingAnnouncementResult] = await database.execute(existingAnnouncementQuery, [
-      game.gameId,
-      typeOfAnnouncement,
-    ]);
-    let announce = existingAnnouncementResult[0];
+    let announce = await announcementSchema.findOne({
+      where: { gameId: game.gameId, typeOfAnnouncement },
+    });
 
     if (!announce) {
       const announceId = uuidv4();
-      const insertAnnouncementQuery = `
-                INSERT INTO Announcement (gameId, announceId, typeOfAnnouncement, announcement)
-                VALUES (?, ?, ?, ?)
-            `;
-      await database.execute(insertAnnouncementQuery, [game.gameId, announceId, typeOfAnnouncement, announcement]);
-
-      const newAnnouncementQuery = 'SELECT * FROM Announcement WHERE announceId = ?';
-      const [newAnnouncementResult] = await database.execute(newAnnouncementQuery, [announceId]);
-      announce = newAnnouncementResult[0];
+      announce = await announcementSchema.create({
+        gameId: game.gameId,
+        announceId: announceId,
+        typeOfAnnouncement,
+        announcement,
+      });
     } else {
-      const updateAnnouncementQuery = 'UPDATE Announcement SET announcement = ? WHERE announceId = ?';
-      await database.execute(updateAnnouncementQuery, [announcement, announce.announceId]);
-      announce.announcement = announcement;
+      await announce.update({ announcement });
     }
 
     return res
       .status(statusCode.create)
       .json(apiResponseSuccess(announce, true, statusCode.create, 'Announcement created successfully'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
+
 // done
 export const getAnnouncement = async (req, res) => {
   try {
     const { announceId } = req.params;
-    const announcementQuery = `
-            SELECT * 
-            FROM Announcement 
-            WHERE announceId = ?
-        `;
-    const [announcementResult] = await database.execute(announcementQuery, [announceId]);
-    const announcement = announcementResult[0];
+    
+    const announcement = await announcementSchema.findOne({ where: { announceId } });
 
     if (!announcement) {
       return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
@@ -80,7 +67,7 @@ export const getAnnouncement = async (req, res) => {
           announcement: [announcementText],
         },
         true,
-        statusCode.create,
+        statusCode.success,
         'Success',
       ),
     );
@@ -103,77 +90,54 @@ export const updateAnnouncement = async (req, res) => {
   const { typeOfAnnouncement, announcement } = req.body;
 
   try {
-    if (typeOfAnnouncement === undefined && announcement === undefined) {
-      return res
-        .status(400)
-        .json(apiResponseErr(null, false, 400, 'At least one of typeOfAnnouncement or announcement is required'));
+    const announcementToUpdate = await announcementSchema.findOne({ where: { announceId } });
+
+    if (!announcementToUpdate) {
+      return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
     }
 
-    const announcementQuery = `
-            SELECT *
-            FROM Announcement
-            WHERE announceId = ?
-        `;
-    const [announcementResult] = await database.execute(announcementQuery, [announceId]);
-    const announcementToUpdate = announcementResult[0];
-
-    if (!announcementToUpdate) return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
-
     if (typeOfAnnouncement !== undefined) {
-      const updateTypeOfAnnouncementQuery = `
-                UPDATE Announcement
-                SET typeOfAnnouncement = ?
-                WHERE announceId = ?
-            `;
-      await database.execute(updateTypeOfAnnouncementQuery, [typeOfAnnouncement, announceId]);
+      announcementToUpdate.typeOfAnnouncement = typeOfAnnouncement;
     }
 
     if (announcement !== undefined) {
-      const updateAnnouncementQuery = `
-                UPDATE Announcement
-                SET announcement = ?
-                WHERE announceId = ?
-            `;
-      await database.execute(updateAnnouncementQuery, [announcement, announceId]);
+      announcementToUpdate.announcement = announcement;
     }
+
+    await announcementToUpdate.save();
 
     return res
       .status(statusCode.create)
       .json(apiResponseSuccess(null, true, statusCode.create, 'Announcement updated successfully'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
-
+// done
 export const getAnnouncementUser = async (req, res) => {
   try {
     const announceId = req.params.announceId;
-    const announceIdString = String(announceId);
-    const announcementQuery = `
-      SELECT *
-      FROM Announcement
-      WHERE announceId = ?
-    `;
-    const [announcementData] = await database.execute(announcementQuery, [announceIdString]);
+
+    const announcementData = await announcementSchema.findAll({ where: { announceId } });
 
     if (announcementData.length === 0) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Announcement not found');
     }
+
     const latestAnnouncement = announcementData.reduce((latest, current) => {
       if (latest.announceId < current.announceId) {
         return current;
       }
       return latest;
     });
+
     res.status(statusCode.success).send(
       apiResponseSuccess(
         {
@@ -187,41 +151,37 @@ export const getAnnouncementUser = async (req, res) => {
       ),
     );
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
-
+// done
 export const getAnnouncementTypes = async (req, res) => {
   try {
-    const announcementTypesQuery = `
-      SELECT announceId, typeOfAnnouncement
-      FROM Announcement
-    `;
-    const [announcementTypesData] = await database.execute(announcementTypesQuery);
+    const announcementTypesData = await announcementSchema.findAll({
+      attributes: ['announceId', 'typeOfAnnouncement'],
+    });
+
     const announcementTypes = announcementTypesData.map((announcement) => ({
       announceId: announcement.announceId,
       typeOfAnnouncement: announcement.typeOfAnnouncement,
     }));
+
     res.status(statusCode.success).send(apiResponseSuccess(announcementTypes, true, statusCode.success, 'Success'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };

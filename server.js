@@ -15,13 +15,13 @@ import marketSchema from './models/market.model.js';
 dotenv.config();
 const app = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(bodyParser.json({ limit: '100mb' }));
+app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = process.env.FRONTEND_URI.split(',');
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: allowedOrigins }));  
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,

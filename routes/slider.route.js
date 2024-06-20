@@ -9,17 +9,19 @@ import {
   deleteGifData,
   getSliderTextImg,
 } from '../controller/slider.controller.js';
+import { string } from '../constructor/string.js';
 
 export const SliderRoute = (app) => {
-  app.post('/api/admin/slider-text-img/dynamic', customErrorHandler, authorize(['Admin']), createSlider);
-
+  // done
+  app.post('/api/admin/slider-text-img/dynamic', customErrorHandler, authorize([string.Admin]), createSlider);
+  // done
   app.get('/api/admin/slider-text-img', customErrorHandler, getSliderTextImg);
-
+  // done
   app.post('/api/admin/active-slider/:imageId', customErrorHandler, activeSlider);
-
+  // done
   app.put('/api/admin/update-slider-img/:imageId', customErrorHandler, updateSliderImage);
-
-  app.post('/api/admin/gif-dynamic', customErrorHandler, errorHandler, authorize(['Admin']), createGif);
-
-  app.delete('/api/delete/gif/:imageId', customErrorHandler, authorize(['Admin']), deleteGifData);
+  // done
+  app.post('/api/admin/gif-dynamic', customErrorHandler, errorHandler, authorize([string.Admin]), createGif);
+  // done
+  app.delete('/api/delete/gif/:imageId', customErrorHandler, authorize([string.Admin]), deleteGifData);
 };

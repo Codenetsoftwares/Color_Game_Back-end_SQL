@@ -5,6 +5,13 @@ import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../mi
 import moment from 'moment';
 import { string } from '../constructor/string.js';
 import userSchema from '../models/user.model.js';
+import gameSchema from '../models/game.model.js'
+import rateSchema from '../models/rate.model.js';
+import marketSchema from '../models/market.model.js';
+import runnerSchema from '../models/market.model.js'
+import gifSchema from '../models/gif.model.js'
+import transactionRecord from "../models/transactionRecord.model.js"
+import betHistory from '../models/betHistory.model.js'
 import { v4 as uuidv4 } from 'uuid';
 import { statusCode } from '../helper/statusCodes.js';
 
@@ -445,15 +452,17 @@ export const getAllGameData = async (req, res) => {
     res
       .status(statusCode.internalServerError)
       .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
+
+
 export const filteredGameData = async (req, res) => {
   try {
     const gameId = req.params.gameId;
@@ -549,57 +558,42 @@ export const filteredGameData = async (req, res) => {
   }
 };
 
-
+// done
 export const userGif = async (req, res) => {
   try {
-    const gifQuery = `
-      SELECT imageId, image, text, headingText, isActive
-      FROM Gif
-    `;
+    const gifData = await gifSchema.findAll({
+      attributes: ['imageId', 'image', 'text', 'headingText', 'isActive'],
+    });
 
-    const [gifData] = await database.execute(gifQuery);
-
-    const formattedGif = gifData.map((data) => ({
-      imageId: data.imageId,
-      image: data.image,
-      text: data.text,
-      headingText: data.headingText,
-      isActive: data.isActive,
-    }));
-
-    res.status(statusCode.success).send(apiResponseSuccess(formattedGif, true, statusCode.success));
+    res.status(statusCode.success).send(apiResponseSuccess(gifData, true, statusCode.success, 'success'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
+
+// done
 export const getUserWallet = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const getUserQuery = `
-          SELECT walletId, balance, exposure, marketListExposure
-          FROM User
-          WHERE id = ?
-      `;
-    const [userData] = await database.execute(getUserQuery, [userId]);
+
+    const userData = await userSchema.findOne({ where: { userId } });
 
     if (!userData || userData.length === 0) {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'User not found'));
     }
 
     const getBalance = {
-      walletId: userData[0].walletId,
-      balance: userData[0].balance,
-      exposure: userData[0].exposure,
-      marketListExposure: userData[0].marketListExposure,
+      walletId: userData.walletId,
+      balance: userData.balance,
+      exposure: userData.exposure,
+      marketListExposure: userData.marketListExposure,
     };
 
     res.status(statusCode.success).send(apiResponseSuccess(getBalance, true, statusCode.success, 'success'));
@@ -616,47 +610,42 @@ export const getUserWallet = async (req, res) => {
       );
   }
 };
+
+// done
 export const transactionDetails = async (req, res) => {
   try {
     const userId = req.params.userId;
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
 
-    const getUserQuery = `
-      SELECT * FROM TransactionRecord
-      WHERE userId = ?
-    `;
-    const [transactionData] = await database.execute(getUserQuery, [userId]);
+    const { count, rows: transactionData } = await transactionRecord.findAndCountAll({
+      where: { userId },
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      order: [['createdAt', 'DESC']],
+    });
 
-    if (!transactionData || transactionData.length === 0) {
+    if (count === 0) {
       throw apiResponseErr(null, statusCode.badRequest, false, 'User Not Found or No Transactions Found');
     }
 
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, transactionData.length);
-
-    const paginatedDetails = transactionData.slice(startIndex, endIndex);
-
-    const totalItems = transactionData.length;
+    const totalItems = count;
     const totalPages = Math.ceil(totalItems / pageSize);
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
 
-    res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(paginatedDetails, true, statusCode.success, 'Success', paginationData));
+    res.status(statusCode.success).send(apiResponseSuccess(transactionData, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
+
 export const filterMarketData = async (req, res) => {
   try {
     const marketId = req.params.marketId;
@@ -875,81 +864,84 @@ export const createBid = async (req, res) => {
       );
   }
 };
+
+
 export const getUserBetHistory = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log('userId', userId);
+    const userId = req.user.userId;
     const marketId = req.params.marketId;
     const page = req.query.page || 1;
     const limit = req.query.limit || 5;
     const { startDate, endDate } = req.query;
 
-    let start = null;
-    let end = null;
+    let whereClause = { userId, marketId };
 
-    if (startDate) {
-      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+    if (startDate && endDate) {
+      const start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+      const end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+
       if (!start.isValid()) {
         throw new Error('startDate is not a valid date');
       }
-    }
-
-    if (endDate) {
-      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
       if (!end.isValid()) {
         throw new Error('endDate is not a valid date');
       }
-
       if (end.isAfter(moment())) {
         throw new Error('Invalid End Date');
       }
+      if (end.isBefore(start)) {
+        throw new Error('endDate should be after startDate');
+      }
+
+      whereClause.date = {
+        [Op.between]: [start.toDate(), end.endOf('day').toDate()],
+      };
     }
 
-    if (start && end && end.isBefore(start)) {
-      throw new Error('endDate should be after startDate');
-    }
+    const betDetails = await betHistory.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: gameSchema,
+          attributes: ['gameName'],
+        },
+        {
+          model: marketSchema,
+          attributes: ['marketName'],
+        },
+        {
+          model: runnerSchema,
+          attributes: ['runnerName'],
+          include: [
+            {
+              model: rateSchema,
+              attributes: ['back', 'lay'],
+            },
+          ],
+        },
+      ],
+      order: [['date', 'DESC']],
+      limit: parseInt(limit),
+      offset: (parseInt(page) - 1) * parseInt(limit),
+    });
 
-    let betHistoryQuery = `
-      SELECT gameName, marketName, runnerName, rate, value, type, date
-      FROM betHistory
-      WHERE userId = ? AND marketId = ?`;
-
-    const queryParams = [userId, marketId];
-
-    if (start && end) {
-      betHistoryQuery += ` AND date BETWEEN ? AND ?`;
-      queryParams.push(start.format('YYYY-MM-DD HH:mm:ss'));
-      queryParams.push(end.endOf('day').format('YYYY-MM-DD HH:mm:ss'));
-    }
-
-    const [rows] = await database.execute(betHistoryQuery, queryParams);
-
-    const betDetails = rows.map((row) => ({
-      gameName: row.gameName,
-      marketName: row.marketName,
-      runnerName: row.runnerName,
-      rate: row.rate,
-      value: row.value,
-      type: row.type,
-      date: row.date,
-    }));
     res.status(statusCode.success).send(apiResponseSuccess(betDetails, true, statusCode.success, 'Success'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.successCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message,
+      ),
+    );
   }
 };
+
+
 export const currentOrderHistory = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const { marketId } = req.params;
 
     if (!marketId) {
@@ -964,7 +956,9 @@ export const currentOrderHistory = async (req, res) => {
       WHERE userId = ? AND marketId = ?;
     `;
 
-    const [orders] = await database.execute(orderQuery, [userId, marketId]);
+    const orders = await  currentOrder.findAll({
+      attributes: ['imageId', 'image', 'text', 'headingText', 'isActive'],
+    });;
 
     if (orders.length === 0) {
       return res
@@ -994,6 +988,8 @@ export const currentOrderHistory = async (req, res) => {
       );
   }
 };
+
+
 export const calculateProfitLoss = async (req, res) => {
   try {
     const userId = req.user.id;

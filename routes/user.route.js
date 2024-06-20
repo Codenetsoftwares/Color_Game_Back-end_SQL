@@ -56,9 +56,9 @@ export const UserRoute = (app) => {
   // done
   app.get('/api/user/gif', userGif);
   // done
-  app.get('/api/user/view-wallet/:userId', authorize(['User']), getUserWallet);
+  app.get('/api/user/view-wallet/:userId', authorize([string.User]), getUserWallet);
   // done
-  app.get('/api/transactionDetails/:userId', authorize(['User']), transactionDetails);
+  app.get('/api/transactionDetails/:userId', authorize([string.User]), transactionDetails);
   // done
   app.post('/api/user-filter-marketData/:marketId', filterMarketData);
   // Not getting correct balance but exposure is done
@@ -68,7 +68,7 @@ export const UserRoute = (app) => {
     '/api/user-betHistory/:marketId',
     bidHistorySchema,
     customErrorHandler,
-    authorize(['User']),
+    authorize([string.User]),
     getUserBetHistory,
   );
   // done
