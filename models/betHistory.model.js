@@ -70,7 +70,7 @@ BetHistory.init(
     },
     exposure: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      allowNull: true,
     },
   },
   {

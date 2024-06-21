@@ -80,5 +80,4 @@ CurrentOrder.init(
     timestamps: false,
   }
 );
-
 export default CurrentOrder;

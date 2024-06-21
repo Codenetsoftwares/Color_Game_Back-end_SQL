@@ -13,6 +13,10 @@ import Sequelize from '../db.js';
 import transactionRecord from '../models/transactionRecord.model.js';
 import Runner from '../models/runner.model.js';
 import Market from '../models/market.model.js';
+import MarketBalance from '../models/marketBalance.js';
+import CurrentOrder from '../models/currentOrder.model.js';
+import BetHistory from '../models/betHistory.model.js';
+import ProfitLoss from '../models/profitLoss.js';
 
 dotenv.config();
 // done
@@ -195,7 +199,7 @@ export const sendBalance = async (req, res) => {
       await transactionRecord.create(
         {
           userId,
-          transactionType: 'Credit',
+          transactionType: 'credit',
           amount: parsedDepositAmount,
           date: Date.now(),
         },
@@ -221,85 +225,76 @@ export const sendBalance = async (req, res) => {
 
 export const afterWining = async (req, res) => {
   try {
-    const { marketId, runnerId, isWin } = req.body
+    const { marketId, runnerId, isWin } = req.body;
+
+    // Find the runner
     const runner = await Runner.findOne({ where: { runnerId } });
     if (!runner) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest,'Runner not found'));
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Runner not found'));
     }
 
-    let gameId = null;
-    let flag = false;
-
+    // Find the market(s)
     const markets = await Market.findAll({ where: { marketId } });
 
     for (const market of markets) {
-      if (!flag) {
-        gameId = market.gameId;
-        console.log("gameId1", gameId);
-      }
-      console.log("gameId", gameId);
-
+      // Update runner(s)
       const runners = await Runner.findAll({ where: { marketId } });
 
       for (const runner of runners) {
-        if (String(runner.runnerId) === runnerId) {
-          await runner.update({ isWin });
-        } else {
-          await runner.update({ isWin: false });
-        }
+        await runner.update({ isWin: String(runner.runnerId) === runnerId ? isWin : false });
       }
 
+      // Update market
       if (isWin) {
         await market.update({ announcementResult: true });
       }
 
-      flag = true;
-      break;
-    }
+      const gameId = market.gameId;
 
-    const users = await MarketBalance.findAll({ where: { marketId } });
+      const users = await MarketBalance.findAll({ where: { marketId } });
 
-    for (const user of users) {
-      const runnerBalance = user.runnerBalance.find(item => String(item.runnerId) === runnerId);
+      for (const user of users) {
+        const runnerBalance = user.runnerBalance.find(item => String(item.runnerId) === runnerId);
 
-      if (runnerBalance) {
-        const marketExposure = user.wallet.marketListExposure.find(item => Object.keys(item)[0] === marketId);
+        if (runnerBalance) {
+          const marketExposure = user.marketListExposure.find(item => Object.keys(item)[0] === marketId);
 
-        if (marketExposure) {
-          const marketExposureValue = Number(marketExposure[marketId]);
+          if (marketExposure) {
+            const marketExposureValue = Number(marketExposure[marketId]);
 
-          if (isWin) {
-            user.wallet.balance += runnerBalance.bal + marketExposureValue;
-          } else {
-            runnerBalance.bal -= marketExposureValue;
-            user.wallet.balance += runnerBalance.bal;
+            if (isWin) {
+              user.balance += runnerBalance.bal + marketExposureValue;
+            } else {
+              runnerBalance.bal -= marketExposureValue;
+              user.balance += runnerBalance.bal;
+            }
+
+            // Create profit loss entry
+            const profitLossEntry = await ProfitLoss.create({
+              userId: user.userId,
+              gameId,
+              marketId,
+              runnerId,
+              date: new Date(),
+              profitLoss: runnerBalance.bal,
+            });
+
+            // Remove market exposure from user's marketListExposure
+            const marketIndex = user.marketListExposure.findIndex(item => Object.keys(item)[0] === marketId);
+            if (marketIndex !== -1) {
+              user.marketListExposure.splice(marketIndex, 1);
+            }
+
+            // Save user
+            await user.save();
           }
-
-          const profitLossEntry = await ProfitLoss.create({
-            userId: user.userId,
-            gameId,
-            marketId,
-            runnerId,
-            date: new Date(),
-            profitLoss: runnerBalance.bal
-          });
-
-          const marketIndex = user.wallet.marketListExposure.findIndex(item => Object.keys(item)[0] === marketId);
-          if (marketIndex !== -1) {
-            user.wallet.marketListExposure.splice(marketIndex, 1);
-          }
-
-          await user.save();
         }
       }
-    }
 
-    if (isWin) {
-      const market = await Market.findOne({ where: { marketId, announcementResult: true } });
-
-      if (market) {
+      // Handle current orders and bet history
+      if (isWin) {
         const orders = await CurrentOrder.findAll({ where: { marketId } });
 
         for (const order of orders) {
@@ -329,11 +324,10 @@ export const afterWining = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(apiResponseSuccess(null, true, statusCode.success, 'success'));
-
+      .json(apiResponseSuccess(null, true, statusCode.success, 'Success'));
   } catch (error) {
-    console.error('Error sending balance:', error);
-    res
+    console.error('Error handling winning:', error);
+    return res
       .status(statusCode.internalServerError)
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }

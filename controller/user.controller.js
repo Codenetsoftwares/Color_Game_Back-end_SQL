@@ -15,6 +15,7 @@ import CurrentOrder from '../models/currentOrder.model.js';
 import Game from '../models/game.model.js';
 import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
+import exp from 'constants';
 
 
 // done
@@ -502,7 +503,6 @@ export const filterMarketData = async (req, res) => {
     const marketId = req.params.marketId;
     const userId = req.body?.userId;
 
-    // Fetch market and runner data using Sequelize
     const marketDataRows = await Market.findAll({
       where: { marketId },
       include: [{
@@ -629,7 +629,8 @@ export const filterMarketData = async (req, res) => {
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
 
-  console.log('Request body:', req.body); 
+  // Console log request body for debugging
+  console.log('Request body:', req.body);
 
   try {
     if (!userId) {
@@ -700,15 +701,23 @@ export const createBid = async (req, res) => {
         bidAmount: mainValue,
         exposure: exposure,
       });
+
+      // Console log currentOrder for debugging
       console.log('CurrentOrder created:', currentOrder);
 
-      await user.save();
+      if (user.changed()) {
+        await user.save(); // Make sure save is called on the correct model instance
+        console.log('User changes saved:', user);
+      } else {
+        console.log('No changes detected in user model');
+      }
     }
 
     return res
       .status(statusCode.success)
       .send(apiResponseSuccess(null, true, statusCode.success, 'Bid placed successfully'));
   } catch (error) {
+    console.log(error);
     return res
       .status(statusCode.internalServerError)
       .send(
@@ -721,6 +730,7 @@ export const createBid = async (req, res) => {
       );
   }
 };
+
 // done
 export const getUserBetHistory = async (req, res) => {
   try {
@@ -1028,5 +1038,53 @@ export const runnerProfitLoss = async (req, res) => {
           error.errMessage ?? error.message
         )
       );
+  }
+};
+export const userMarketData = async (req, res) => {
+  try {
+    const user = req.user;
+    const userId = user.userId;
+    
+    const getCurrentMarket = await CurrentOrder.findAll({
+      where: { userId },
+      include: [{ model: Market, as: 'market', attributes: ['marketId', 'marketName'] }],
+    });
+
+    const currentMarketSet = new Set();
+
+    getCurrentMarket.forEach(item => {
+      currentMarketSet.add(JSON.stringify({
+        marketId: item.market.marketId,
+        marketName: item.market.marketName
+      }));
+    });
+
+    const currentMarketArray = Array.from(currentMarketSet).map(item => JSON.parse(item));
+
+    const getBetHistory = await BetHistory.findAll({
+      where: { userId },
+      include: [{ model: Market, as: 'market', attributes: ['marketId', 'marketName'] }],
+    });
+
+    const betHistorySet = new Set();
+
+    getBetHistory.forEach(item => {
+      betHistorySet.add(JSON.stringify({
+        marketId: item.market.marketId,
+        marketName: item.market.marketName
+      }));
+    });
+
+    const betHistoryArray = Array.from(betHistorySet).map(item => JSON.parse(item));
+
+    const responseData = {
+      currentMarket: currentMarketArray,
+      betHistory: betHistoryArray
+    };
+
+    res.status(statusCode.success).send(apiResponseSuccess(responseData, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching user market data:', error);
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };

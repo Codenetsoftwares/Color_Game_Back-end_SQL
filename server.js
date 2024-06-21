@@ -13,6 +13,8 @@ import Game from './models/game.model.js';
 import Market from './models/market.model.js';
 import Runner from './models/runner.model.js';
 import { authRoute } from './routes/auth.route.js';
+import CurrentOrder from './models/currentOrder.model.js';
+import BetHistory from './models/betHistory.model.js';
 
 dotenv.config();
 const app = express();
@@ -59,6 +61,10 @@ Market.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
 
 Market.hasMany(Runner, { foreignKey: 'marketId', sourceKey: 'marketId' });
 Runner.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId' });
+
+CurrentOrder.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', as: 'market' });
+BetHistory.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', as: 'market' });
+
 
 sequelize
   .sync({ alter: true })

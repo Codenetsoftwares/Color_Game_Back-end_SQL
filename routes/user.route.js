@@ -18,6 +18,7 @@ import {
   runnerProfitLoss,
   createUser,
   userUpdate,
+  userMarketData,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -96,4 +97,6 @@ export const UserRoute = (app) => {
     authorize([string.User]),
     runnerProfitLoss,
   );
+
+  app.get('/api/user-market-data', customErrorHandler,authorize([string.User]),userMarketData )
 };
