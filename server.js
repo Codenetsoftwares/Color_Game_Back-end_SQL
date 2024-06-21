@@ -12,6 +12,7 @@ import sequelize from './db.js';
 import Game from './models/game.model.js';
 import Market from './models/market.model.js';
 import Runner from './models/runner.model.js';
+import { authRoute } from './routes/auth.route.js';
 
 dotenv.config();
 const app = express();
@@ -48,6 +49,7 @@ app.get('/', (req, res) => {
 });
 
 AdminRoute(app);
+authRoute(app);
 UserRoute(app);
 GameRoute(app);
 AnnouncementRoute(app);

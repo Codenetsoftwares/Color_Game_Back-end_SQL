@@ -1,6 +1,6 @@
-import { adminLogin, loginUser } from "../controller/auth.controller";
-import customErrorHandler from "../middleware/customErrorHandler";
-import { loginSchema } from "../schema/commonSchema";
+import { adminLogin, loginUser } from "../controller/auth.controller.js";
+import customErrorHandler from "../middleware/customErrorHandler.js";
+import { loginSchema } from "../schema/commonSchema.js";
 
 
 export const authRoute = (app) => {
