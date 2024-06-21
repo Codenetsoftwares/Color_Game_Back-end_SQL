@@ -626,13 +626,9 @@ export const filterMarketData = async (req, res) => {
       );
   }
 };
-//check after frontend done
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
-
-  // Console log request body for debugging
   console.log('Request body:', req.body);
-
   try {
     if (!userId) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'User ID is required');
@@ -640,16 +636,13 @@ export const createBid = async (req, res) => {
     if (value < 0) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Bid value cannot be negative');
     }
-
     const user = await userSchema.findOne({ where: { userId } });
-
     if (!user) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'User Not Found');
     }
     if (user.balance < value) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Insufficient balance. Bid cannot be placed.');
     }
-
     const game = await Game.findOne({
       where: { gameId },
       include: {
@@ -657,36 +650,27 @@ export const createBid = async (req, res) => {
         as: 'Markets'
       }
     });
-
     if (!game) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Game Not Found');
     }
-
     const market = game.Markets.find(market => String(market.marketId) === String(marketId));
-
     if (!market) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
     }
-
     const runner = await Runner.findOne({ where: { marketId, runnerId } });
-
     if (!runner) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Runner Not Found');
     }
-
     const gameName = game.gameName;
     const marketName = market.marketName;
     const runnerName = runner.runnerName;
-
     if (bidType === 'back' || bidType === 'lay') {
       const adjustedRate = runner[bidType.toLowerCase()] - 1;
       const mainValue = Math.round(adjustedRate * value);
       const betAmount = bidType === 'back' ? value : mainValue;
-
       user.balance = wallet;
       user.exposure = exposure;
       user.marketListExposure = marketListExposure;
-
       const currentOrder = await CurrentOrder.create({
         userId: userId,
         gameId: gameId,
@@ -702,23 +686,13 @@ export const createBid = async (req, res) => {
         bidAmount: mainValue,
         exposure: exposure,
       });
-
-      // Console log currentOrder for debugging
       console.log('CurrentOrder created:', currentOrder);
-
-      if (user.changed()) {
-        await user.save(); // Make sure save is called on the correct model instance
-        console.log('User changes saved:', user);
-      } else {
-        console.log('No changes detected in user model');
-      }
+      await user.save();
     }
-
     return res
       .status(statusCode.success)
       .send(apiResponseSuccess(null, true, statusCode.success, 'Bid placed successfully'));
   } catch (error) {
-    console.log(error);
     return res
       .status(statusCode.internalServerError)
       .send(
@@ -731,7 +705,6 @@ export const createBid = async (req, res) => {
       );
   }
 };
-
 // done
 export const getUserBetHistory = async (req, res) => {
   try {

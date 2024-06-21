@@ -2,9 +2,7 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-
 class userSchema extends Model {}
-
 userSchema.init(
   {
     id: {
@@ -51,11 +49,11 @@ userSchema.init(
       allowNull: true,
     },
     balance: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DECIMAL(10, 2), // Adjust based on your needs
       defaultValue: 0.0,
     },
     exposure: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DECIMAL(10, 2), // Adjust based on your needs
       defaultValue: 0.0,
     },
     marketListExposure: {
@@ -65,10 +63,9 @@ userSchema.init(
   },
   {
     sequelize,
-    modelName: 'User',
+    modelName: 'userSchema',
     tableName: 'user',
     timestamps: false,
   },
 );
-
 export default userSchema;
