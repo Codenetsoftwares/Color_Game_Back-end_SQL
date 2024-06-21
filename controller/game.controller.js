@@ -81,6 +81,17 @@ export const getAllGames = async (req, res) => {
         announcement: announcement.announcement,
       }));
 
+      if (formattedAnnouncements.length === 0) {
+        // Ensure the game is included even if there are no announcements
+        return [{
+          gameId: game.gameId,
+          gameName: game.gameName,
+          description: game.description,
+          announceId: null,
+          announcement: null,
+        }];
+      }
+
       return formattedAnnouncements.map((announcement) => ({
         gameId: game.gameId,
         gameName: game.gameName,

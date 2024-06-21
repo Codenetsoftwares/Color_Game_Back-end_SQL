@@ -502,107 +502,134 @@ export const filterMarketData = async (req, res) => {
     const marketId = req.params.marketId;
     const userId = req.body?.userId;
 
-    const marketData = await Market.findOne({
+    // Fetch market and runner data using Sequelize
+    const marketDataRows = await Market.findAll({
       where: { marketId },
       include: [{
         model: Runner,
-        attributes: ['id', 'runnerId', 'runnerName', 'isWin', 'bal', 'back', 'lay'],
-      }],
+        required: false
+      }]
     });
 
-    if (!marketData) {
+    if (marketDataRows.length === 0) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Market not found with MarketId');
     }
 
     let marketDataObj = {
-      marketId: marketData.marketId,
-      marketName: marketData.marketName,
-      participants: marketData.participants,
-      timeSpan: marketData.timeSpan,
-      announcementResult: marketData.announcementResult,
-      isActive: marketData.isActive,
-      runners: marketData.Runners.map(runner => ({
+      marketId: marketDataRows[0].marketId,
+      marketName: marketDataRows[0].marketName,
+      participants: marketDataRows[0].participants,
+      timeSpan: marketDataRows[0].timeSpan,
+      announcementResult: marketDataRows[0].announcementResult,
+      isActive: marketDataRows[0].isActive,
+      runners: [],
+    };
+
+    marketDataRows[0].Runners.forEach((runner) => {
+      marketDataObj.runners.push({
         id: runner.id,
         runnerName: {
           runnerId: runner.runnerId,
           name: runner.runnerName,
           isWin: runner.isWin,
-          bal: parseFloat(runner.bal).toFixed(2),
+          bal: Math.round(parseFloat(runner.bal)),
         },
-        rate: [{
-          Back: runner.back,
-          Lay: runner.lay,
-        }],
-      })),
-    };
+        rate: [
+          {
+            back: runner.back,
+            lay: runner.lay,
+          },
+        ],
+      });
+    });
 
     if (userId) {
-      const orders = await CurrentOrder.findAll({
+      const currentOrdersRows = await CurrentOrder.findAll({
         where: {
           userId,
           marketId,
-        },
+        }
       });
 
-      for (const order of orders) {
-        for (const runner of marketDataObj.runners) {
-          if (order.type === 'Back') {
+      const userMarketBalance = {
+        userId,
+        marketId,
+        runnerBalance: [],
+      };
+
+      marketDataObj.runners.forEach((runner) => {
+        currentOrdersRows.forEach((order) => {
+          if (order.type === 'back') {
             if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runner.runnerName.bal = (Number(runner.runnerName.bal) + Number(order.bidAmount)).toFixed(2);
+              runner.runnerName.bal += Number(order.bidAmount);
             } else {
-              runner.runnerName.bal = (Number(runner.runnerName.bal) - Number(order.value)).toFixed(2);
+              runner.runnerName.bal -= Number(order.value);
             }
-          } else if (order.type === 'Lay') {
+          } else if (order.type === 'lay') {
             if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runner.runnerName.bal = (Number(runner.runnerName.bal) - Number(order.bidAmount)).toFixed(2);
+              runner.runnerName.bal -= Number(order.bidAmount);
             } else {
-              runner.runnerName.bal = (Number(runner.runnerName.bal) + Number(order.value)).toFixed(2);
+              runner.runnerName.bal += Number(order.value);
             }
           }
-        }
-      }
+        });
 
-      const user = await userSchema.findByPk(userId);
-      if (user) {
-        let marketBalance = await MarketBalance.findAll({
+        userMarketBalance.runnerBalance.push({
+          runnerId: runner.runnerName.runnerId,
+          bal: runner.runnerName.bal,
+        });
+      });
+
+      for (const balance of userMarketBalance.runnerBalance) {
+        const userMarketBalanceRows = await MarketBalance.findAll({
           where: {
             userId,
             marketId,
-          },
+            runnerId: balance.runnerId,
+          }
         });
 
-        if (!marketBalance || marketBalance.length === 0) {
-          marketBalance = await MarketBalance.create({
-            userId: user.id,
-            marketId,
-            runnerId: marketDataObj.runners.map(runner => runner.runnerName.runnerId.toString()),
-            bal: marketDataObj.runners.map(runner => Number(runner.runnerName.bal)),
-          });
-        } else {
-          marketBalance.forEach(balance => {
-            const runner = marketDataObj.runners.find(runner => String(runner.runnerName.runnerId) === String(balance.runnerId));
-            if (runner) {
-              balance.bal = Number(runner.runnerName.bal);
-              balance.save();
+        if (userMarketBalanceRows.length > 0) {
+          await MarketBalance.update(
+            { bal: balance.bal },
+            {
+              where: {
+                userId,
+                marketId,
+                runnerId: balance.runnerId,
+              },
             }
+          );
+        } else {
+          await MarketBalance.create({
+            userId,
+            marketId,
+            runnerId: balance.runnerId,
+            bal: balance.bal,
           });
         }
-
-        await user.save();
       }
     }
 
-    res.status(statusCode.success).send(marketDataObj);
+    res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
   } catch (error) {
-    console.error('Error retrieving market data:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 //check after frontend done
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
 
-  console.log('Request body:', req.body); // Log request body
+  console.log('Request body:', req.body); 
 
   try {
     if (!userId) {
