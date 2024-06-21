@@ -114,28 +114,29 @@ export const eligibilityCheck = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { oldPassword, password, confirmPassword } = req.body;
-    const userId = req.user.id;
+    const user = req.user;
+    const userId = user.userId;
 
     if (password !== confirmPassword) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Confirm Password does not match with Password'));
     }
 
-    const user = await userSchema.findOne({ where: { userId } });
+    const userData = await userSchema.findOne({ where: { userId } });
 
-    if (!user) {
+    if (!userData) {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
     }
 
-    const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, user.password);
+    const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, userData.password);
     if (!oldPasswordIsCorrect) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
     }
 
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-    await user.save();
+    userData.password = await bcrypt.hash(password, salt);
+    await userData.save();
 
-    res.status(statusCode.success).send(apiResponseSuccess(user, true, statusCode.success, 'Password Reset Successfully'));
+    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successfully'));
   } catch (error) {
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
@@ -1044,7 +1045,7 @@ export const userMarketData = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    
+
     const getCurrentMarket = await CurrentOrder.findAll({
       where: { userId },
       include: [{ model: Market, as: 'market', attributes: ['marketId', 'marketName'] }],
