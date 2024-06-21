@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
-import { apiResponseErr, apiResponseSuccess, apiResponsePagination } from '../middleware/serverError.js';
+import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js';
 import { statusCode } from '../helper/statusCodes.js';
 import admins from '../models/admin.model.js';
 import { string } from '../constructor/string.js';
@@ -22,94 +22,22 @@ export const createAdmin = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { userName } });
 
     if (existingAdmin) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
     }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const newAdmin = await admins.create({
       adminId: uuidv4(),
       userName,
-      password,
+      password: hashedPassword,
       roles: string.Admin,
     });
 
-    return res
-      .status(statusCode.create)
-      .json(apiResponseSuccess(null, true, statusCode.create, 'Admin created successfully'));
+    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Admin created successfully'));
   } catch (error) {
-    return res
-      .status(statusCode.internalServerError)
-      .json(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
-  }
-};
-// done
-export const adminLogin = async (req, res) => {
-  const { userName, password } = req.body;
-  try {
-    const existingAdmin = await admins.findOne({ where: { userName } });
-
-    if (!existingAdmin) {
-      console.log('Admin not found');
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
-    }
-
-    const isPasswordValid = await existingAdmin.validPassword(password);
-
-    if (!isPasswordValid) {
-      console.log('Invalid password');
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
-    }
-
-    const accessTokenResponse = {
-      id: existingAdmin.id,
-      adminId: existingAdmin.adminId,
-      userName: existingAdmin.userName,
-      userType: existingAdmin.userType || 'admin',
-    };
-
-    const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1d',
-    });
-
-    return res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          {
-            accessToken,
-            adminId: existingAdmin.adminId,
-            userName: existingAdmin.userName,
-            userType: existingAdmin.userType || 'admin',
-          },
-          true,
-          statusCode.success,
-          'Admin login successfully',
-        ),
-      );
-  } catch (error) {
-    console.error('Error in adminLogin:', error.message);
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    return res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -168,7 +96,7 @@ export const getAllUsers = async (req, res) => {
     });
 
     if (!users || users.length === 0) {
-      throw new Error('User not found');
+      throw apiResponseErr(null, false,statusCode.badRequest,'User not found');
     }
 
     const paginationData = {
@@ -177,9 +105,8 @@ export const getAllUsers = async (req, res) => {
       totalItems,
     };
 
-    res.status(statusCode.success).json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
+   return res.status(statusCode.success).json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
   } catch (error) {
-    console.error('Error fetching users:', error);
     res
       .status(statusCode.internalServerError)
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
@@ -297,7 +224,9 @@ export const afterWining = async (req, res) => {
     const { marketId, runnerId, isWin } = req.body
     const runner = await Runner.findOne({ where: { runnerId } });
     if (!runner) {
-      throw new Error('Runner not found');
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest,'Runner not found'));
     }
 
     let gameId = null;
@@ -349,7 +278,7 @@ export const afterWining = async (req, res) => {
           }
 
           const profitLossEntry = await ProfitLoss.create({
-            userId: user._id,
+            userId: user.userId,
             gameId,
             marketId,
             runnerId,

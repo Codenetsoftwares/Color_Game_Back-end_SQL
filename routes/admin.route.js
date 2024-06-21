@@ -7,12 +7,10 @@ import {
   deposit,
   sendBalance,
   getAllUsers,
-  adminLogin,
   afterWining,
 } from '../controller/admin.controller.js';
 import {
   depositSchema,
-  loginSchema,
   sendBalanceSchema,
   winningSchema,
   suspendedMarketSchema,
@@ -24,8 +22,7 @@ dotenv.config();
 export const AdminRoute = (app) => {
   // done
   app.post('/api/admin-create', customErrorHandler, authorize([string.Admin]), createAdmin);
-  // done
-  app.post('/api/admin-login', loginSchema, customErrorHandler, adminLogin);
+
   // done
   app.post(
     '/api/update-market-status/:marketId',

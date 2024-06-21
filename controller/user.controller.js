@@ -14,6 +14,7 @@ import MarketBalance from '../models/marketBalance.js';
 import CurrentOrder from '../models/currentOrder.model.js';
 import Game from '../models/game.model.js';
 import BetHistory from '../models/betHistory.model.js';
+import ProfitLoss from '../models/profitLoss.js';
 
 
 // done
@@ -23,34 +24,25 @@ export const createUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (existingUser) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
     }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newUser = await userSchema.create({
       firstName,
       lastName,
       userName,
       userId: uuidv4(),
       phoneNumber,
-      password,
+      password: hashedPassword,
       roles: string.User,
     });
 
-    return res
-      .status(statusCode.create)
-      .send(apiResponseSuccess(null, true, statusCode.create, 'User created successfully'));
+    return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, 'User created successfully'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -71,88 +63,19 @@ export const userUpdate = async (req, res) => {
     if (userName) updateData.userName = userName;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
     if (password) {
-      const passwordSalt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash(password, passwordSalt);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
       updateData.password = hashedPassword;
     }
 
     await user.update(updateData);
 
-    res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(null, true, statusCode.success, 'User updated successfully'));
+    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User updated successfully'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
-// done
-export const loginUser = async (req, res) => {
-  const { userName, password } = req.body;
-   try {
-     const existingUser = await userSchema.findOne({ where: { userName } });
- 
-     if (!existingUser) {
-       console.log('Admin not found');
-       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User Does Not Exist'));
-     }
- 
-     const isPasswordValid = await existingUser.validPassword(password);
- 
-     if (!isPasswordValid) {
-       console.log('Invalid password');
-       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid username or password'));
-     }
- 
-     const accessTokenResponse = {
-       id: existingUser.id,
-       userName: existingUser.userName,
-       isEighteen: existingUser.eligibilityCheck,
-       UserType: existingUser.userType || 'user',
-       wallet: existingUser.wallet
-     };
- 
-     const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-       expiresIn: '1d',
-     });
- 
-     res.status(statusCode.success).send(
-       apiResponseSuccess(
-         {
-           accessToken,
-           userId: existingUser.userId,
-           userName: existingUser.userName,
-           isEighteen: existingUser.eligibilityCheck,
-           userType: existingUser.userType || 'user',
-           wallet: existingUser.wallet,
-         },
-         true,
-         statusCode.success,
-         'Login successful',
-       ),
-     );
-   } catch (error) {
-     console.error('Error in adminLogin:', error.message);
-     res
-       .status(statusCode.internalServerError)
-       .send(
-         apiResponseErr(
-           error.data ?? null,
-           false,
-           error.responseCode ?? statusCode.internalServerError,
-           error.errMessage ?? error.message,
-         ),
-       );
-   }
- };
+
 // done
 export const eligibilityCheck = async (req, res) => {
   try {
@@ -193,43 +116,27 @@ export const resetPassword = async (req, res) => {
     const userId = req.user.id;
 
     if (password !== confirmPassword) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Confirm Password does not match with Password'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Confirm Password does not match with Password'));
     }
 
-    const user = await userSchema.findByPk(userId);
+    const user = await userSchema.findOne({ where: { userId } });
 
     if (!user) {
-      return res
-        .status(statusCode.notFound)
-        .send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
     }
 
-    const oldPasswordIsCorrect = await user.validPassword(oldPassword);
+    const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, user.password);
     if (!oldPasswordIsCorrect) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
     }
 
-    user.password = password;
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
     await user.save();
 
-    res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(user, true, statusCode.success, 'Password Reset Successfully'));
+    res.status(statusCode.success).send(apiResponseSuccess(user, true, statusCode.success, 'Password Reset Successfully'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
 // done
@@ -693,7 +600,6 @@ export const filterMarketData = async (req, res) => {
 };
 //check after frontend done
 export const createBid = async (req, res) => {
-  console.log("req.body", req.body)
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
 
   console.log('Request body:', req.body); // Log request body
@@ -906,26 +812,34 @@ export const calculateProfitLoss = async (req, res) => {
     const limit = req.query.limit || 5;
     const startDate = req.query.startDate + ' 00:00:00';
     const endDate = req.query.endDate + ' 23:59:59';
-    const query = `
-      SELECT
-        gameId,
-        SUM(profitLoss) AS totalProfitLoss
-      FROM ProfitLoss
-      WHERE userId = ? AND date >= ? AND date <= ?
-      GROUP BY gameId
-    `;
 
-    const parameters = [userId, startDate, endDate];
-    const [rows] = await database.execute(query, parameters);
+    const profitLossData = await ProfitLoss.findAll({
+      attributes: ['gameId', [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss']],
+      where: {
+        userId: userId,
+        date: {
+          [Op.between]: [startDate, endDate],
+        },
+      },
+      group: ['gameId'],
+      offset: (page - 1) * limit,
+      limit: limit,
+    });
 
-    if (rows.length === 0) {
-      throw apiResponseErr(null, statusCode.notFound, false, 'No profit/loss data found for the given date range.');
+    if (profitLossData.length === 0) {
+      throw new Error('No profit/loss data found for the given date range.');
     }
 
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const profitLossData = rows.slice(startIndex, endIndex);
-    const totalItems = rows.length;
+    const totalItems = await ProfitLoss.count({
+      where: {
+        userId: userId,
+        date: {
+          [Op.between]: [startDate, endDate],
+        },
+      },
+      distinct: true,
+    });
+
     const totalPages = Math.ceil(totalItems / limit);
 
     const paginationData = {
@@ -934,9 +848,15 @@ export const calculateProfitLoss = async (req, res) => {
       totalItems: totalItems,
     };
 
-    return res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(profitLossData, true, statusCode.success, 'Success', paginationData));
+    return res.status(statusCode.success).send(
+      apiResponseSuccess(
+        profitLossData,
+        true,
+        statusCode.success,
+        'Success',
+        paginationData
+      )
+    );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -945,8 +865,8 @@ export const calculateProfitLoss = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
+          error.errMessage ?? error.message
+        )
       );
   }
 };
@@ -960,42 +880,40 @@ export const marketProfitLoss = async (req, res) => {
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
 
-    const query = `
-    SELECT
-    ProfitLoss.marketId,
-    Market.marketName,
-    SUM(ProfitLoss.profitLoss) AS totalProfitLoss
-FROM ProfitLoss
-JOIN Market ON ProfitLoss.marketId = Market.marketId
-WHERE ProfitLoss.userId = ? AND ProfitLoss.gameId = ? AND ProfitLoss.date >= ? AND ProfitLoss.date <= ?
-GROUP BY ProfitLoss.marketId
+    const marketsProfitLoss = await ProfitLoss.findAll({
+      attributes: [
+        'marketId',
+        [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss'],
+      ],
+      include: [{
+        model: Market,
+        attributes: ['marketName'],
+        where: { marketId: sequelize.col('ProfitLoss.marketId') }
+      }],
+      where: {
+        userId: userId,
+        gameId: gameId,
+        date: {
+          [Op.between]: [startDateObj, endDateObj],
+        },
+      },
+      group: ['ProfitLoss.marketId', 'Market.marketName']
+    });
 
-    `;
-
-    const parameters = [userId, gameId, startDateObj, endDateObj];
-    const [rows] = await database.execute(query, parameters);
-
-    if (rows.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+    if (marketsProfitLoss.length === 0) {
+      throw new Error('No profit/loss data found for the given date range.');
     }
-
-    const marketsProfitLoss = rows.map((row) => ({
-      marketId: row.marketId,
-      marketName: row.marketName,
-      totalProfitLoss: row.totalProfitLoss,
-    }));
-
-    const totalItemsQuery = `
-      SELECT COUNT(DISTINCT marketId) AS totalItems
-      FROM ProfitLoss
-      WHERE userId = ? AND gameId = ? AND date >= ? AND date <= ?
-    `;
-    const [totalItemsRows] = await database.execute(totalItemsQuery, [userId, gameId, startDateObj, endDateObj]);
-    const totalItems = totalItemsRows[0].totalItems;
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, statusCode.success, 'Success'));
+      .send(
+        apiResponseSuccess(
+          { marketsProfitLoss: marketsProfitLoss },
+          true,
+          statusCode.success,
+          'Success'
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -1004,8 +922,8 @@ GROUP BY ProfitLoss.marketId
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
+          error.errMessage ?? error.message
+        )
       );
   }
 };
@@ -1021,48 +939,57 @@ export const runnerProfitLoss = async (req, res) => {
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
 
-    const query = `
-      SELECT
-          g.gameName,
-          m.marketName,
-          r.runnerName,
-          r.runnerId,
-          SUM(pl.profitLoss) AS totalProfitLoss
-      FROM
-          ProfitLoss pl
-      JOIN
-          Market m ON pl.marketId = m.marketId
-      JOIN
-          Runner r ON pl.runnerId = r.runnerId
-      JOIN
-          Game g ON pl.gameId = g.gameId
-      WHERE
-          pl.userId = ? AND
-          pl.marketId = ? AND
-          pl.date >= ? AND
-          pl.date <= ?
-      GROUP BY
-          g.gameName, m.marketName, r.runnerName, r.runnerId
-    `;
+    const runnersProfitLoss = await ProfitLoss.findAll({
+      attributes: [
+        [sequelize.col('Game.gameName'), 'gameName'],
+        [sequelize.col('Market.marketName'), 'marketName'],
+        [sequelize.col('Runner.runnerName'), 'runnerName'],
+        [sequelize.col('Runner.runnerId'), 'runnerId'],
+        [sequelize.fn('SUM', sequelize.col('ProfitLoss.profitLoss')), 'totalProfitLoss'],
+      ],
+      include: [
+        {
+          model: Market,
+          attributes: [],
+          where: { marketId: marketId }
+        },
+        {
+          model: Runner,
+          attributes: [],
+          where: { runnerId: sequelize.col('ProfitLoss.runnerId') }
+        },
+        {
+          model: Game,
+          attributes: [],
+          where: { gameId: sequelize.col('ProfitLoss.gameId') }
+        }
+      ],
+      where: {
+        userId: userId,
+        marketId: marketId,
+        date: {
+          [Op.between]: [startDateObj, endDateObj],
+        },
+      },
+      group: ['Game.gameName', 'Market.marketName', 'Runner.runnerName', 'Runner.runnerId'],
+      offset: (page - 1) * limit,
+      limit: limit,
+    });
 
-    const parameters = [userId, marketId, startDateObj, endDateObj];
-    const [rows] = await database.execute(query, parameters);
-
-    if (rows.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+    if (runnersProfitLoss.length === 0) {
+      throw new Error('No profit/loss data found for the given date range.');
     }
-
-    const runnersProfitLoss = rows.map((row) => ({
-      gameName: row.gameName,
-      marketName: row.marketName,
-      runnerName: row.runnerName,
-      runnerId: row.runnerId,
-      profitLoss: row.totalProfitLoss,
-    }));
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess({ runnersProfitLoss: runnersProfitLoss }, true, statusCode.success, 'Success'));
+      .send(
+        apiResponseSuccess(
+          { runnersProfitLoss: runnersProfitLoss },
+          true,
+          statusCode.success,
+          'Success'
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -1071,8 +998,8 @@ export const runnerProfitLoss = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
+          error.errMessage ?? error.message
+        )
       );
   }
 };

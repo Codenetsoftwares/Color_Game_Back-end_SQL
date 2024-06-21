@@ -68,25 +68,7 @@ userSchema.init(
     modelName: 'User',
     tableName: 'user',
     timestamps: false,
-    hooks: {
-      beforeCreate: async (user) => {
-        if (user.password) {
-          const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
-        }
-      },
-      beforeUpdate: async (user) => {
-        if (user.password) {
-          const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
-        }
-      },
-    },
   },
 );
-
-userSchema.prototype.validPassword = async function (password) {
-  return await bcrypt.compare(password, this.password);
-};
 
 export default userSchema;

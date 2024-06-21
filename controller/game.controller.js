@@ -125,7 +125,7 @@ export const updateGame = async (req, res) => {
     });
 
     if (!game) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Game not found.'));
+      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found.'));
     }
 
     if (gameName) {
@@ -291,7 +291,7 @@ export const updateMarket = async (req, res) => {
     if (!market) {
       return res
         .status(statusCode.notFound)
-        .json(apiResponseErr(null, false, statusCode.notFound, 'Market not found.'));
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found.'));
     }
     await Runner.destroy({
       where: {
@@ -352,7 +352,7 @@ export const createRunner = async (req, res) => {
     const { runnerNames } = req.body;
 
     if (!runnerNames) {
-      throw apiResponseErr(null, false, statusCode.notFound, `RunnerName Required`);
+      throw apiResponseErr(null, false, statusCode.badRequest, `RunnerName Required`);
     }
 
     const market = await Market.findOne({

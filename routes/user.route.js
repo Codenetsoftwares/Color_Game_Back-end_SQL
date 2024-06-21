@@ -1,5 +1,4 @@
 import {
-  loginUser,
   eligibilityCheck,
   resetPassword,
   userGame,
@@ -38,8 +37,7 @@ export const UserRoute = (app) => {
   app.post('/api/user-create', createdUserSchema, customErrorHandler, authorize([string.Admin]), createUser);
   // done
   app.put('/api/users-update/:userId', userUpdateSchema, customErrorHandler, authorize([string.Admin]), userUpdate);
-  // done
-  app.post('/api/user-login', loginUser);
+
   // done
   app.post('/api/eligibilityCheck/:userId', authorize([string.User]), eligibilityCheck);
   // done
@@ -62,7 +60,7 @@ export const UserRoute = (app) => {
   app.get('/api/transactionDetails/:userId', authorize([string.User]), transactionDetails);
   // done
   app.post('/api/user-filter-marketData/:marketId', filterMarketData);
-  // Not getting correct balance but exposure is done
+  
   app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, authorize([string.User]), createBid);
   // done
   app.get(
