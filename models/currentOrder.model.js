@@ -76,6 +76,6 @@ CurrentOrder.init(
     modelName: 'CurrentOrder',
     tableName: 'currentOrder',
     timestamps: false,
-  }
+  },
 );
 export default CurrentOrder;

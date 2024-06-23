@@ -35,14 +35,16 @@ export const announcements = async (req, res) => {
       .status(statusCode.create)
       .json(apiResponseSuccess(announce, true, statusCode.create, 'Announcement created successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -50,7 +52,7 @@ export const announcements = async (req, res) => {
 export const getAnnouncement = async (req, res) => {
   try {
     const { announceId } = req.params;
-    
+
     const announcement = await announcementSchema.findOne({ where: { announceId } });
 
     if (!announcement) {
@@ -110,14 +112,16 @@ export const updateAnnouncement = async (req, res) => {
       .status(statusCode.create)
       .json(apiResponseSuccess(null, true, statusCode.create, 'Announcement updated successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -151,14 +155,16 @@ export const getAnnouncementUser = async (req, res) => {
       ),
     );
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -175,13 +181,15 @@ export const getAnnouncementTypes = async (req, res) => {
 
     res.status(statusCode.success).send(apiResponseSuccess(announcementTypes, true, statusCode.success, 'Success'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };

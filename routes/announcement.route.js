@@ -1,5 +1,11 @@
 import { string } from '../constructor/string.js';
-import { announcements, getAnnouncement, updateAnnouncement, getAnnouncementUser, getAnnouncementTypes } from '../controller/announcement.controller.js';
+import {
+  announcements,
+  getAnnouncement,
+  updateAnnouncement,
+  getAnnouncementUser,
+  getAnnouncementTypes,
+} from '../controller/announcement.controller.js';
 import { authorize } from '../middleware/auth.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
 import { announcementsSchema, updateAnnouncementSchema } from '../schema/commonSchema.js';

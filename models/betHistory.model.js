@@ -81,4 +81,4 @@ BetHistory.init(
   },
 );
 
-export default BetHistory ;
+export default BetHistory;

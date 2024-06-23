@@ -48,7 +48,7 @@ ProfitLoss.init(
         fields: ['userId', 'gameId', 'marketId', 'runnerId'],
       },
     ],
-  }
+  },
 );
 
 export default ProfitLoss;

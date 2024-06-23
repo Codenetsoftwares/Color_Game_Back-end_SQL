@@ -9,12 +9,7 @@ import {
   getAllUsers,
   afterWining,
 } from '../controller/admin.controller.js';
-import {
-  depositSchema,
-  sendBalanceSchema,
-  winningSchema,
-  suspendedMarketSchema,
-} from '../schema/commonSchema.js';
+import { depositSchema, sendBalanceSchema, winningSchema, suspendedMarketSchema } from '../schema/commonSchema.js';
 import { string } from '../constructor/string.js';
 
 dotenv.config();

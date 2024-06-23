@@ -27,7 +27,9 @@ export const createAdmin = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { userName } });
 
     if (existingAdmin) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -40,9 +42,20 @@ export const createAdmin = async (req, res) => {
       roles: string.Admin,
     });
 
-    return res.status(statusCode.create).json(apiResponseSuccess(null, true, statusCode.create, 'Admin created successfully'));
+    return res
+      .status(statusCode.create)
+      .json(apiResponseSuccess(null, true, statusCode.create, 'Admin created successfully'));
   } catch (error) {
-    return res.status(statusCode.internalServerError).json(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .json(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -101,7 +114,7 @@ export const getAllUsers = async (req, res) => {
     });
 
     if (!users || users.length === 0) {
-      throw apiResponseErr(null, false,statusCode.badRequest,'User not found');
+      throw apiResponseErr(null, false, statusCode.badRequest, 'User not found');
     }
 
     const paginationData = {
@@ -110,7 +123,9 @@ export const getAllUsers = async (req, res) => {
       totalItems,
     };
 
-   return res.status(statusCode.success).json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -230,22 +245,21 @@ export const afterWining = async (req, res) => {
     const { marketId, runnerId, isWin } = req.body;
     let gameId = null;
 
-    // Fetch the market and include its runners
     const market = await Market.findOne({
       where: { marketId },
-      include: [{ model: Runner, required: false }]
+      include: [{ model: Runner, required: false }],
     });
 
     if (!market) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
     }
 
-    // Retrieve gameId from the market
     gameId = market.gameId;
 
-    // Update runners' isWin property based on runnerId and isWin
     if (market.runners) {
-      market.runners.forEach(runner => {
+      market.runners.forEach((runner) => {
         if (String(runner.runnerId) === runnerId) {
           runner.isWin = isWin;
         } else {
@@ -254,63 +268,69 @@ export const afterWining = async (req, res) => {
       });
     }
 
-    // Set announcementResult to true if isWin is true
     if (isWin) {
       market.announcementResult = true;
     }
 
-    // Save the updated market
     await market.save();
 
-    // Fetch all users with balances in the market
     const users = await MarketBalance.findAll({
       where: { marketId },
     });
 
-    console.log('Fetched users:', users);
-
-    // Iterate through each user and update their balance based on marketExposure
     for (const user of users) {
       try {
-        // Find the specific runner balance
         const runnerBalance = await MarketBalance.findOne({
           where: { marketId, runnerId },
         });
 
         if (runnerBalance) {
-          // Get marketExposure for the specific marketId from user's marketListExposure
-          const marketListExposure = JSON.parse(user.marketListExposure || '[]');
-          const marketExposure = marketListExposure.find(exposure => exposure[marketId]);
+          const userDetails = await userSchema.findOne({
+            where: { userId: user.userId },
+          });
 
-          // Ensure marketExposure is defined and is a number
-          if (marketExposure !== undefined && !isNaN(marketExposure[marketId])) {
-            const marketExposureValue = Number(marketExposure[marketId]);
+          if (userDetails) {
+            const marketExposure = userDetails.marketListExposure.find((item) => Object.keys(item)[0] === marketId);
 
-            // Update balances based on win/loss
-            if (isWin) {
-              runnerBalance.bal += marketExposureValue;
-              user.balance += marketExposureValue; // Update user's balance
+            if (marketExposure !== undefined && !isNaN(marketExposure[marketId])) {
+              const marketExposureValue = Number(marketExposure[marketId]);
+              if (isWin) {
+                runnerBalance.bal += marketExposureValue;
+                userDetails.balance += marketExposureValue;
+              } else {
+                runnerBalance.bal -= marketExposureValue;
+                userDetails.balance -= marketExposureValue;
+              }
+
+              await ProfitLoss.create({
+                userId: user.userId,
+                gameId,
+                marketId,
+                runnerId,
+                date: new Date(),
+                profitLoss: runnerBalance.bal,
+              });
+
+              const marketIndex = userDetails.marketListExposure.findIndex((item) => Object.keys(item)[0] === marketId);
+              if (marketIndex !== -1) {
+                userDetails.marketListExposure.splice(marketIndex, 1);
+              }
+
+              await userSchema.update(
+                { marketListExposure: userDetails.marketListExposure },
+                { where: { userId: user.userId } },
+              );
+
+              await userDetails.save();
+
+              await MarketBalance.destroy({
+                where: { marketId, runnerId },
+              });
             } else {
-              runnerBalance.bal -= marketExposureValue;
-              user.balance -= marketExposureValue; // Update user's balance
+              console.error(`Market exposure not found or invalid for marketId ${marketId}`);
             }
-
-            // Create profit/loss record
-            await ProfitLoss.create({
-              userId: user.userId,
-              gameId,
-              marketId,
-              runnerId,
-              date: new Date(),
-              profitLoss: runnerBalance.bal,
-            });
-
-            // Delete the runner balance after processing
-            await MarketBalance.destroy({
-              where: { marketId, runnerId },
-            });
           } else {
-            console.error(`Market exposure not found or invalid for marketId ${marketId}`);
+            console.error(`User details not found for userId ${user.userId}`);
           }
         } else {
           console.error(`Runner balance not found for marketId ${marketId} and runnerId ${runnerId}`);
@@ -320,13 +340,10 @@ export const afterWining = async (req, res) => {
       }
     }
 
-    // If isWin is true, move orders to bet history and delete from current orders
     if (isWin) {
       const orders = await CurrentOrder.findAll({
         where: { marketId },
       });
-
-      console.log('Fetched orders:', orders);
 
       for (const order of orders) {
         await BetHistory.create({
@@ -352,12 +369,11 @@ export const afterWining = async (req, res) => {
       });
     }
 
-    // Return success response
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success'));
-
   } catch (error) {
     console.error('Error sending balance:', error);
-    return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
-

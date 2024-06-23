@@ -163,10 +163,13 @@ export const validateAnnouncementsId = [param('announceId').notEmpty().withMessa
 export const validateUserResetPassword = [
   body('oldPassword').notEmpty().withMessage('Old Password is required'),
   body('password')
-    .notEmpty().withMessage('New Password is required')
-    .isLength({ min: 6 }).withMessage('New Password must be at least 6 characters long'),
+    .notEmpty()
+    .withMessage('New Password is required')
+    .isLength({ min: 6 })
+    .withMessage('New Password must be at least 6 characters long'),
   body('confirmPassword')
-    .notEmpty().withMessage('Confirm Password is required')
+    .notEmpty()
+    .withMessage('Confirm Password is required')
     .custom((value, { req }) => value === req.body.password)
     .withMessage('Confirm Password does not match with Password'),
 ];
@@ -203,4 +206,3 @@ export const calculateProfitLossSchema = [
     .withMessage('Invalid start date format.'),
   query('endDate').notEmpty().withMessage('End date is required.').isISO8601().withMessage('Invalid end date format.'),
 ];
-

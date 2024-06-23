@@ -1,11 +1,10 @@
-import { adminLogin, loginUser } from "../controller/auth.controller.js";
-import customErrorHandler from "../middleware/customErrorHandler.js";
-import { loginSchema } from "../schema/commonSchema.js";
-
+import { adminLogin, loginUser } from '../controller/auth.controller.js';
+import customErrorHandler from '../middleware/customErrorHandler.js';
+import { loginSchema } from '../schema/commonSchema.js';
 
 export const authRoute = (app) => {
-    // done
-    app.post('/api/admin-login', loginSchema, customErrorHandler, adminLogin);
-    // done
-    app.post('/api/user-login', loginUser);
-}
+  // done
+  app.post('/api/admin-login', loginSchema, customErrorHandler, adminLogin);
+  // done
+  app.post('/api/user-login', loginUser);
+};

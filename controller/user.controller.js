@@ -17,7 +17,6 @@ import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
 import exp from 'constants';
 
-
 // done
 export const createUser = async (req, res) => {
   const { firstName, lastName, userName, phoneNumber, password } = req.body;
@@ -25,7 +24,9 @@ export const createUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (existingUser) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -41,9 +42,20 @@ export const createUser = async (req, res) => {
       roles: string.User,
     });
 
-    return res.status(statusCode.create).send(apiResponseSuccess(null, true, statusCode.create, 'User created successfully'));
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(null, true, statusCode.create, 'User created successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -71,9 +83,20 @@ export const userUpdate = async (req, res) => {
 
     await user.update(updateData);
 
-    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User updated successfully'));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'User updated successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -118,27 +141,44 @@ export const resetPassword = async (req, res) => {
     const userId = user.userId;
 
     if (password !== confirmPassword) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Confirm Password does not match with Password'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Confirm Password does not match with Password'));
     }
 
     const userData = await userSchema.findOne({ where: { userId } });
 
     if (!userData) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
+      return res
+        .status(statusCode.notFound)
+        .send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
     }
 
     const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, userData.password);
     if (!oldPasswordIsCorrect) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
     }
 
     const salt = await bcrypt.genSalt(10);
     userData.password = await bcrypt.hash(password, salt);
     await userData.save();
 
-    res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successfully'));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Password Reset Successfully'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -310,36 +350,36 @@ export const getAllGameData = async (req, res) => {
             {
               model: Runner,
               attributes: ['runnerId', 'runnerName', 'isWin', 'bal', 'back', 'lay'],
-            }
+            },
           ],
-        }
+        },
       ],
     });
 
-    const formattedGameData = gameData.map(game => ({
+    const formattedGameData = gameData.map((game) => ({
       gameId: game.gameId,
       gameName: game.gameName,
       description: game.description,
       isBlink: game.isBlink,
-      markets: game.Markets.map(market => ({
+      markets: game.Markets.map((market) => ({
         marketId: market.marketId,
         marketName: market.marketName,
         participants: market.participants,
         timeSpan: market.timeSpan,
         announcementResult: market.announcementResult,
         isActive: market.isActive,
-        runners: market.Runners.map(runner => ({
+        runners: market.Runners.map((runner) => ({
           runnerName: {
             runnerId: runner.runnerId,
             runnerName: runner.runnerName,
             isWin: runner.isWin,
-            bal: runner.bal
+            bal: runner.bal,
           },
           rate: [
             {
               back: runner.back,
-              lay: runner.lay
-            }
+              lay: runner.lay,
+            },
           ],
         })),
       })),
@@ -348,7 +388,9 @@ export const getAllGameData = async (req, res) => {
     res.status(statusCode.success).json(apiResponseSuccess(formattedGameData, true, statusCode.success, 'Success'));
   } catch (error) {
     console.error('Error retrieving game data:', error);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res
+      .status(statusCode.internalServerError)
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 // done
@@ -366,41 +408,40 @@ export const filteredGameData = async (req, res) => {
             {
               model: Runner,
               attributes: ['runnerId', 'runnerName', 'isWin', 'bal', 'back', 'lay'],
-            }
+            },
           ],
-        }
+        },
       ],
     });
-
 
     if (!gameData) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Game not found');
     }
 
-    const formattedGameData = gameData.map(game => ({
+    const formattedGameData = gameData.map((game) => ({
       gameId: game.gameId,
       gameName: game.gameName,
       description: game.description,
       isBlink: game.isBlink,
-      markets: game.Markets.map(market => ({
+      markets: game.Markets.map((market) => ({
         marketId: market.marketId,
         marketName: market.marketName,
         participants: market.participants,
         timeSpan: market.timeSpan,
         announcementResult: market.announcementResult,
         isActive: market.isActive,
-        runners: market.Runners.map(runner => ({
+        runners: market.Runners.map((runner) => ({
           runnerName: {
             runnerId: runner.runnerId,
             runnerName: runner.runnerName,
             isWin: runner.isWin,
-            bal: runner.bal
+            bal: runner.bal,
           },
           rate: [
             {
               back: runner.back,
-              lay: runner.lay
-            }
+              lay: runner.lay,
+            },
           ],
         })),
       })),
@@ -410,7 +451,9 @@ export const filteredGameData = async (req, res) => {
     res.status(statusCode.success).json(apiResponseSuccess(formattedGameData, true, statusCode.success, 'Success'));
   } catch (error) {
     console.error('Error retrieving game data:', error);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res
+      .status(statusCode.internalServerError)
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 // done
@@ -422,14 +465,16 @@ export const userGif = async (req, res) => {
 
     res.status(statusCode.success).send(apiResponseSuccess(gifData, true, statusCode.success, 'success'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -486,16 +531,20 @@ export const transactionDetails = async (req, res) => {
     const totalPages = Math.ceil(totalItems / pageSize);
     const paginationData = apiResponsePagination(page, totalPages, totalItems);
 
-    res.status(statusCode.success).send(apiResponseSuccess(transactionData, true, statusCode.success, 'Success', paginationData));
+    res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(transactionData, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -506,10 +555,12 @@ export const filterMarketData = async (req, res) => {
 
     const marketDataRows = await Market.findAll({
       where: { marketId },
-      include: [{
-        model: Runner,
-        required: false
-      }]
+      include: [
+        {
+          model: Runner,
+          required: false,
+        },
+      ],
     });
 
     if (marketDataRows.length === 0) {
@@ -549,7 +600,7 @@ export const filterMarketData = async (req, res) => {
         where: {
           userId,
           marketId,
-        }
+        },
       });
 
       const userMarketBalance = {
@@ -587,7 +638,7 @@ export const filterMarketData = async (req, res) => {
             userId,
             marketId,
             runnerId: balance.runnerId,
-          }
+          },
         });
 
         if (userMarketBalanceRows.length > 0) {
@@ -599,7 +650,7 @@ export const filterMarketData = async (req, res) => {
                 marketId,
                 runnerId: balance.runnerId,
               },
-            }
+            },
           );
         } else {
           await MarketBalance.create({
@@ -647,13 +698,13 @@ export const createBid = async (req, res) => {
       where: { gameId },
       include: {
         model: Market,
-        as: 'Markets'
-      }
+        as: 'Markets',
+      },
     });
     if (!game) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Game Not Found');
     }
-    const market = game.Markets.find(market => String(market.marketId) === String(marketId));
+    const market = game.Markets.find((market) => String(market.marketId) === String(marketId));
     if (!market) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
     }
@@ -779,7 +830,7 @@ export const currentOrderHistory = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    console.log("userId", userId);
+    console.log('userId', userId);
     const marketId = req.params.marketId;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
@@ -859,15 +910,9 @@ export const calculateProfitLoss = async (req, res) => {
       totalItems: totalItems,
     };
 
-    return res.status(statusCode.success).send(
-      apiResponseSuccess(
-        profitLossData,
-        true,
-        statusCode.success,
-        'Success',
-        paginationData
-      )
-    );
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(profitLossData, true, statusCode.success, 'Success', paginationData));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -876,8 +921,8 @@ export const calculateProfitLoss = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message
-        )
+          error.errMessage ?? error.message,
+        ),
       );
   }
 };
@@ -892,15 +937,14 @@ export const marketProfitLoss = async (req, res) => {
     endDateObj.setHours(23, 59, 59, 999);
 
     const marketsProfitLoss = await ProfitLoss.findAll({
-      attributes: [
-        'marketId',
-        [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss'],
+      attributes: ['marketId', [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss']],
+      include: [
+        {
+          model: Market,
+          attributes: ['marketName'],
+          where: { marketId: sequelize.col('ProfitLoss.marketId') },
+        },
       ],
-      include: [{
-        model: Market,
-        attributes: ['marketName'],
-        where: { marketId: sequelize.col('ProfitLoss.marketId') }
-      }],
       where: {
         userId: userId,
         gameId: gameId,
@@ -908,7 +952,7 @@ export const marketProfitLoss = async (req, res) => {
           [Op.between]: [startDateObj, endDateObj],
         },
       },
-      group: ['ProfitLoss.marketId', 'Market.marketName']
+      group: ['ProfitLoss.marketId', 'Market.marketName'],
     });
 
     if (marketsProfitLoss.length === 0) {
@@ -917,14 +961,7 @@ export const marketProfitLoss = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          { marketsProfitLoss: marketsProfitLoss },
-          true,
-          statusCode.success,
-          'Success'
-        )
-      );
+      .send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, statusCode.success, 'Success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -933,8 +970,8 @@ export const marketProfitLoss = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message
-        )
+          error.errMessage ?? error.message,
+        ),
       );
   }
 };
@@ -962,18 +999,18 @@ export const runnerProfitLoss = async (req, res) => {
         {
           model: Market,
           attributes: [],
-          where: { marketId: marketId }
+          where: { marketId: marketId },
         },
         {
           model: Runner,
           attributes: [],
-          where: { runnerId: sequelize.col('ProfitLoss.runnerId') }
+          where: { runnerId: sequelize.col('ProfitLoss.runnerId') },
         },
         {
           model: Game,
           attributes: [],
-          where: { gameId: sequelize.col('ProfitLoss.gameId') }
-        }
+          where: { gameId: sequelize.col('ProfitLoss.gameId') },
+        },
       ],
       where: {
         userId: userId,
@@ -993,14 +1030,7 @@ export const runnerProfitLoss = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          { runnersProfitLoss: runnersProfitLoss },
-          true,
-          statusCode.success,
-          'Success'
-        )
-      );
+      .send(apiResponseSuccess({ runnersProfitLoss: runnersProfitLoss }, true, statusCode.success, 'Success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -1009,8 +1039,8 @@ export const runnerProfitLoss = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message
-        )
+          error.errMessage ?? error.message,
+        ),
       );
   }
 };
@@ -1026,14 +1056,16 @@ export const userMarketData = async (req, res) => {
 
     const currentMarketSet = new Set();
 
-    getCurrentMarket.forEach(item => {
-      currentMarketSet.add(JSON.stringify({
-        marketId: item.market.marketId,
-        marketName: item.market.marketName
-      }));
+    getCurrentMarket.forEach((item) => {
+      currentMarketSet.add(
+        JSON.stringify({
+          marketId: item.market.marketId,
+          marketName: item.market.marketName,
+        }),
+      );
     });
 
-    const currentMarketArray = Array.from(currentMarketSet).map(item => JSON.parse(item));
+    const currentMarketArray = Array.from(currentMarketSet).map((item) => JSON.parse(item));
 
     const getBetHistory = await BetHistory.findAll({
       where: { userId },
@@ -1042,23 +1074,34 @@ export const userMarketData = async (req, res) => {
 
     const betHistorySet = new Set();
 
-    getBetHistory.forEach(item => {
-      betHistorySet.add(JSON.stringify({
-        marketId: item.market.marketId,
-        marketName: item.market.marketName
-      }));
+    getBetHistory.forEach((item) => {
+      betHistorySet.add(
+        JSON.stringify({
+          marketId: item.market.marketId,
+          marketName: item.market.marketName,
+        }),
+      );
     });
 
-    const betHistoryArray = Array.from(betHistorySet).map(item => JSON.parse(item));
+    const betHistoryArray = Array.from(betHistorySet).map((item) => JSON.parse(item));
 
     const responseData = {
       currentMarket: currentMarketArray,
-      betHistory: betHistoryArray
+      betHistory: betHistoryArray,
     };
 
     res.status(statusCode.success).send(apiResponseSuccess(responseData, true, statusCode.success, 'Success'));
   } catch (error) {
     console.error('Error fetching user market data:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };

@@ -49,11 +49,11 @@ userSchema.init(
       allowNull: true,
     },
     balance: {
-      type: DataTypes.DECIMAL(10, 2), // Adjust based on your needs
+      type: DataTypes.INTEGER, // Adjust based on your needs
       defaultValue: 0.0,
     },
     exposure: {
-      type: DataTypes.DECIMAL(10, 2), // Adjust based on your needs
+      type: DataTypes.INTEGER, // Adjust based on your needs
       defaultValue: 0.0,
     },
     marketListExposure: {

@@ -39,7 +39,7 @@ MarketBalance.init(
         fields: ['userId', 'marketId', 'runnerId'],
       },
     ],
-  }
+  },
 );
 
 export default MarketBalance;

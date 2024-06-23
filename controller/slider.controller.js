@@ -32,18 +32,20 @@ export const createSlider = async (req, res) => {
 
     console.log('Slider documents inserted into the database.');
 
-    return res.status(statusCode.create).send(
-      apiResponseSuccess(createdSliders, true, statusCode.create, 'Slider created successfully.')
-    );
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(createdSliders, true, statusCode.create, 'Slider created successfully.'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -56,14 +58,16 @@ export const getSliderTextImg = async (req, res) => {
 
     return res.status(statusCode.success).send(apiResponseSuccess(sliders, true, statusCode.success, 'Success'));
   } catch (error) {
-    return res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -81,18 +85,22 @@ export const activeSlider = async (req, res) => {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Image not found'));
     }
 
-    sliderData.update({isActive})
+    sliderData.update({ isActive });
 
-    return res.status(statusCode.success).send(apiResponseSuccess(sliderData, true, statusCode.success, 'Slider status updated successfully'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(sliderData, true, statusCode.success, 'Slider status updated successfully'));
   } catch (error) {
-    return res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -104,7 +112,7 @@ export const updateSliderImage = async (req, res) => {
     const slider = await sliderSchema.findOne({
       where: { imageId },
     });
-    if(!slider){
+    if (!slider) {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Image not found'));
     }
 
@@ -113,7 +121,9 @@ export const updateSliderImage = async (req, res) => {
     slider.headingText = data.headingText || slider.headingText;
     const updatedSlider = await slider.save();
 
-    return res.status(statusCode.success).send(apiResponseSuccess(updatedSlider, true, statusCode.success, 'Slider updated successfully'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(updatedSlider, true, statusCode.success, 'Slider updated successfully'));
   } catch (error) {
     return res
       .status(statusCode.internalServerError)
@@ -154,20 +164,22 @@ export const createGif = async (req, res) => {
 
     console.log('Gif documents inserted into the database.');
 
-    return res.status(statusCode.create).send(
-      apiResponseSuccess(createdSliders, true, statusCode.create, 'Gif created successfully.')
-    );
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(createdSliders, true, statusCode.create, 'Gif created successfully.'));
   } catch (error) {
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
-  }
+};
 
 // Done
 export const deleteGifData = async (req, res) => {
@@ -190,16 +202,20 @@ export const deleteGifData = async (req, res) => {
       },
     });
 
-    return res.status(statusCode.success).send(apiResponseSuccess(gifData, true, statusCode.success, 'Delete Gif Successfully'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(gifData, true, statusCode.success, 'Delete Gif Successfully'));
   } catch (error) {
     console.error('Error in deleteGifData:', error);
-    return res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };

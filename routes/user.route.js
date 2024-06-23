@@ -42,17 +42,23 @@ export const UserRoute = (app) => {
   // done
   app.post('/api/eligibilityCheck/:userId', authorize([string.User]), eligibilityCheck);
   // done
-  app.post('/api/user/resetpassword',validateUserResetPassword,customErrorHandler, authorize([string.User]), resetPassword);
+  app.post(
+    '/api/user/resetpassword',
+    validateUserResetPassword,
+    customErrorHandler,
+    authorize([string.User]),
+    resetPassword,
+  );
   // done
-  app.get('/api/user-games',customErrorHandler, userGame);
+  app.get('/api/user-games', customErrorHandler, userGame);
   // done
-  app.get('/api/user-markets/:gameId', customErrorHandler,authorize([string.User]), userMarket);
+  app.get('/api/user-markets/:gameId', customErrorHandler, authorize([string.User]), userMarket);
   // done
-  app.get('/api/user-runners/:marketId', customErrorHandler,authorize([string.User]), userRunners);
+  app.get('/api/user-runners/:marketId', customErrorHandler, authorize([string.User]), userRunners);
   // done
-  app.get('/api/user-all-gameData', customErrorHandler,getAllGameData);
+  app.get('/api/user-all-gameData', customErrorHandler, getAllGameData);
   // done
-  app.get('/api/user-filter-gameData/:gameId',customErrorHandler, filteredGameData);
+  app.get('/api/user-filter-gameData/:gameId', customErrorHandler, filteredGameData);
   // done
   app.get('/api/user/gif', userGif);
   // done
@@ -61,7 +67,7 @@ export const UserRoute = (app) => {
   app.get('/api/transactionDetails/:userId', authorize([string.User]), transactionDetails);
   // done
   app.post('/api/user-filter-marketData/:marketId', filterMarketData);
-  
+
   app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, authorize([string.User]), createBid);
   // done
   app.get(
@@ -80,7 +86,13 @@ export const UserRoute = (app) => {
     currentOrderHistory,
   );
   // done
-  app.get('/api/profit_loss', calculateProfitLossSchema, customErrorHandler, authorize([string.User]), calculateProfitLoss);
+  app.get(
+    '/api/profit_loss',
+    calculateProfitLossSchema,
+    customErrorHandler,
+    authorize([string.User]),
+    calculateProfitLoss,
+  );
   // done
   app.get(
     '/api/profit_loss_market/:gameId',
@@ -98,5 +110,5 @@ export const UserRoute = (app) => {
     runnerProfitLoss,
   );
 
-  app.get('/api/user-market-data', customErrorHandler,authorize([string.User]),userMarketData )
+  app.get('/api/user-market-data', customErrorHandler, authorize([string.User]), userMarketData);
 };

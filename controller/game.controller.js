@@ -65,41 +65,47 @@ export const getAllGames = async (req, res) => {
     });
 
     if (!rows || rows.length === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
     }
 
-    const gameData = await Promise.all(rows.map(async (game) => {
-      const announcements = await announcementSchema.findAll({
-        attributes: ['announceId', 'announcement'],
-        where: {
-          gameId: game.gameId,
-        },
-      });
+    const gameData = await Promise.all(
+      rows.map(async (game) => {
+        const announcements = await announcementSchema.findAll({
+          attributes: ['announceId', 'announcement'],
+          where: {
+            gameId: game.gameId,
+          },
+        });
 
-      const formattedAnnouncements = announcements.map((announcement) => ({
-        announceId: announcement.announceId,
-        announcement: announcement.announcement,
-      }));
+        const formattedAnnouncements = announcements.map((announcement) => ({
+          announceId: announcement.announceId,
+          announcement: announcement.announcement,
+        }));
 
-      if (formattedAnnouncements.length === 0) {
-        // Ensure the game is included even if there are no announcements
-        return [{
+        if (formattedAnnouncements.length === 0) {
+          // Ensure the game is included even if there are no announcements
+          return [
+            {
+              gameId: game.gameId,
+              gameName: game.gameName,
+              description: game.description,
+              announceId: null,
+              announcement: null,
+            },
+          ];
+        }
+
+        return formattedAnnouncements.map((announcement) => ({
           gameId: game.gameId,
           gameName: game.gameName,
           description: game.description,
-          announceId: null,
-          announcement: null,
-        }];
-      }
-
-      return formattedAnnouncements.map((announcement) => ({
-        gameId: game.gameId,
-        gameName: game.gameName,
-        description: game.description,
-        announceId: announcement.announceId,
-        announcement: announcement.announcement,
-      }));
-    }));
+          announceId: announcement.announceId,
+          announcement: announcement.announcement,
+        }));
+      }),
+    );
 
     const flattenedGameData = gameData.flat();
 
@@ -112,17 +118,18 @@ export const getAllGames = async (req, res) => {
     };
 
     return res.status(statusCode.success).json(apiResponseSuccess(response, true, statusCode.success, 'Success'));
-
   } catch (error) {
     console.error('Error fetching games:', error);
-    res.status(statusCode.internalServerError).send(
-      apiResponseErr(
-        error.data ?? null,
-        false,
-        error.responseCode ?? statusCode.internalServerError,
-        error.errMessage ?? error.message,
-      ),
-    );
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 // done
@@ -136,7 +143,9 @@ export const updateGame = async (req, res) => {
     });
 
     if (!game) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found.'));
+      return res
+        .status(statusCode.notFound)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found.'));
     }
 
     if (gameName) {
@@ -212,7 +221,7 @@ export const createMarket = async (req, res) => {
       timeSpan: timeSpan,
       announcementResult: 0,
       isActive: 1,
-      isDisplay: true
+      isDisplay: true,
     });
 
     // Fetch all markets for the game
@@ -330,7 +339,7 @@ export const updateMarket = async (req, res) => {
         where: {
           marketId: marketId,
         },
-      }
+      },
     );
 
     const updatedMarket = await Market.findOne({
@@ -420,7 +429,7 @@ export const createRunner = async (req, res) => {
         where: {
           marketId: marketId,
         },
-      }
+      },
     );
 
     return res
