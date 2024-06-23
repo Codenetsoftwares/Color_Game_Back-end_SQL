@@ -5,7 +5,6 @@ import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../mi
 import moment from 'moment';
 import { string } from '../constructor/string.js';
 import userSchema from '../models/user.model.js';
-import { v4 as uuidv4 } from 'uuid';
 import { statusCode } from '../helper/statusCodes.js';
 import Market from '../models/market.model.js';
 import Runner from '../models/runner.model.js';
@@ -36,7 +35,8 @@ export const createUser = async (req, res) => {
       firstName,
       lastName,
       userName,
-      userId: uuidv4(),
+      // userId,
+      // walletId,
       phoneNumber,
       password: hashedPassword,
       roles: string.User,

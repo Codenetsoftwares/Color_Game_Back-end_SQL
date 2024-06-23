@@ -1,7 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
-import bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+
 class userSchema extends Model {}
 userSchema.init(
   {
@@ -44,8 +43,7 @@ userSchema.init(
       defaultValue: false,
     },
     walletId: {
-      type: DataTypes.UUID,
-      defaultValue: uuidv4(),
+      type: DataTypes.STRING,
       allowNull: true,
     },
     balance: {
