@@ -15,15 +15,12 @@ import Runner from './models/runner.model.js';
 import { authRoute } from './routes/auth.route.js';
 import CurrentOrder from './models/currentOrder.model.js';
 import BetHistory from './models/betHistory.model.js';
-import MarketBalance from './models/marketBalance.js';
-import userSchema from './models/user.model.js';
 
 dotenv.config();
 const app = express();
-
-app.use(bodyParser.json());
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(bodyParser.json({ limit: '100mb' }));
+app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = process.env.FRONTEND_URI.split(',');
@@ -67,8 +64,6 @@ Runner.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId' });
 CurrentOrder.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', as: 'market' });
 BetHistory.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', as: 'market' });
 
-// userSchema.hasMany(MarketBalance, { foreignKey: 'userId', sourceKey: 'userId' });
-// MarketBalance.belongsTo(userSchema, { foreignKey: 'userId', targetKey: 'userId' });
 
 sequelize
   .sync({ alter: true })
