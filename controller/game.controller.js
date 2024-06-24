@@ -314,14 +314,12 @@ export const updateMarket = async (req, res) => {
         .json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found.'));
     }
 
-    // Find runners associated with the market
     const runners = await Runner.findAll({
       where: {
         marketId: marketId,
       },
     });
 
-    // Delete related entries in the rate table
     for (const runner of runners) {
       await rateSchema.destroy({
         where: {
@@ -330,7 +328,6 @@ export const updateMarket = async (req, res) => {
       });
     }
 
-    // Now delete the runners
     await Runner.destroy({
       where: {
         marketId: marketId,
