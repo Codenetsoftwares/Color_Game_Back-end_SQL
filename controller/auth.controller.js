@@ -12,7 +12,6 @@ export const adminLogin = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { userName } });
 
     if (!existingAdmin) {
-      console.log('Admin not found');
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
@@ -21,7 +20,6 @@ export const adminLogin = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, existingAdmin.password);
 
     if (!isPasswordValid) {
-      console.log('Invalid password');
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password'));

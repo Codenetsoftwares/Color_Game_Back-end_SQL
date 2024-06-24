@@ -484,7 +484,15 @@ export const createRate = async (req, res) => {
     const runnerId = req.params.runnerId;
     const { back, lay } = req.body;
 
-    const existingRate = await rateSchema.findOne({
+    const existingRunner = await Runner.findOne({
+      where: { runnerId: runnerId }
+    });
+
+    if (!existingRunner) {
+      throw new Error(`Runner with ID ${runnerId} not found.`);
+    }
+
+    let existingRate = await rateSchema.findOne({
       where: { runnerId: runnerId },
     });
 
@@ -505,9 +513,9 @@ export const createRate = async (req, res) => {
 
     return res
       .status(statusCode.create)
-      .send(apiResponseSuccess(null, true, statusCode.create, 'Rate created successfully'));
+      .send(apiResponseSuccess(null, true, statusCode.create, 'Rate created or updated successfully'));
   } catch (error) {
-    console.error('Error creating rate:', error);
+    console.error('Error creating or updating rate:', error);
     res
       .status(statusCode.internalServerError)
       .send(
@@ -535,8 +543,6 @@ export const updateRate = async (req, res) => {
       throw apiResponseErr(null, false, statusCode.notFound, 'Runner not found.');
     }
 
-    console.log('Runner before update:', runnerBeforeUpdate.toJSON());
-
     const updateFields = {};
 
     if (back !== undefined && back !== parseFloat(runnerBeforeUpdate.back)) {
@@ -562,13 +568,11 @@ export const updateRate = async (req, res) => {
     }
 
     const runnerAfterUpdate = await Runner.findOne({ where: { runnerId } });
-    console.log('Runner after update:', runnerAfterUpdate.toJSON());
 
     return res
       .status(statusCode.success)
       .json(apiResponseSuccess(null, true, statusCode.success, 'Rate updated successfully.'));
   } catch (error) {
-    console.error('Error updating rate:', error); // Log the error for debugging
     res
       .status(statusCode.internalServerError)
       .send(

@@ -680,7 +680,6 @@ export const filterMarketData = async (req, res) => {
 };
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
-  console.log('Request body:', req.body);
   try {
     if (!userId) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'User ID is required');
@@ -738,7 +737,6 @@ export const createBid = async (req, res) => {
         bidAmount: mainValue,
         exposure: exposure,
       });
-      console.log('CurrentOrder created:', currentOrder);
       await user.save();
     }
     return res
@@ -838,7 +836,6 @@ export const currentOrderHistory = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    console.log('userId', userId);
     const marketId = req.params.marketId;
     // const page = parseInt(req.query.page, 10) || 1;
     // const limit = parseInt(req.query.limit, 10) || 5;
