@@ -1,7 +1,10 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
+import Market from './market.model.js';
+import Runner from './runner.model.js';
+import Game from './game.model.js';
 
-class ProfitLoss extends Model {}
+class ProfitLoss extends Model { }
 
 ProfitLoss.init(
   {
@@ -50,5 +53,12 @@ ProfitLoss.init(
     ],
   },
 );
+ProfitLoss.belongsTo(Runner, { foreignKey: 'runnerId', targetKey: 'runnerId' });
+Runner.hasMany(ProfitLoss, { foreignKey: 'runnerId', sourceKey: 'runnerId' });
 
+ProfitLoss.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId' });
+Market.hasMany(ProfitLoss, { foreignKey: 'marketId', sourceKey: 'marketId' });
+
+ProfitLoss.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
+Game.hasMany(ProfitLoss, { foreignKey: 'gameId', sourceKey: 'gameId' });
 export default ProfitLoss;

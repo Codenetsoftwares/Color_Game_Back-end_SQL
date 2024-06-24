@@ -15,6 +15,7 @@ import Game from '../models/game.model.js';
 import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
 import exp from 'constants';
+import sequelize from '../db.js';
 
 // done
 export const createUser = async (req, res) => {
@@ -869,7 +870,8 @@ export const currentOrderHistory = async (req, res) => {
 };
 export const calculateProfitLoss = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const user = req.user;
+    const userId = user.userId;
     const page = req.query.page || 1;
     const limit = req.query.limit || 5;
     const startDate = req.query.startDate + ' 00:00:00';
@@ -928,7 +930,8 @@ export const calculateProfitLoss = async (req, res) => {
 };
 export const marketProfitLoss = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const user = req.user;
+    const userId = user.userId;
     const gameId = req.params.gameId;
     const { startDate, endDate } = req.query;
 
@@ -977,7 +980,8 @@ export const marketProfitLoss = async (req, res) => {
 };
 export const runnerProfitLoss = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const user = req.user;
+    const userId = user.userId;
     const marketId = req.params.marketId;
     const page = req.query.page || 1;
     const limit = req.query.limit || 5;
