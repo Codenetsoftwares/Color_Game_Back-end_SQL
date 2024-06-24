@@ -891,7 +891,16 @@ export const calculateProfitLoss = async (req, res) => {
     const endDate = req.query.endDate + ' 23:59:59';
 
     const profitLossData = await ProfitLoss.findAll({
-      attributes: ['gameId', [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss']],
+      attributes: [
+        'gameId',
+        [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss'],
+      ],
+      include: [
+        {
+          model: Game,
+          attributes: ['gameName'], 
+        },
+      ],
       where: {
         userId: userId,
         date: {
@@ -925,18 +934,33 @@ export const calculateProfitLoss = async (req, res) => {
       totalItems: totalItems,
     };
 
+    const formattedProfitLossData = profitLossData.map((item) => ({
+      gameId: item.gameId,
+      gameName: item.Game.gameName, 
+      totalProfitLoss: item.dataValues.totalProfitLoss,
+    }));
+
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(profitLossData, true, statusCode.success, 'Success', paginationData));
+      .send(
+        apiResponseSuccess(
+          formattedProfitLossData,
+          true,
+          statusCode.success,
+          'Success',
+          paginationData,
+        ),
+      );
   } catch (error) {
+    console.error('Error calculating profit/loss:', error);
     res
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
-          error.data ?? null,
+          null,
           false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
+          error.responseCode || statusCode.internalServerError,
+          error.errMessage || error.message,
         ),
       );
   }
@@ -951,6 +975,10 @@ export const marketProfitLoss = async (req, res) => {
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
+
+    if (!userId || !gameId) {
+      throw new Error('User ID or Game ID is missing.');
+    }
 
     const marketsProfitLoss = await ProfitLoss.findAll({
       attributes: ['marketId', [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss']],
@@ -971,13 +999,20 @@ export const marketProfitLoss = async (req, res) => {
       group: ['ProfitLoss.marketId', 'Market.marketName'],
     });
 
+
     if (marketsProfitLoss.length === 0) {
       throw new Error('No profit/loss data found for the given date range.');
     }
 
+    const formattedMarketsProfitLoss = marketsProfitLoss.map((item) => ({
+      marketId: item.marketId,
+      totalProfitLoss: item.dataValues.totalProfitLoss,
+      marketName: item.Market.marketName,
+    }));
+
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess({ marketsProfitLoss: marketsProfitLoss }, true, statusCode.success, 'Success'));
+      .send(apiResponseSuccess({ marketsProfitLoss: formattedMarketsProfitLoss }, true, statusCode.success, 'Success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -1004,6 +1039,10 @@ export const runnerProfitLoss = async (req, res) => {
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
 
+    if (!userId || !marketId) {
+      throw new Error('User ID or Market ID is missing.');
+    }
+
     const runnersProfitLoss = await ProfitLoss.findAll({
       attributes: [
         [sequelize.col('Game.gameName'), 'gameName'],
@@ -1016,17 +1055,14 @@ export const runnerProfitLoss = async (req, res) => {
         {
           model: Market,
           attributes: [],
-          where: { marketId: marketId },
         },
         {
           model: Runner,
           attributes: [],
-          where: { runnerId: sequelize.col('ProfitLoss.runnerId') },
         },
         {
           model: Game,
           attributes: [],
-          where: { gameId: sequelize.col('ProfitLoss.gameId') },
         },
       ],
       where: {
@@ -1045,9 +1081,17 @@ export const runnerProfitLoss = async (req, res) => {
       throw new Error('No profit/loss data found for the given date range.');
     }
 
+    const formattedRunnersProfitLoss = runnersProfitLoss.map((item) => ({
+      gameName: item.dataValues.gameName,
+      marketName: item.dataValues.marketName,
+      runnerName: item.dataValues.runnerName,
+      runnerId: item.dataValues.runnerId,
+      totalProfitLoss: item.dataValues.totalProfitLoss,
+    }));
+
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess({ runnersProfitLoss: runnersProfitLoss }, true, statusCode.success, 'Success'));
+      .send(apiResponseSuccess({ runnersProfitLoss: formattedRunnersProfitLoss }, true, statusCode.success, 'Success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -1061,6 +1105,7 @@ export const runnerProfitLoss = async (req, res) => {
       );
   }
 };
+
 export const userMarketData = async (req, res) => {
   try {
     const user = req.user;
