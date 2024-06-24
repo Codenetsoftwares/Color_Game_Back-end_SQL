@@ -840,8 +840,8 @@ export const currentOrderHistory = async (req, res) => {
     const userId = user.userId;
     console.log('userId', userId);
     const marketId = req.params.marketId;
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
+    // const page = parseInt(req.query.page, 10) || 1;
+    // const limit = parseInt(req.query.limit, 10) || 5;
 
     if (!marketId) {
       return res
@@ -849,19 +849,19 @@ export const currentOrderHistory = async (req, res) => {
         .send(apiResponseErr(null, statusCode.badRequest, false, 'Market ID is required'));
     }
 
-    const { count, rows } = await CurrentOrder.findAndCountAll({
+    const { rows } = await CurrentOrder.findAndCountAll({
       where: {
         userId,
         marketId,
       },
       attributes: ['runnerName', 'rate', 'value', 'type', 'bidAmount'],
-      limit,
-      offset: (page - 1) * limit,
+      // limit,
+      // offset: (page - 1) * limit,
     });
 
-    const totalPages = Math.ceil(count / limit);
-    const pageSize = limit;
-    const totalItems = count;
+    // const totalPages = Math.ceil(count / limit);
+    // const pageSize = limit;
+    // const totalItems = count;
     res.status(statusCode.success).send(apiResponseSuccess(
       { rows },
       true,
