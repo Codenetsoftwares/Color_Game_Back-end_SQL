@@ -251,15 +251,13 @@ export const afterWining = async (req, res) => {
     });
 
     if (!market) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
     }
 
     gameId = market.gameId;
 
     if (market.runners) {
-      market.runners.forEach((runner) => {
+      market.runners.forEach(runner => {
         if (String(runner.runnerId) === runnerId) {
           runner.isWin = isWin;
         } else {
@@ -281,7 +279,7 @@ export const afterWining = async (req, res) => {
     for (const user of users) {
       try {
         const runnerBalance = await MarketBalance.findOne({
-          where: { marketId, runnerId },
+          where: { marketId, runnerId, userId: user.userId },
         });
 
         if (runnerBalance) {
@@ -290,16 +288,16 @@ export const afterWining = async (req, res) => {
           });
 
           if (userDetails) {
-            const marketExposure = userDetails.marketListExposure.find((item) => Object.keys(item)[0] === marketId);
+            const marketExposureEntry = userDetails.marketListExposure.find(item => Object.keys(item)[0] === marketId);
+            if (marketExposureEntry) {
+              const marketExposureValue = Number(marketExposureEntry[marketId]);
+              const runnerBalanceValue = Number(runnerBalance.bal);
 
-            if (marketExposure !== undefined && !isNaN(marketExposure[marketId])) {
-              const marketExposureValue = Number(marketExposure[marketId]);
               if (isWin) {
-                runnerBalance.bal += marketExposureValue;
-                userDetails.balance += marketExposureValue;
+                userDetails.balance += (runnerBalanceValue + marketExposureValue);
+                console.log(`Updated Balance after win: ${userDetails.balance}`);
               } else {
-                runnerBalance.bal -= marketExposureValue;
-                userDetails.balance -= marketExposureValue;
+                console.log(`No win. Balance remains the same: ${userDetails.balance}`);
               }
 
               await ProfitLoss.create({
@@ -308,13 +306,10 @@ export const afterWining = async (req, res) => {
                 marketId,
                 runnerId,
                 date: new Date(),
-                profitLoss: runnerBalance.bal,
+                profitLoss: runnerBalanceValue,
               });
 
-              const marketIndex = userDetails.marketListExposure.findIndex((item) => Object.keys(item)[0] === marketId);
-              if (marketIndex !== -1) {
-                userDetails.marketListExposure.splice(marketIndex, 1);
-              }
+              userDetails.marketListExposure = userDetails.marketListExposure.filter(item => Object.keys(item)[0] !== marketId);
 
               await userSchema.update(
                 { marketListExposure: userDetails.marketListExposure },
@@ -324,10 +319,10 @@ export const afterWining = async (req, res) => {
               await userDetails.save();
 
               await MarketBalance.destroy({
-                where: { marketId, runnerId },
+                where: { marketId, runnerId, userId: user.userId },
               });
             } else {
-              console.error(`Market exposure not found or invalid for marketId ${marketId}`);
+              console.error(`Market exposure not found for marketId ${marketId}`);
             }
           } else {
             console.error(`User details not found for userId ${user.userId}`);
@@ -372,8 +367,10 @@ export const afterWining = async (req, res) => {
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success'));
   } catch (error) {
     console.error('Error sending balance:', error);
-    return res
-      .status(statusCode.internalServerError)
-      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+
+
+
+
