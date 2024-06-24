@@ -313,6 +313,24 @@ export const updateMarket = async (req, res) => {
         .status(statusCode.notFound)
         .json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found.'));
     }
+
+    // Find runners associated with the market
+    const runners = await Runner.findAll({
+      where: {
+        marketId: marketId,
+      },
+    });
+
+    // Delete related entries in the rate table
+    for (const runner of runners) {
+      await rateSchema.destroy({
+        where: {
+          runnerId: runner.runnerId,
+        },
+      });
+    }
+
+    // Now delete the runners
     await Runner.destroy({
       where: {
         marketId: marketId,
@@ -568,6 +586,7 @@ export const updateRate = async (req, res) => {
     }
 
     const runnerAfterUpdate = await Runner.findOne({ where: { runnerId } });
+    console.log('Runner after update:', runnerAfterUpdate.toJSON());
 
     return res
       .status(statusCode.success)
