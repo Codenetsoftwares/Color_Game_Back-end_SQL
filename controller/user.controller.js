@@ -8,7 +8,7 @@ import userSchema from '../models/user.model.js';
 import { statusCode } from '../helper/statusCodes.js';
 import Market from '../models/market.model.js';
 import Runner from '../models/runner.model.js';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import MarketBalance from '../models/marketBalance.js';
 import CurrentOrder from '../models/currentOrder.model.js';
 import Game from '../models/game.model.js';
@@ -898,7 +898,7 @@ export const calculateProfitLoss = async (req, res) => {
       include: [
         {
           model: Game,
-          attributes: ['gameName'], 
+          attributes: ['gameName'],
         },
       ],
       where: {
@@ -936,7 +936,7 @@ export const calculateProfitLoss = async (req, res) => {
 
     const formattedProfitLossData = profitLossData.map((item) => ({
       gameId: item.gameId,
-      gameName: item.Game.gameName, 
+      gameName: item.Game.gameName,
       totalProfitLoss: item.dataValues.totalProfitLoss,
     }));
 
@@ -969,59 +969,85 @@ export const marketProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    const gameId = req.params.gameId;
-    const { startDate, endDate } = req.query;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 5;
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
 
-    if (!userId || !gameId) {
-      throw new Error('User ID or Game ID is missing.');
-    }
-
-    const marketsProfitLoss = await ProfitLoss.findAll({
-      attributes: ['marketId', [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss']],
-      include: [
-        {
-          model: Market,
-          attributes: ['marketName'],
-          where: { marketId: sequelize.col('ProfitLoss.marketId') },
-        },
+    const distinctMarketIds = await ProfitLoss.findAll({
+      attributes: [
+        [Sequelize.fn('DISTINCT', Sequelize.col('marketId')), 'marketId']
       ],
-      where: {
-        userId: userId,
-        gameId: gameId,
-        date: {
-          [Op.between]: [startDateObj, endDateObj],
-        },
-      },
-      group: ['ProfitLoss.marketId', 'Market.marketName'],
+      where: { userId: userId }
     });
 
+    const marketsProfitLoss = await Promise.all(distinctMarketIds.map(async market => {
+      const profitLossEntries = await ProfitLoss.findAll({
+        attributes: [
+          'marketId',
+          [Sequelize.literal('CAST(profitLoss AS DECIMAL(10, 2))'), 'profitLoss']
+        ],
+        where: {
+          userId: userId,
+          marketId: market.marketId,
+          date: { [Op.between]: [startDateObj, endDateObj] }
+        }
+      });
 
-    if (marketsProfitLoss.length === 0) {
-      throw new Error('No profit/loss data found for the given date range.');
-    }
+      if (profitLossEntries.length === 0) {
+        throw new Error('No profit/loss data found for the given date range.');
+      }
 
-    const formattedMarketsProfitLoss = marketsProfitLoss.map((item) => ({
-      marketId: item.marketId,
-      totalProfitLoss: item.dataValues.totalProfitLoss,
-      marketName: item.Market.marketName,
+      const game = await Game.findOne({
+        include: [{ model: Market, where: { marketId: market.marketId }, attributes: ['marketName'] }],
+        attributes: ['gameName'],
+      });
+
+      const gameName = game.gameName;
+      const marketName = game.Markets[0].marketName;
+      const totalProfitLoss = profitLossEntries.reduce((acc, entry) => acc + parseFloat(entry.profitLoss), 0);
+
+      const formattedTotalProfitLoss = totalProfitLoss.toFixed(2);
+
+      return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss };
     }));
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedProfitLossData = marketsProfitLoss.slice(startIndex, endIndex);
+    const totalItems = marketsProfitLoss.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const paginationData = {
+      page: page,
+      totalPages: totalPages,
+      totalItems: totalItems
+    };
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess({ marketsProfitLoss: formattedMarketsProfitLoss }, true, statusCode.success, 'Success'));
+      .send(
+        apiResponseSuccess(
+          paginatedProfitLossData,
+          true,
+          statusCode.success,
+          'Success',
+          paginationData,
+        ),
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
-          error.data ?? null,
+          null,
           false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
+          error.responseCode || statusCode.internalServerError,
+          error.errMessage || error.message,
         ),
       );
   }
@@ -1031,81 +1057,98 @@ export const runnerProfitLoss = async (req, res) => {
     const user = req.user;
     const userId = user.userId;
     const marketId = req.params.marketId;
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 5;
-    const { startDate, endDate } = req.query;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 5;
 
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
 
-    if (!userId || !marketId) {
-      throw new Error('User ID or Market ID is missing.');
-    }
-
-    const runnersProfitLoss = await ProfitLoss.findAll({
-      attributes: [
-        [sequelize.col('Game.gameName'), 'gameName'],
-        [sequelize.col('Market.marketName'), 'marketName'],
-        [sequelize.col('Runner.runnerName'), 'runnerName'],
-        [sequelize.col('Runner.runnerId'), 'runnerId'],
-        [sequelize.fn('SUM', sequelize.col('ProfitLoss.profitLoss')), 'totalProfitLoss'],
-      ],
-      include: [
-        {
-          model: Market,
-          attributes: [],
-        },
-        {
-          model: Runner,
-          attributes: [],
-        },
-        {
-          model: Game,
-          attributes: [],
-        },
-      ],
+    const profitLossEntries = await ProfitLoss.findAll({
       where: {
         userId: userId,
         marketId: marketId,
-        date: {
-          [Op.between]: [startDateObj, endDateObj],
-        },
-      },
-      group: ['Game.gameName', 'Market.marketName', 'Runner.runnerName', 'Runner.runnerId'],
-      offset: (page - 1) * limit,
-      limit: limit,
+        date: { [Op.between]: [startDateObj, endDateObj] }
+      }
     });
 
-    if (runnersProfitLoss.length === 0) {
+    if (profitLossEntries.length === 0) {
       throw new Error('No profit/loss data found for the given date range.');
     }
 
-    const formattedRunnersProfitLoss = runnersProfitLoss.map((item) => ({
-      gameName: item.dataValues.gameName,
-      marketName: item.dataValues.marketName,
-      runnerName: item.dataValues.runnerName,
-      runnerId: item.dataValues.runnerId,
-      totalProfitLoss: item.dataValues.totalProfitLoss,
+    const runnersProfitLoss = await Promise.all(profitLossEntries.map(async entry => {
+      const game = await Game.findOne({
+        where: { gameId: entry.gameId },
+        include: [
+          {
+            model: Market,
+            where: { marketId: marketId },
+            include: [{ model: Runner }]
+          }
+        ]
+      });
+
+      if (!game) {
+        throw new Error(`Game data not found for gameId: ${entry.gameId}`);
+      }
+
+      const gameName = game.gameName;
+      const marketName = game.Markets[0].marketName;
+      const runner = game.Markets[0].Runners.find(runner => runner.runnerId === entry.runnerId);
+
+      if (!runner) {
+        throw new Error(`Runner data not found for runnerId: ${entry.runnerId}`);
+      }
+
+      const runnerName = runner.runnerName;
+
+      return {
+        gameName: gameName,
+        marketName: marketName,
+        runnerName: runnerName,
+        runnerId: entry.runnerId,
+        profitLoss: parseFloat(entry.profitLoss).toFixed(2)
+      };
     }));
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedRunnersProfitLoss = runnersProfitLoss.slice(startIndex, endIndex);
+    const totalItems = runnersProfitLoss.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const paginationData = {
+      page: page,
+      totalPages: totalPages,
+      totalItems: totalItems
+    };
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess({ runnersProfitLoss: formattedRunnersProfitLoss }, true, statusCode.success, 'Success'));
+      .send(
+        apiResponseSuccess(
+          paginatedRunnersProfitLoss,
+          true,
+          statusCode.success,
+          'Success',
+          paginationData,
+        ),
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
-          error.data ?? null,
+          null,
           false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
+          error.responseCode || statusCode.internalServerError,
+          error.errMessage || error.message,
         ),
       );
   }
 };
-
 export const userMarketData = async (req, res) => {
   try {
     const user = req.user;
