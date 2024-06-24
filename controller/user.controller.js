@@ -886,7 +886,7 @@ export const calculateProfitLoss = async (req, res) => {
     const user = req.user;
     const userId = user.userId;
     const page = req.query.page || 1;
-    const limit = req.query.limit || 5;
+    let limit = parseInt(req.query.limit) || 5;
     const startDate = req.query.startDate + ' 00:00:00';
     const endDate = req.query.endDate + ' 23:59:59';
 
