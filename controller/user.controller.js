@@ -18,7 +18,7 @@ import exp from 'constants';
 
 // done
 export const createUser = async (req, res) => {
-  const { firstName, lastName, userName, phoneNumber, password } = req.body;
+  const { firstName, lastName, userName, phoneNumber, password, userId, walletId } = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -28,17 +28,17 @@ export const createUser = async (req, res) => {
         .send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // const salt = await bcrypt.genSalt(10);
+    // const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = await userSchema.create({
       firstName,
       lastName,
       userName,
-      // userId,
-      // walletId,
       phoneNumber,
-      password: hashedPassword,
+      walletId,
+      userId,
+      password,
       roles: string.User,
     });
 
