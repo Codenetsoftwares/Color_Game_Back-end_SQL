@@ -7,7 +7,7 @@ import gifSchema from '../models/gif.model.js';
 
 // Done
 export const createSlider = async (req, res) => {
-  const { sliderCount, data } = req.body;
+  const { data } = req.body;
   try {
     if (!Array.isArray(data)) {
       return res.status(400).send(apiResponseErr(null, false, 400, 'Data must be an array'));
@@ -23,7 +23,7 @@ export const createSlider = async (req, res) => {
         text: element.text,
         headingText: element.headingText,
         isActive: element.isActive ?? true,
-        sliderCount: parseInt(sliderCount),
+        // sliderCount: parseInt(sliderCount),
       };
       sliderArray.push(slider);
     }

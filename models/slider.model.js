@@ -31,10 +31,10 @@ sliderSchema.init(
       allowNull: false,
       defaultValue: true,
     },
-    sliderCount: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
+    // sliderCount: {
+    //   type: DataTypes.INTEGER,
+    //   allowNull: false,
+    // },
   },
   {
     sequelize,
