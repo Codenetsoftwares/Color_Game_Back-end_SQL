@@ -24,7 +24,6 @@ export const authorize = (roles) => {
       }
 
       const user = jwt.verify(tokenParts[1], process.env.JWT_SECRET_KEY);
-      console.log('user', user);
       if (!user) {
         return res
           .status(statusCode.unauthorize)

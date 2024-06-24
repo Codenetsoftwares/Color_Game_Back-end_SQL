@@ -240,7 +240,6 @@ export const sendBalance = async (req, res) => {
 
 export const afterWining = async (req, res) => {
   try {
-    console.log(req.body);
     const { marketId, runnerId, isWin } = req.body;
     let gameId = null;
 
@@ -294,7 +293,6 @@ export const afterWining = async (req, res) => {
 
               if (isWin) {
                 userDetails.balance += (runnerBalanceValue + marketExposureValue);
-                console.log(`Updated Balance after win: ${userDetails.balance}`);
               } else {
                 console.log(`No win. Balance remains the same: ${userDetails.balance}`);
               }

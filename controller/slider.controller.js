@@ -30,8 +30,6 @@ export const createSlider = async (req, res) => {
 
     const createdSliders = await sliderSchema.bulkCreate(sliderArray);
 
-    console.log('Slider documents inserted into the database.');
-
     return res
       .status(statusCode.create)
       .send(apiResponseSuccess(createdSliders, true, statusCode.create, 'Slider created successfully.'));
@@ -161,8 +159,6 @@ export const createGif = async (req, res) => {
     }
 
     const createdSliders = await gifSchema.bulkCreate(sliderArray);
-
-    console.log('Gif documents inserted into the database.');
 
     return res
       .status(statusCode.create)

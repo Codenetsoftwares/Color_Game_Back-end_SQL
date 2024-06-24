@@ -52,6 +52,8 @@ Runner.init(
     modelName: 'Runner',
     tableName: 'runner',
     timestamps: false,
+    paranoid: true, // Enable soft delete
+    deletedAt: 'deletedAt',
   },
 );
 
