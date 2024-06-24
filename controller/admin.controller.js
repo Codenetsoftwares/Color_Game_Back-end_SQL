@@ -1,6 +1,4 @@
-import { database } from '../controller/database.controller.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js';
@@ -17,7 +15,7 @@ import MarketBalance from '../models/marketBalance.js';
 import ProfitLoss from '../models/profitLoss.js';
 import CurrentOrder from '../models/currentOrder.model.js';
 import BetHistory from '../models/betHistory.model.js';
-import Game from '../models/game.model.js';
+import { Op } from 'sequelize';
 
 dotenv.config();
 // done
@@ -97,7 +95,7 @@ export const getAllUsers = async (req, res) => {
 
     const countQuery = await userSchema.count({
       where: {
-        userName: { [Sequelize.Op.like]: `%${searchQuery}%` },
+        userName: { [Op.like]: `%${searchQuery}%` },
       },
     });
     const totalItems = countQuery;
@@ -107,7 +105,7 @@ export const getAllUsers = async (req, res) => {
 
     const users = await userSchema.findAll({
       where: {
-        userName: { [Sequelize.Op.like]: `%${searchQuery}%` },
+        userName: { [Op.like]: `%${searchQuery}%` },
       },
       limit: pageSize,
       offset: offset,
@@ -127,6 +125,7 @@ export const getAllUsers = async (req, res) => {
       .status(statusCode.success)
       .json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
   } catch (error) {
+    console.log(error);
     res
       .status(statusCode.internalServerError)
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
@@ -215,7 +214,7 @@ export const sendBalance = async (req, res) => {
       await transactionRecord.create(
         {
           userId,
-          transactionType: 'Credit',
+          transactionType: 'credit',
           amount: parsedDepositAmount,
           date: Date.now(),
         },

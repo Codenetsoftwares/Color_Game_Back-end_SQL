@@ -19,7 +19,7 @@ import sequelize from '../db.js';
 
 // done
 export const createUser = async (req, res) => {
-  const { firstName, lastName, userName, phoneNumber, password, userId, walletId } = req.body;
+  const {  userName, password, userId, walletId } = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -33,10 +33,7 @@ export const createUser = async (req, res) => {
     // const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = await userSchema.create({
-      firstName,
-      lastName,
       userName,
-      phoneNumber,
       walletId,
       userId,
       password,

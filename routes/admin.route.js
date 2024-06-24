@@ -27,11 +27,11 @@ export const AdminRoute = (app) => {
     checkMarketStatus,
   );
   // done
-  app.get('/api/all-user', customErrorHandler, authorize([string.Admin]), getAllUsers);
+  app.get('/api/all-user', customErrorHandler, getAllUsers);
   // done
   app.post('/api/deposit-amount', depositSchema, customErrorHandler, authorize([string.Admin]), deposit);
   // done
-  app.post('/api/sendBalance-user', sendBalanceSchema, customErrorHandler, authorize([string.Admin]), sendBalance);
+  app.post('/api/sendBalance-user', customErrorHandler, sendBalance);
 
   app.post('/api/afterWining', winningSchema, customErrorHandler, authorize([string.Admin]), afterWining);
 };
