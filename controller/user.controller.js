@@ -811,8 +811,15 @@ export const getUserBetHistory = async (req, res) => {
     });
 
     const totalPages = Math.ceil(count / limit);
-
-    res.status(statusCode.success).send(apiResponseSuccess({ rows, totalPages }, true, statusCode.success, 'Success'));
+    const pageSize = limit;
+    const totalItems = count;
+    res.status(statusCode.success).send(apiResponseSuccess(
+      { rows },
+      true,
+      statusCode.success,
+      'Success',
+      { totalPages, pageSize, totalItems, page }
+    ));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -853,8 +860,14 @@ export const currentOrderHistory = async (req, res) => {
     });
 
     const totalPages = Math.ceil(count / limit);
-
-    res.status(statusCode.success).send(apiResponseSuccess({ rows, totalPages }, true, statusCode.success, 'Success'));
+    const pageSize = limit;
+    const totalItems = count;
+    res.status(statusCode.success).send(apiResponseSuccess(
+      { rows },
+      true,
+      statusCode.success,
+      'Success',
+    ));
   } catch (error) {
     res
       .status(statusCode.internalServerError)
