@@ -369,5 +369,38 @@ export const afterWining = async (req, res) => {
 };
 
 
+// Authentcate by user Password
+
+export const  updateByAdmin = async (req, res) => {
+  try {
+    const { amount, userId, type } = req.body;
+
+    const user = await userSchema.findOne({ where: { userId } });
+    if (!user) {
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
+    }
+    
+    const currentAmount = type === 'credit' ? amount : -amount;
+    
+    await userSchema.update(
+      { balance:  user.balance + currentAmount},
+      { where: { userId } },
+    );
+    
+    return res
+      .status(statusCode.success)
+      .json(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successful'));
+  } catch (error) {
+    console.error('Error sending balance:', error);
+    res
+      .status(statusCode.internalServerError)
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+
+
 
 

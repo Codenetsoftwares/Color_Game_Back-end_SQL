@@ -8,8 +8,9 @@ import {
   sendBalance,
   getAllUsers,
   afterWining,
+  updateByAdmin
 } from '../controller/admin.controller.js';
-import { depositSchema, sendBalanceSchema, winningSchema, suspendedMarketSchema } from '../schema/commonSchema.js';
+import { depositSchema, exUpdateBalanceSchema, winningSchema, suspendedMarketSchema } from '../schema/commonSchema.js';
 import { string } from '../constructor/string.js';
 
 dotenv.config();
@@ -34,4 +35,8 @@ export const AdminRoute = (app) => {
   app.post('/api/sendBalance-user', customErrorHandler, sendBalance);
 
   app.post('/api/afterWining', winningSchema, customErrorHandler, authorize([string.Admin]), afterWining);
+
+  app.post('/api/extrnal/balance-update', exUpdateBalanceSchema, customErrorHandler, updateByAdmin);
 };
+
+
