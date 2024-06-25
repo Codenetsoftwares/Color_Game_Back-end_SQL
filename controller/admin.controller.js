@@ -312,6 +312,24 @@ export const afterWining = async (req, res) => {
                 { marketListExposure: userDetails.marketListExposure },
                 { where: { userId: user.userId } },
               );
+              
+              // sync with whiteLable 
+               
+              const dataToSend = {
+                amount : userDetails.balance,
+                userId : userDetails.userId,
+              };
+          
+              const {data:response} = await axios.post('http://localhost:8000/api/admin/extrnal/balance-update', dataToSend);
+          
+              console.log('Reset password response:', response.data);
+              let message;
+              if (!response.success) {
+                message = 'Sync not successfuly'
+              } else {
+                message = 'Sync data successfuly'
+              }
+              
 
               await userDetails.save();
 
@@ -361,7 +379,7 @@ export const afterWining = async (req, res) => {
       });
     }
 
-    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success'));
+    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success' + " " + message));
   } catch (error) {
     console.error('Error sending balance:', error);
     return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
