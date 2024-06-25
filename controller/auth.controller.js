@@ -130,30 +130,42 @@ export const loginUser = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-      const { userName, password, newPassword } = req.body;
+    const { userName, password, newPassword } = req.body;
 
-      const existingUser = await userSchema.findOne({ where: { userName } });
+    const existingUser = await userSchema.findOne({ where: { userName } });
 
-      if (existingUser) {
-        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact to admin'));
-      }
+    if (existingUser) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists.'));
+    }
 
-      // const passwordValid = await bcrypt.compare(password, existingUser.password);
-      // if (!passwordValid) {
-      //     return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, "Invalid password"));
-      // }
-      
-      const dataToSend = {
-        userName, password, newPassword
-      };
-        const response = await axios.post('http://localhost:8000/api/external/reset-password', dataToSend);
-        console.log('Reset password response:', response.data);
-        if(!response.data.success){
-          return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact to admin'));
-        }
-        
-        return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, 'Sucess'));
+    const dataToSend = {
+      userName,
+      password,
+      newPassword
+    };
+
+    const response = await axios.post('http://localhost:8000/api/external/reset-password', dataToSend);
+
+    console.log('Reset password response:', response.data);
+
+    if (!response.data.success) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact admin.'));
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const newUser = await userSchema.create({
+      userName: response.data.data.userName,
+      userId: response.data.data.userId,
+      password: hashedPassword,
+      balance: response.data.data.balance,
+      roles: 'user',
+    });
+
+    return res.status(statusCode.success).send(apiResponseSuccess(newUser, true, statusCode.success, 'User password reset successfully'));
   } catch (error) {
-      res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    console.error('Error resetting password:', error);
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
