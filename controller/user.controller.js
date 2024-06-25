@@ -19,7 +19,7 @@ import sequelize from '../db.js';
 
 // done
 export const createUser = async (req, res) => {
-  const {  userName, password, userId, walletId } = req.body;
+  const { firstName, lastName, userName, phoneNumber, password } = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -28,14 +28,12 @@ export const createUser = async (req, res) => {
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
     }
-
-    // const salt = await bcrypt.genSalt(10);
-    // const hashedPassword = await bcrypt.hash(password, salt);
-
     const newUser = await userSchema.create({
+      firstName,
+      lastName,
       userName,
-      walletId,
-      userId,
+      userId: uuidv4(),
+      phoneNumber,
       password,
       roles: string.User,
     });
