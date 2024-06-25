@@ -8,6 +8,7 @@ import Market from '../models/market.model.js';
 import Runner from '../models/runner.model.js';
 import rateSchema from '../models/rate.model.js';
 import announcementSchema from '../models/announcement.model.js';
+import BetHistory from '../models/betHistory.model.js';
 
 // done
 export const createGame = async (req, res) => {
@@ -684,6 +685,14 @@ export const deleteGame = async (req, res) => {
 
     const runnerIds = runners.map((runner) => runner.runnerId);
 
+    await BetHistory.destroy({
+      where: {
+        marketId: {
+          [Op.in]: marketIds,
+        },
+      },
+    });
+
     await rateSchema.destroy({
       where: {
         runnerId: {
@@ -738,7 +747,6 @@ export const deleteGame = async (req, res) => {
       );
   }
 };
-
 // done
 export const deleteMarket = async (req, res) => {
   try {
