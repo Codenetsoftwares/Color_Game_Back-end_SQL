@@ -4,6 +4,7 @@ import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js
 import { statusCode } from '../helper/statusCodes.js';
 import admins from '../models/admin.model.js';
 import userSchema from '../models/user.model.js';
+import axios from 'axios';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -124,5 +125,35 @@ export const loginUser = async (req, res) => {
           error.errMessage ?? error.message,
         ),
       );
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+      const { userName, password, newPassword } = req.body;
+
+      const existingUser = await userSchema.findOne({ where: { userName } });
+
+      if (existingUser) {
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact to admin'));
+      }
+
+      // const passwordValid = await bcrypt.compare(password, existingUser.password);
+      // if (!passwordValid) {
+      //     return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, "Invalid password"));
+      // }
+      
+      const dataToSend = {
+        userName, password, newPassword
+      };
+        const response = await axios.post('http://localhost:8000/api/external/reset-password', dataToSend);
+        console.log('Reset password response:', response.data);
+        if(!response.data.success){
+          return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact to admin'));
+        }
+        
+        return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, 'Sucess'));
+  } catch (error) {
+      res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
