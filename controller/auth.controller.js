@@ -130,7 +130,7 @@ export const loginUser = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { userName, password, newPassword } = req.body;
+    const { userName, oldPassword, newPassword } = req.body;
 
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -140,7 +140,7 @@ export const resetPassword = async (req, res) => {
 
     const dataToSend = {
       userName,
-      password,
+      oldPassword,
       newPassword
     };
 

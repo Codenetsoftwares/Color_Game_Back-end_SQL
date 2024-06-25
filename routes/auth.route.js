@@ -1,6 +1,6 @@
 import { adminLogin, loginUser, resetPassword } from '../controller/auth.controller.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
-import { loginSchema } from '../schema/commonSchema.js';
+import { loginSchema, resetPasswordSchema } from '../schema/commonSchema.js';
 
 export const authRoute = (app) => {
   // done
@@ -8,6 +8,6 @@ export const authRoute = (app) => {
   // done
   app.post('/api/user-login', loginUser);
 
-  app.post('/api/reset-password', customErrorHandler, resetPassword);
+  app.post('/api/reset-password', resetPasswordSchema, customErrorHandler, resetPassword);
 
 };
