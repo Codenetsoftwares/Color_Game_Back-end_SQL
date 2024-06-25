@@ -176,6 +176,12 @@ export const validateUserResetPassword = [
 
 export const validateMarketId = [param('marketId').notEmpty().withMessage('Market ID is required')];
 
+export const exUpdateBalanceSchema = [body('userId').notEmpty().withMessage('user ID is required'),
+  body('amount').notEmpty().withMessage('amount is required'),
+  body('type').notEmpty().withMessage('type is required').isIn(['credit', 'debit'])
+  .withMessage('type must be either "credit" or "debit".'),
+];
+
 export const userUpdateSchema = [
   param('userId').notEmpty().withMessage('User ID is required'),
   body('firstName').optional().notEmpty().withMessage('First name is required'),

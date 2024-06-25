@@ -35,7 +35,7 @@ import { string } from '../constructor/string.js';
 
 export const UserRoute = (app) => {
   // done
-  app.post('/api/user-create', customErrorHandler, createUser);
+  app.post('/api/user-create', createdUserSchema, customErrorHandler, createUser);
   // done
   app.put('/api/users-update/:userId', userUpdateSchema, customErrorHandler, authorize([string.Admin]), userUpdate);
 

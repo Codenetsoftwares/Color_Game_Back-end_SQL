@@ -4,6 +4,7 @@ import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js
 import { statusCode } from '../helper/statusCodes.js';
 import admins from '../models/admin.model.js';
 import userSchema from '../models/user.model.js';
+import axios from 'axios';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -124,5 +125,47 @@ export const loginUser = async (req, res) => {
           error.errMessage ?? error.message,
         ),
       );
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { userName, password, newPassword } = req.body;
+
+    const existingUser = await userSchema.findOne({ where: { userName } });
+
+    if (existingUser) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists.'));
+    }
+
+    const dataToSend = {
+      userName,
+      password,
+      newPassword
+    };
+
+    const response = await axios.post('http://localhost:8000/api/external/reset-password', dataToSend);
+
+    console.log('Reset password response:', response.data);
+
+    if (!response.data.success) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact admin.'));
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const newUser = await userSchema.create({
+      userName: response.data.data.userName,
+      userId: response.data.data.userId,
+      password: hashedPassword,
+      balance: response.data.data.balance,
+      roles: 'user',
+    });
+
+    return res.status(statusCode.success).send(apiResponseSuccess(newUser, true, statusCode.success, 'User password reset successfully'));
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
