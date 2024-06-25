@@ -140,7 +140,7 @@ export const resetPassword = async (req, res) => {
 
     const dataToSend = {
       userName,
-      password : oldPassword,
+      oldPassword,
       newPassword
     };
 
