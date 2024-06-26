@@ -19,9 +19,7 @@ export const createGame = async (req, res) => {
     const existingGame = await Game.findOne({ where: { gameName } });
 
     if (existingGame) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Game name already exists'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Game name already exists'));
     }
 
     const newGame = await Game.create({
@@ -66,9 +64,7 @@ export const getAllGames = async (req, res) => {
     });
 
     if (!rows || rows.length === 0) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
+      return res.status(statusCode.success).json(apiResponseSuccess([], true, statusCode.success, 'Data Not Found'));
     }
 
     const gameData = await Promise.all(
@@ -144,9 +140,7 @@ export const updateGame = async (req, res) => {
     });
 
     if (!game) {
-      return res
-        .status(statusCode.notFound)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found.'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Game not found.'));
     }
 
     if (gameName) {
@@ -196,9 +190,7 @@ export const createMarket = async (req, res) => {
     });
 
     if (existingMarket) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(existingMarket, false, statusCode.badRequest, 'Market already exists for this game'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Market already exists for this game'));
     }
 
     const game = await Game.findOne({
@@ -208,9 +200,7 @@ export const createMarket = async (req, res) => {
     });
 
     if (!game) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Game not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Game not found'));
     }
 
     const marketId = uuidv4();
@@ -310,9 +300,7 @@ export const updateMarket = async (req, res) => {
     });
 
     if (!market) {
-      return res
-        .status(statusCode.notFound)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found.'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Market not found.'));
     }
 
     const runners = await Runner.findAll({
@@ -398,7 +386,7 @@ export const createRunner = async (req, res) => {
     });
 
     if (!market) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Market Not Found'));
     }
 
     const existingRunners = await Runner.findAll({
@@ -413,18 +401,18 @@ export const createRunner = async (req, res) => {
     for (const runnerName of runnerNames) {
       const lowerCaseRunnerName = runnerName.toLowerCase();
       if (existingRunnerNames.includes(lowerCaseRunnerName)) {
-        throw apiResponseErr(null, false, statusCode.badRequest, `Runner already exists for this market`);
+        return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, `Runner already exists for this market`));
       }
     }
 
     const maxParticipants = market.participants;
     if (runnerNames.length !== maxParticipants) {
-      throw apiResponseErr(
+      return res.status(statusCode.badRequest).json(apiResponseErr(
         null,
         false,
         statusCode.badRequest,
         'Number of runners exceeds the maximum allowed participants',
-      );
+      ));
     }
 
     const runnersToInsert = runnerNames.map((runnerName) => ({
@@ -473,9 +461,7 @@ export const updateRunner = async (req, res) => {
     const [rowsAffected] = await Runner.update({ runnerName: runnerName }, { where: { runnerId: runnerId } });
 
     if (rowsAffected === 0) {
-      return res
-        .status(statusCode.notFound)
-        .json(apiResponseErr(null, false, statusCode.notFound, 'Runner not found.'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Runner not found.'));
     }
 
     return res
@@ -505,7 +491,7 @@ export const createRate = async (req, res) => {
     });
 
     if (!existingRunner) {
-      throw new Error(`Runner with ID ${runnerId} not found.`);
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success,`Runner with ID ${runnerId} not found.`));
     }
 
     let existingRate = await rateSchema.findOne({
@@ -556,7 +542,7 @@ export const updateRate = async (req, res) => {
     const runnerBeforeUpdate = await Runner.findOne({ where: { runnerId } });
 
     if (!runnerBeforeUpdate) {
-      throw apiResponseErr(null, false, statusCode.notFound, 'Runner not found.');
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Runner not found.'));
     }
 
     const updateFields = {};
@@ -728,7 +714,7 @@ export const deleteGame = async (req, res) => {
     });
 
     if (deletedGameCount === 0) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Game not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Game not found'));
     }
 
     res
@@ -821,7 +807,7 @@ export const deleteRunner = async (req, res) => {
     });
 
     if (deletedRunnerCount === 0) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Runner not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Runner not found'));
     }
 
     res

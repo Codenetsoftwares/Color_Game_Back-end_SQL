@@ -12,7 +12,7 @@ export const announcements = async (req, res) => {
     const game = await gameSchema.findOne({ where: { gameName: typeOfAnnouncement } });
 
     if (!game) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Game not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Game not found'));
     }
 
     let announce = await announcementSchema.findOne({
@@ -56,7 +56,7 @@ export const getAnnouncement = async (req, res) => {
     const announcement = await announcementSchema.findOne({ where: { announceId } });
 
     if (!announcement) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
+      return res.status( statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Announcement not found'));
     }
 
     const announcementText = announcement.announcement;
@@ -95,7 +95,7 @@ export const updateAnnouncement = async (req, res) => {
     const announcementToUpdate = await announcementSchema.findOne({ where: { announceId } });
 
     if (!announcementToUpdate) {
-      return res.status(400).json(apiResponseErr(null, false, 400, 'Announcement not found'));
+      return res.status( statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Announcement not found'));
     }
 
     if (typeOfAnnouncement !== undefined) {
@@ -132,7 +132,7 @@ export const getAnnouncementUser = async (req, res) => {
     const announcementData = await announcementSchema.findAll({ where: { announceId } });
 
     if (announcementData.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Announcement not found');
+      return res.status( statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Announcement not found'));
     }
 
     const latestAnnouncement = announcementData.reduce((latest, current) => {
@@ -179,7 +179,7 @@ export const getAnnouncementTypes = async (req, res) => {
       typeOfAnnouncement: announcement.typeOfAnnouncement,
     }));
 
-    res.status(statusCode.success).send(apiResponseSuccess(announcementTypes, true, statusCode.success, 'Success'));
+    return res.status(statusCode.success).send(apiResponseSuccess(announcementTypes, true, statusCode.success, 'Success'));
   } catch (error) {
     res
       .status(statusCode.internalServerError)

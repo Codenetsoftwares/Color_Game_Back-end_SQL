@@ -24,7 +24,7 @@ export const createUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (existingUser) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists'));
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User already exists'));
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -54,7 +54,7 @@ export const userUpdate = async (req, res) => {
     const user = await userSchema.findOne({ where: { userId } });
 
     if (!user) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'User not found'));
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User not found'));
     }
 
     const updateData = {};
@@ -70,7 +70,7 @@ export const userUpdate = async (req, res) => {
 
     await user.update(updateData);
 
-    res
+    return res
       .status(statusCode.success)
       .send(apiResponseSuccess(null, true, statusCode.success, 'User updated successfully'));
   } catch (error) {
@@ -96,15 +96,13 @@ export const eligibilityCheck = async (req, res) => {
     const user = await userSchema.findOne({ where: { userId } });
 
     if (!user) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User not found'));
     }
 
     user.eligibilityCheck = eligibilityCheck;
     await user.save();
 
-    return res.status(200).json({
+    return res.status(statusCode.success).json({
       message: eligibilityCheck ? 'User Eligible' : 'User Not Eligible',
     });
   } catch (error) {
@@ -187,9 +185,7 @@ export const userGame = async (req, res) => {
     });
 
     if (!rows || rows.length === 0) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Data Not Found'));
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, 'Data Not Found'));
     }
 
     const gameData = rows.map((game) => ({
@@ -402,7 +398,7 @@ export const filteredGameData = async (req, res) => {
     });
 
     if (!gameData) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Game not found');
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Game not found'));
     }
 
     const formattedGameData = gameData.map((game) => ({
@@ -472,7 +468,7 @@ export const getUserWallet = async (req, res) => {
     const userData = await userSchema.findOne({ where: { userId } });
 
     if (!userData || userData.length === 0) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'User not found'));
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User not found'));
     }
 
     const getBalance = {
@@ -511,7 +507,7 @@ export const transactionDetails = async (req, res) => {
     });
 
     if (count === 0) {
-      throw apiResponseErr(null, statusCode.badRequest, false, 'User Not Found or No Transactions Found');
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User Not Found or No Transactions Found'));
     }
 
     const totalItems = count;
@@ -551,7 +547,7 @@ export const filterMarketData = async (req, res) => {
     });
 
     if (marketDataRows.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Market not found with MarketId');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'Market not found with MarketId'));
     }
 
     let marketDataObj = {
@@ -668,17 +664,17 @@ export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
   try {
     if (!userId) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'User ID is required');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'User ID is required'));
     }
     if (value < 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Bid value cannot be negative');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'Bid value cannot be negative'));
     }
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'User Not Found');
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User Not Found'));
     }
     if (user.balance < value) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Insufficient balance. Bid cannot be placed.');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'Insufficient balance. Bid cannot be placed.'));
     }
     const game = await Game.findOne({
       where: { gameId },
@@ -688,11 +684,11 @@ export const createBid = async (req, res) => {
       },
     });
     if (!game) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Game Not Found');
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Game Not Found'));
     }
     const market = game.Markets.find((market) => String(market.marketId) === String(marketId));
     if (!market) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Market Not Found'));
     }
     const runner = await Runner.findOne({ where: { marketId, runnerId } });
     if (!runner) {
@@ -757,23 +753,23 @@ export const getUserBetHistory = async (req, res) => {
     if (startDate) {
       start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
       if (!start.isValid()) {
-        throw new Error('startDate is not a valid date');
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'startDate is not a valid date'));
       }
     }
 
     if (endDate) {
       end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
       if (!end.isValid()) {
-        throw new Error('endDate is not a valid date');
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'endDate is not a valid date'));
       }
 
       if (end.isAfter(moment())) {
-        throw new Error('Invalid End Date');
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'Invalid End Date'));
       }
     }
 
     if (start && end && end.isBefore(start)) {
-      throw new Error('endDate should be after startDate');
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, 'endDate should be after startDate'));
     }
 
     const whereClause = {
@@ -829,7 +825,7 @@ export const currentOrderHistory = async (req, res) => {
     if (!marketId) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, statusCode.badRequest, false, 'Market ID is required'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Market ID is required'));
     }
 
     const { rows } = await CurrentOrder.findAndCountAll({
@@ -896,7 +892,9 @@ export const calculateProfitLoss = async (req, res) => {
     });
 
     if (profitLossData.length === 0) {
-      return apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
     const totalItems = await ProfitLoss.count({
@@ -935,7 +933,6 @@ export const calculateProfitLoss = async (req, res) => {
         ),
       );
   } catch (error) {
-    console.error('Error calculating profit/loss:', error);
     res
       .status(statusCode.internalServerError)
       .send(
@@ -982,7 +979,9 @@ export const marketProfitLoss = async (req, res) => {
       });
 
       if (profitLossEntries.length === 0) {
-        return apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+        return res
+          .status(statusCode.success)
+          .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
       }
 
       const game = await Game.findOne({
@@ -1058,7 +1057,9 @@ export const runnerProfitLoss = async (req, res) => {
     });
 
     if (profitLossEntries.length === 0) {
-      return apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
     const runnersProfitLoss = await Promise.all(profitLossEntries.map(async entry => {
@@ -1074,7 +1075,7 @@ export const runnerProfitLoss = async (req, res) => {
       });
 
       if (!game) {
-       return apiResponseErr(null, false, statusCode.badRequest, `Game data not found for gameId: ${entry.gameId}`);
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, `Game data not found for gameId: ${entry.gameId}`));
       }
 
       const gameName = game.gameName;
@@ -1082,7 +1083,7 @@ export const runnerProfitLoss = async (req, res) => {
       const runner = game.Markets[0].Runners.find(runner => runner.runnerId === entry.runnerId);
 
       if (!runner) {
-        return apiResponseErr(null, false, statusCode.badRequest, `Runner data not found for runnerId: ${entry.runnerId}`);
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, true, statusCode.badRequest, `Runner data not found for runnerId: ${entry.runnerId}`));
       }
 
       const runnerName = runner.runnerName;

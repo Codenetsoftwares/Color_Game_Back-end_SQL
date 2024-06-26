@@ -13,9 +13,7 @@ export const adminLogin = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { userName } });
 
     if (!existingAdmin) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Admin Does Not Exist'));
+      return res.status( statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Admin Does Not Exist'));
     }
 
     const isPasswordValid = await bcrypt.compare(password, existingAdmin.password);
@@ -72,9 +70,7 @@ export const loginUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (!existingUser) {
-      return res
-        .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'User does not exist'));
+      return res.status( statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'User does not exist'));
     }
 
     const isPasswordValid = await bcrypt.compare(password, existingUser.password);
@@ -135,7 +131,7 @@ export const resetPassword = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (existingUser) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists.'));
+      return res.status( statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'User already exists.'));
     }
 
     const dataToSend = {

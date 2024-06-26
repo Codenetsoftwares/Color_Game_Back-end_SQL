@@ -26,8 +26,8 @@ export const createAdmin = async (req, res) => {
 
     if (existingAdmin) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Admin already exists'));
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, 'Admin already exists'));
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -65,7 +65,7 @@ export const checkMarketStatus = async (req, res) => {
     const market = await marketSchema.findOne({ where: { marketId } });
 
     if (!market) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Market not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Market not found'));
     }
 
     market.isActive = status;
@@ -112,7 +112,7 @@ export const getAllUsers = async (req, res) => {
     });
 
     if (!users || users.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'User not found');
+      throw apiResponseSuccess(null, true, statusCode.success, 'User not found');
     }
 
     const paginationData = {
@@ -125,7 +125,6 @@ export const getAllUsers = async (req, res) => {
       .status(statusCode.success)
       .json(apiResponseSuccess(users, true, statusCode.success, 'success', paginationData));
   } catch (error) {
-    console.log(error);
     res
       .status(statusCode.internalServerError)
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
@@ -139,7 +138,7 @@ export const deposit = async (req, res) => {
     const existingAdmin = await admins.findOne({ where: { adminId } });
 
     if (!existingAdmin) {
-      return res.status(statusCode.notFound).json(apiResponseErr(null, false, statusCode.notFound, 'Admin Not Found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Admin Not Found'));
     }
 
     const parsedDepositAmount = parseFloat(depositAmount);
@@ -149,7 +148,7 @@ export const deposit = async (req, res) => {
     const updatedAdmin = await admins.findOne({ where: { adminId } });
 
     if (!updatedAdmin) {
-      throw new Error('Failed to fetch updated admin');
+      return res.status(statusCode.success).json(apiResponseErr(null, true, statusCode.success, 'Failed to fetch updated admin'));
     }
 
     const newAdmin = {
@@ -162,7 +161,6 @@ export const deposit = async (req, res) => {
       .status(statusCode.create)
       .json(apiResponseSuccess(newAdmin, true, statusCode.create, 'Deposit balance successful'));
   } catch (error) {
-    console.error('Error depositing balance:', error);
     res
       .status(statusCode.internalServerError)
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
@@ -176,15 +174,15 @@ export const sendBalance = async (req, res) => {
     const admin = await admins.findOne({ where: { adminId } });
     if (!admin) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Admin Not Found'));
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, 'Admin Not Found'));
     }
 
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, 'User Not Found'));
     }
 
     const parsedDepositAmount = parseFloat(balance);
@@ -249,7 +247,7 @@ export const afterWining = async (req, res) => {
     });
 
     if (!market) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Market not found'));
     }
 
     gameId = market.gameId;
@@ -312,16 +310,16 @@ export const afterWining = async (req, res) => {
                 { marketListExposure: userDetails.marketListExposure },
                 { where: { userId: user.userId } },
               );
-              
+
               // sync with whiteLable 
-               
+
               const dataToSend = {
-                amount : userDetails.balance,
-                userId : userDetails.userId,
+                amount: userDetails.balance,
+                userId: userDetails.userId,
               };
-          
-              const {data:response} = await axios.post('http://localhost:8000/api/admin/extrnal/balance-update', dataToSend);
-          
+
+              const { data: response } = await axios.post('http://localhost:8000/api/admin/extrnal/balance-update', dataToSend);
+
               console.log('Reset password response:', response.data);
               let message;
               if (!response.success) {
@@ -329,7 +327,7 @@ export const afterWining = async (req, res) => {
               } else {
                 message = 'Sync data successfuly'
               }
-              
+
 
               await userDetails.save();
 
@@ -389,24 +387,24 @@ export const afterWining = async (req, res) => {
 
 // Authentcate by user Password
 
-export const  updateByAdmin = async (req, res) => {
+export const updateByAdmin = async (req, res) => {
   try {
     const { amount, userId, type } = req.body;
 
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
       return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
+        .status(statusCode.success)
+        .json(apiResponseSuccess(null, true, statusCode.success, 'User Not Found'));
     }
-    
+
     const currentAmount = type === 'credit' ? amount : -amount;
-    
+
     await userSchema.update(
-      { balance:  user.balance + currentAmount},
+      { balance: user.balance + currentAmount },
       { where: { userId } },
     );
-    
+
     return res
       .status(statusCode.success)
       .json(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successful'));

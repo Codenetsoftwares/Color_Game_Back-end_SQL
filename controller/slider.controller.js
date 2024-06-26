@@ -10,7 +10,7 @@ export const createSlider = async (req, res) => {
   const { data } = req.body;
   try {
     if (!Array.isArray(data)) {
-      return res.status(400).send(apiResponseErr(null, false, 400, 'Data must be an array'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Data must be an array'));
     }
 
     let sliderArray = [];
@@ -80,7 +80,7 @@ export const activeSlider = async (req, res) => {
     });
 
     if (!sliderData) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Image not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Image not found'));
     }
 
     sliderData.update({ isActive });
@@ -111,7 +111,7 @@ export const updateSliderImage = async (req, res) => {
       where: { imageId },
     });
     if (!slider) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Image not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Image not found'));
     }
 
     slider.image = data.image || slider.image;
@@ -141,7 +141,7 @@ export const createGif = async (req, res) => {
   try {
     const { data } = req.body;
     if (!Array.isArray(data)) {
-      return res.status(400).send(apiResponseErr(null, false, 400, 'Data must be an array'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Data must be an array'));
     }
 
     let sliderArray = [];
@@ -189,7 +189,7 @@ export const deleteGifData = async (req, res) => {
     });
 
     if (!gifData) {
-      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Gif not found'));
+      return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Gif not found'));
     }
 
     await gifSchema.destroy({
