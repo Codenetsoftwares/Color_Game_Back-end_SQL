@@ -70,7 +70,7 @@ sequelize
   .then(() => {
     console.log('Database & tables created!');
     app.listen(process.env.PORT, () => {
-      console.log(`App is running on  - http://localhost:${process.env.PORT || 8080}`);
+      console.log(`App is running on  - http://localhost:${process.env.PORT || 7000}`);
     });
   })
   .catch((err) => {
