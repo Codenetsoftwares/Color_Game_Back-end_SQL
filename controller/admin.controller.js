@@ -16,6 +16,7 @@ import ProfitLoss from '../models/profitLoss.js';
 import CurrentOrder from '../models/currentOrder.model.js';
 import BetHistory from '../models/betHistory.model.js';
 import { Op } from 'sequelize';
+import axios from 'axios';
 
 dotenv.config();
 // done
@@ -273,7 +274,7 @@ export const afterWining = async (req, res) => {
     const users = await MarketBalance.findAll({
       where: { marketId },
     });
-
+    let message = '';
     for (const user of users) {
       try {
         const runnerBalance = await MarketBalance.findOne({
@@ -313,25 +314,24 @@ export const afterWining = async (req, res) => {
                 { where: { userId: user.userId } },
               );
               
+              await userDetails.save();
               // sync with whiteLable 
-               
+      
               const dataToSend = {
                 amount : userDetails.balance,
                 userId : userDetails.userId,
               };
-          
+             console.log("data", dataToSend);
               const {data:response} = await axios.post('http://localhost:8000/api/admin/extrnal/balance-update', dataToSend);
           
-              console.log('Reset password response:', response.data);
-              let message;
-              if (!response.success) {
-                message = 'Sync not successfuly'
-              } else {
-                message = 'Sync data successfuly'
-              }
+              // console.log('Reset password response:', response.data);
               
+              if (!response.success) {
+                message = 'Sync not successful'
+              } else {
+                message = 'Sync data successful'
+              }
 
-              await userDetails.save();
 
               await MarketBalance.destroy({
                 where: { marketId, runnerId, userId: user.userId },
@@ -387,7 +387,7 @@ export const afterWining = async (req, res) => {
 };
 
 
-// Authentcate by user Password
+// Authenticate by user Password
 
 export const  updateByAdmin = async (req, res) => {
   try {
