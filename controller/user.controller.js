@@ -896,7 +896,9 @@ export const calculateProfitLoss = async (req, res) => {
     });
 
     if (profitLossData.length === 0) {
-      return apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
     const totalItems = await ProfitLoss.count({
@@ -935,7 +937,6 @@ export const calculateProfitLoss = async (req, res) => {
         ),
       );
   } catch (error) {
-    console.error('Error calculating profit/loss:', error);
     res
       .status(statusCode.internalServerError)
       .send(
@@ -982,7 +983,9 @@ export const marketProfitLoss = async (req, res) => {
       });
 
       if (profitLossEntries.length === 0) {
-        return apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+        return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
       }
 
       const game = await Game.findOne({
@@ -1058,7 +1061,9 @@ export const runnerProfitLoss = async (req, res) => {
     });
 
     if (profitLossEntries.length === 0) {
-      return apiResponseErr(null, false, statusCode.badRequest, 'No profit/loss data found for the given date range.');
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
     const runnersProfitLoss = await Promise.all(profitLossEntries.map(async entry => {
