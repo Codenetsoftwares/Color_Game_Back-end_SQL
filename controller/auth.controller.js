@@ -144,7 +144,7 @@ export const resetPassword = async (req, res) => {
       newPassword
     };
 
-    const response = await axios.post('http://localhost:8000/api/external/reset-password', dataToSend);
+    const response = await axios.post('https://wl.server.dummydoma.in/api/external/reset-password', dataToSend);
 
     console.log('Reset password response:', response.data);
 
