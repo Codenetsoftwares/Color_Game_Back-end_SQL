@@ -868,15 +868,26 @@ export const calculateProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    const page = req.query.page || 1;
-    let limit = parseInt(req.query.limit) || 5;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
     const startDate = req.query.startDate + ' 00:00:00';
     const endDate = req.query.endDate + ' 23:59:59';
+
+    const totalGames = await ProfitLoss.count({
+      where: {
+        userId: userId,
+        date: {
+          [Op.between]: [startDate, endDate],
+        },
+      },
+      distinct: true,
+      col: 'gameId'
+    });
 
     const profitLossData = await ProfitLoss.findAll({
       attributes: [
         'gameId',
-        [sequelize.fn('SUM', sequelize.col('profitLoss')), 'totalProfitLoss'],
+        [Sequelize.fn('SUM', Sequelize.col('profitLoss')), 'totalProfitLoss'],
       ],
       include: [
         {
@@ -890,7 +901,7 @@ export const calculateProfitLoss = async (req, res) => {
           [Op.between]: [startDate, endDate],
         },
       },
-      group: ['gameId'],
+      group: ['gameId', 'Game.gameName'],
       offset: (page - 1) * limit,
       limit: limit,
     });
@@ -901,22 +912,12 @@ export const calculateProfitLoss = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
-    const totalItems = await ProfitLoss.count({
-      where: {
-        userId: userId,
-        date: {
-          [Op.between]: [startDate, endDate],
-        },
-      },
-      distinct: true,
-    });
-
-    const totalPages = Math.ceil(totalItems / limit);
+    const totalPages = Math.ceil(totalGames / limit);
 
     const paginationData = {
       page: page,
       totalPages: totalPages,
-      totalItems: totalItems,
+      totalItems: totalGames,
     };
 
     const formattedProfitLossData = profitLossData.map((item) => ({
