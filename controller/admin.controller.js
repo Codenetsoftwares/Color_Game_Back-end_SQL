@@ -322,7 +322,7 @@ export const afterWining = async (req, res) => {
                 userId : userDetails.userId,
               };
              console.log("data", dataToSend);
-              const {data:response} = await axios.post('http://localhost:8000/api/admin/extrnal/balance-update', dataToSend);
+              const {data:response} = await axios.post('https://wl.server.dummydoma.in/api/admin/extrnal/balance-update', dataToSend);
           
               // console.log('Reset password response:', response.data);
               
