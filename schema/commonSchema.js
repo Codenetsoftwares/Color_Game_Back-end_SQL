@@ -49,6 +49,10 @@ export const resetPasswordSchema = [
   body('newPassword').notEmpty().withMessage('New Password is required'),
 ];
 
+export const trashUserSchema = [
+  body('userId').notEmpty().withMessage('User ID is required.'),
+];
+
 export const createdUserSchema = [
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
