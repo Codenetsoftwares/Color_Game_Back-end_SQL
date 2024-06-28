@@ -137,6 +137,16 @@ export const resetPassword = async (req, res) => {
     if (existingUser) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists.'));
     }
+    if (oldPassword === newPassword) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(
+          null,
+          false,
+          statusCode.badRequest,
+          'The old password and new password cannot be the same.'
+        ));
+    }
 
     const dataToSend = {
       userName,
