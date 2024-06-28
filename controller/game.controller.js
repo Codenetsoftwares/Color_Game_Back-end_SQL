@@ -808,6 +808,18 @@ export const deleteRunner = async (req, res) => {
   try {
     const { runnerId } = req.params;
 
+    const runner = await Runner.findOne({
+      where: {
+        runnerId: runnerId,
+      },
+    });
+
+    if (!runner) {
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Runner not found'));
+    }
+
+    const marketId = runner.marketId;
+
     await rateSchema.destroy({
       where: {
         runnerId: runnerId,
@@ -822,6 +834,23 @@ export const deleteRunner = async (req, res) => {
 
     if (deletedRunnerCount === 0) {
       return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'Runner not found'));
+    }
+
+    const remainingRunners = await Runner.count({
+      where: {
+        marketId: marketId,
+      },
+    });
+
+    if (remainingRunners === 0) {
+      await Market.update(
+        { isDisplay: true },
+        {
+          where: {
+            marketId: marketId,
+          },
+        }
+      );
     }
 
     res
@@ -840,3 +869,4 @@ export const deleteRunner = async (req, res) => {
       );
   }
 };
+
