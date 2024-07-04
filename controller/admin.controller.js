@@ -391,7 +391,7 @@ export const afterWining = async (req, res) => {
 
 export const  updateByAdmin = async (req, res) => {
   try {
-    const { amount, userId, type } = req.body;
+    const { amount, userId, type, transactionId, transactionType, date, remarks, transferFromUserAccount, transferToUserAccount } = req.body;
 
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
@@ -407,6 +407,22 @@ export const  updateByAdmin = async (req, res) => {
       { where: { userId } },
     );
     
+    const createTransaction = await transactionRecord.create({
+      userId: userId,
+      transactionId: transactionId,
+      transactionType: transactionType,
+      amount: amount,
+      date: date,
+      remarks: remarks,
+      trDone: 'wl',
+      transferFromUserAccount: transferFromUserAccount,
+      transferToUserAccount: transferToUserAccount
+    })
+     console.log("uddbvbdvb", createTransaction);
+    if (!createTransaction) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to create transaction'));
+    }
+
     return res
       .status(statusCode.success)
       .json(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successful'));

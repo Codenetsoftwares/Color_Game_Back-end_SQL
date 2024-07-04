@@ -15,16 +15,39 @@ transactionRecord.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    transactionId: {
+      type: DataTypes.STRING,
+    },
     transactionType: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     amount: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     date: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    remarks: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    trDone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    userName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    transferFromUserAccount: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    transferToUserAccount: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
   },

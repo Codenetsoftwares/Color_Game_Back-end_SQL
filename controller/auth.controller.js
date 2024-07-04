@@ -5,6 +5,9 @@ import { statusCode } from '../helper/statusCodes.js';
 import admins from '../models/admin.model.js';
 import userSchema from '../models/user.model.js';
 import axios from 'axios';
+import userTrashData from '../models/userTrashData.model.js';
+import { v4 as uuid4 } from 'uuid';
+import transactionRecord from '../models/transactionRecord.model.js';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -144,7 +147,7 @@ export const resetPassword = async (req, res) => {
       newPassword
     };
 
-    const response = await axios.post('https://wl.server.dummydoma.in/api/external/reset-password', dataToSend);
+    const response = await axios.post('http://localhost:8000/api/external/reset-password', dataToSend);
 
     console.log('Reset password response:', response.data);
 
@@ -167,5 +170,83 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error('Error resetting password:', error);
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+  }
+};
+
+export const trashUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const existingUser = await userSchema.findOne({ where: { userId } });
+
+    if (!existingUser) {
+      return res.status(statusCode.success).json(apiResponseErr(null, false, statusCode.success, 'User not found'));
+    }
+
+    const serializedUserData = JSON.stringify(existingUser);
+
+    const trashEntry = await userTrashData.create({
+      trashId: uuid4(),
+      userId : existingUser.userId,
+      data: serializedUserData,
+    });
+
+    if (!trashEntry) {
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup User`));
+    }
+
+    const deleteUser = await existingUser.destroy();
+
+    if (!deleteUser) {return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete User with userId: ${userId}`));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User trashed successfully'));
+  } catch (error) {
+    console.error('Error trashing user:', error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+  }
+};
+
+export const restoreTrashUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const existingUser = await userTrashData.findOne({ where: { userId } });
+
+    if (!existingUser) {
+      return res.status(statusCode.success).json(apiResponseErr(null, false, statusCode.success, 'User not found in trash'));
+    }
+
+    const serializedUserData = JSON.parse(existingUser.data);
+
+    const trashEntry = await userSchema.create({
+      firstName : serializedUserData.firstName,
+      lastName : serializedUserData.lastName,
+      userName : serializedUserData.userName,
+      userId : serializedUserData.userId,
+      phoneNumber : serializedUserData.phoneNumber,
+      password : serializedUserData.password,
+      roles : serializedUserData.roles,
+      eligibilityCheck : serializedUserData.eligibilityCheck,
+      walletId : serializedUserData.walletId,
+      balance : serializedUserData.balance,
+      exposure : serializedUserData.exposure,
+      marketListExposure : serializedUserData.marketListExposure
+    });
+
+    if (!trashEntry) {
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, 'Failed to restore User'));
+    }
+
+    const deleteUser = await existingUser.destroy();
+
+    if (!deleteUser) {
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, `Failed to delete User with userId: ${userId} from trash`));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User restored successfully'));
+  } catch (error) {
+    console.error('Error restoring user:', error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };

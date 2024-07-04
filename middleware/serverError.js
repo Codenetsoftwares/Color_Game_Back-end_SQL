@@ -6,7 +6,7 @@ export const apiResponseErr = (data, success, responseCode, errMessage) => {
     errMessage: errMessage ?? 'Something went wrong',
   };
 };
-export const apiResponseSuccess = (data, success, successCode, message, pagination) => {
+export const apiResponseSuccess = (data, success, successCode, message, pagination = null) => {
   return {
     data: data,
     success: success,
