@@ -602,80 +602,72 @@ export const buildRootPath = async (req, res) => {
   try {
     const { action } = req.params;
     const { name } = req.query;
-    let user;
+    let data;
 
-    // Find user based on the name
-    user =
-      (await Game.findOne({ where: { gameName: name } })) ||
-      (await Market.findOne({ where: { marketName: name } })) ||
-      (await Runner.findOne({ where: { runnerName: name } }));
+    data = await Game.findOne({ where: { gameName: name } }) ||
+           await Market.findOne({ where: { marketName: name } }) ||
+           await Runner.findOne({ where: { runnerName: name } });
 
-    if (!user) {
-      return res
-      .status(statusCode.success)
-      .json(
+    if (!data) {
+      return res.status(statusCode.success).json(
         apiResponseErr(null, false, statusCode.badRequest, "Data not found for the specified criteria")
       );
     }
 
+    const identifier = data instanceof Game ? data.gameId
+                          : data instanceof Market ? data.marketId
+                          : data.runnerId;
+
+    const nameIdMap = globalName.reduce((acc, item) => {
+      acc[item.name] = item.id;
+      return acc;
+    }, {});
+
     if (action === "store") {
-      const newPath = name;
-      const indexToRemove = globalName.indexOf(newPath);
+      const newPath = { name, id: identifier };
+      const indexToRemove = globalName.findIndex(item => item.name === newPath.name);
 
       if (indexToRemove !== -1) {
-        globalName.splice(indexToRemove + 1);
+        globalName.splice(indexToRemove + 1); // Remove elements after the found index
       } else {
-        globalName.push(newPath);
+        globalName.push(newPath); // Add new path
       }
 
-      await user.update({ path: JSON.stringify(globalName) });
+      // Update user's path
+      await data.update({ path: JSON.stringify(globalName) });
 
-      return res
-      .status(statusCode.success)
-      .json(
-        apiResponseSuccess(globalName, true, statusCode.success, "Path stored successfully")
+      return res.status(statusCode.success).json(
+        apiResponseSuccess(nameIdMap, true, statusCode.success, "Path stored successfully")
       );
-    } else if (action === "clear") {
-      const lastUsername = globalName.pop();
+    }  else if (action === "clear") {
+      const lastItem = globalName.pop();
 
-      if (lastUsername) {
-        const indexToRemove = globalName.indexOf(lastUsername);
+      if (lastItem) {
+        const indexToRemove = globalName.findIndex(item => item.name === lastItem.name);
 
         if (indexToRemove !== -1) {
-          globalName.splice(indexToRemove, 1);
+          globalName.splice(indexToRemove, 1); // Remove specific element
         }
       }
     } else if (action === "clearAll") {
-      globalName.length = 0;
+      globalName.length = 0; // Clear the entire array
     } else {
-      return res
-      .status(statusCode.success)
-      .json(
+      return res.status(statusCode.badRequest).json(
         apiResponseErr(null, false, statusCode.badRequest, "Invalid action provided")
       );
     }
 
-    await user.update({ path: JSON.stringify(globalName) });
+    // Update user's path after clear or clearAll actions
+    await data.update({ path: JSON.stringify(globalName) });
 
-    const successMessage =
-      action === "store"
-        ? "Path stored successfully"
-        : "Path cleared successfully";
-    return res
-      .status(statusCode.success)
-      .json(
-        apiResponseSuccess(globalName, true, statusCode.success, successMessage)
-      );
+    const successMessage = action === "store" ? "Path stored successfully" : "Path cleared successfully";
+    return res.status(statusCode.success).json(
+      apiResponseSuccess(nameIdMap, true, statusCode.success, successMessage)
+    );
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .json(
-        apiResponseErr(
-          null,
-          false,
-          statusCode.internalServerError,
-          error.message
-        )
-      );
+    console.error('Error occurred:', error); // Log error for debugging
+    return res.status(statusCode.internalServerError).json(
+      apiResponseErr(null, false, statusCode.internalServerError, error.message)
+    );
   }
 };
