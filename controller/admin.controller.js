@@ -604,6 +604,7 @@ export const buildRootPath = async (req, res) => {
     const { name } = req.query;
     let data;
 
+    // Find user based on the name
     data = await Game.findOne({ where: { gameName: name } }) ||
            await Market.findOne({ where: { marketName: name } }) ||
            await Runner.findOne({ where: { runnerName: name } });
@@ -618,10 +619,8 @@ export const buildRootPath = async (req, res) => {
                           : data instanceof Market ? data.marketId
                           : data.runnerId;
 
-    const nameIdMap = globalName.reduce((acc, item) => {
-      acc[item.name] = item.id;
-      return acc;
-    }, {});
+    // Map name to identifier in an array format
+    const nameIdMap = globalName.map(item => ({ name: item.name, id: item.id }));
 
     if (action === "store") {
       const newPath = { name, id: identifier };
@@ -637,9 +636,9 @@ export const buildRootPath = async (req, res) => {
       await data.update({ path: JSON.stringify(globalName) });
 
       return res.status(statusCode.success).json(
-        apiResponseSuccess(nameIdMap, true, statusCode.success, "Path stored successfully")
+        apiResponseSuccess(globalName, true, statusCode.success, "Path stored successfully")
       );
-    }  else if (action === "clear") {
+    } else if (action === "clear") {
       const lastItem = globalName.pop();
 
       if (lastItem) {
@@ -662,7 +661,7 @@ export const buildRootPath = async (req, res) => {
 
     const successMessage = action === "store" ? "Path stored successfully" : "Path cleared successfully";
     return res.status(statusCode.success).json(
-      apiResponseSuccess(nameIdMap, true, statusCode.success, successMessage)
+      apiResponseSuccess(globalName, true, statusCode.success, successMessage)
     );
   } catch (error) {
     console.error('Error occurred:', error); // Log error for debugging
@@ -671,3 +670,4 @@ export const buildRootPath = async (req, res) => {
     );
   }
 };
+
