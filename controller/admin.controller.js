@@ -598,33 +598,107 @@ export const updateByAdmin = async (req, res) => {
   }
 };
 
+// export const buildRootPath = async (req, res) => {
+//   try {
+//     const { action } = req.params;
+//     const { name } = req.query;
+//     let data;
+
+//     // Find user based on the name
+//     data = await Game.findOne({ where: { gameName: name } }) ||
+//            await Market.findOne({ where: { marketName: name } }) ||
+//            await Runner.findOne({ where: { runnerName: name } });
+
+//     if (!data) {
+//       return res.status(statusCode.success).json(
+//         apiResponseErr(null, false, statusCode.badRequest, "Data not found for the specified criteria")
+//       );
+//     }
+
+//     const identifier = data instanceof Game ? data.gameId
+//                           : data instanceof Market ? data.marketId
+//                           : data.runnerId;
+
+//     // Map name to identifier in an array format
+//     const nameIdMap = globalName.map(item => ({ name: item.name, id: item.id }));
+
+//     if (action === "store") {
+//       const newPath = { name, id: identifier };
+//       const indexToRemove = globalName.findIndex(item => item.name === newPath.name);
+
+//       if (indexToRemove !== -1) {
+//         globalName.splice(indexToRemove + 1); // Remove elements after the found index
+//       } else {
+//         globalName.push(newPath); // Add new path
+//       }
+
+//       // Update user's path
+//       await data.update({ path: JSON.stringify(globalName) });
+
+//       return res.status(statusCode.success).json(
+//         apiResponseSuccess(globalName, true, statusCode.success, "Path stored successfully")
+//       );
+//     } else if (action === "clear") {
+//       const lastItem = globalName.pop();
+
+//       if (lastItem) {
+//         const indexToRemove = globalName.findIndex(item => item.name === lastItem.name);
+
+//         if (indexToRemove !== -1) {
+//           globalName.splice(indexToRemove, 1); // Remove specific element
+//         }
+//       }
+//     } else if (action === "clearAll") {
+//       globalName.length = 0; // Clear the entire array
+//     } else {
+//       return res.status(statusCode.badRequest).json(
+//         apiResponseErr(null, false, statusCode.badRequest, "Invalid action provided")
+//       );
+//     }
+
+//     // Update user's path after clear or clearAll actions
+//     await data.update({ path: JSON.stringify(globalName) });
+
+//     const successMessage = action === "store" ? "Path stored successfully" : "Path cleared successfully";
+//     return res.status(statusCode.success).json(
+//       apiResponseSuccess(globalName, true, statusCode.success, successMessage)
+//     );
+//   } catch (error) {
+//     console.error('Error occurred:', error); // Log error for debugging
+//     return res.status(statusCode.internalServerError).json(
+//       apiResponseErr(null, false, statusCode.internalServerError, error.message)
+//     );
+//   }
+// };
+
+
 export const buildRootPath = async (req, res) => {
   try {
     const { action } = req.params;
-    const { name } = req.query;
+    const { id } = req.query;
     let data;
 
-    // Find user based on the name
-    data = await Game.findOne({ where: { gameName: name } }) ||
-           await Market.findOne({ where: { marketName: name } }) ||
-           await Runner.findOne({ where: { runnerName: name } });
+    // Find data based on the id
+    data = await Game.findOne({ where: { gameId: id } }) ||
+           await Market.findOne({ where: { marketId: id } }) ||
+           await Runner.findOne({ where: { runnerId: id } });
 
     if (!data) {
-      return res.status(statusCode.success).json(
+      return res.status(statusCode.badRequest).json(
         apiResponseErr(null, false, statusCode.badRequest, "Data not found for the specified criteria")
       );
     }
 
-    const identifier = data instanceof Game ? data.gameId
-                          : data instanceof Market ? data.marketId
-                          : data.runnerId;
+    const entityName = data instanceof Game ? data.gameName
+                          : data instanceof Market ? data.marketName
+                          : data.runnerName;
 
     // Map name to identifier in an array format
     const nameIdMap = globalName.map(item => ({ name: item.name, id: item.id }));
 
     if (action === "store") {
-      const newPath = { name, id: identifier };
-      const indexToRemove = globalName.findIndex(item => item.name === newPath.name);
+      const newPath = { name: entityName, id };
+      const indexToRemove = globalName.findIndex(item => item.id === newPath.id);
 
       if (indexToRemove !== -1) {
         globalName.splice(indexToRemove + 1); // Remove elements after the found index
@@ -642,7 +716,7 @@ export const buildRootPath = async (req, res) => {
       const lastItem = globalName.pop();
 
       if (lastItem) {
-        const indexToRemove = globalName.findIndex(item => item.name === lastItem.name);
+        const indexToRemove = globalName.findIndex(item => item.id === lastItem.id);
 
         if (indexToRemove !== -1) {
           globalName.splice(indexToRemove, 1); // Remove specific element
@@ -670,4 +744,3 @@ export const buildRootPath = async (req, res) => {
     );
   }
 };
-
