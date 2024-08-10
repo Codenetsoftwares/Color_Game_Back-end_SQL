@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
+import Market from './market.model.js';
 
 class MarketBalance extends Model {}
 
@@ -17,6 +18,10 @@ MarketBalance.init(
     marketId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
+      references: {
+        model: Market, 
+        key: 'marketId',
+      },
     },
     runnerId: {
       type: DataTypes.CHAR(36),

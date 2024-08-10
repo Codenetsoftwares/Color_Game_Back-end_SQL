@@ -5,11 +5,6 @@ class Game extends Model {}
 
 Game.init(
   {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
     gameId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
@@ -31,6 +26,10 @@ Game.init(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    hideGame : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    }
   },
   {
     sequelize,

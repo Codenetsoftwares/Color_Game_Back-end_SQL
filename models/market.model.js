@@ -45,6 +45,10 @@ Market.init(
       allowNull: false,
       defaultValue: true,
     },
+    hideMarket : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    }
   },
   {
     sequelize,
@@ -55,4 +59,4 @@ Market.init(
   },
 );
 
-export default Market;
+export default Market; 

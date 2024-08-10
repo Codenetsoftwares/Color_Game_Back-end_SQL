@@ -21,6 +21,7 @@ import BetHistory from "../models/betHistory.model.js";
 import { Op } from "sequelize";
 import axios from "axios";
 import Game from "../models/game.model.js";
+import InactiveGame from "../models/inactiveGame.model.js";
 
 dotenv.config();
 const globalName = [];
@@ -347,32 +348,18 @@ export const afterWining = async (req, res) => {
     if (!market) {
       return res
         .status(statusCode.badRequest)
-        .json(
-          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
-        );
+        .json(apiResponseErr(null, false, statusCode.badRequest, "Market not found"));
     }
 
     gameId = market.gameId;
 
-    if (market.runners) {
+    if (market.runners && Array.isArray(market.runners)) {
       market.runners.forEach((runner) => {
-        if (String(runner.runnerId) === runnerId) {
-          runner.isWin = isWin;
-        } else {
-          runner.isWin = false;
-        }
+        runner.isWin = String(runner.runnerId) === runnerId ? isWin : false;
       });
     }
 
-    if (isWin) {
-      market.announcementResult = true;
-    }
-
-    await market.save();
-
-    const users = await MarketBalance.findAll({
-      where: { marketId },
-    });
+    const users = await MarketBalance.findAll({ where: { marketId } });
     let message = "";
     for (const user of users) {
       try {
@@ -389,16 +376,13 @@ export const afterWining = async (req, res) => {
             const marketExposureEntry = userDetails.marketListExposure.find(
               (item) => Object.keys(item)[0] === marketId
             );
+
             if (marketExposureEntry) {
               const marketExposureValue = Number(marketExposureEntry[marketId]);
               const runnerBalanceValue = Number(runnerBalance.bal);
 
               if (isWin) {
                 userDetails.balance += runnerBalanceValue + marketExposureValue;
-              } else {
-                console.log(
-                  `No win. Balance remains the same: ${userDetails.balance}`
-                );
               }
 
               await ProfitLoss.create({
@@ -421,25 +405,20 @@ export const afterWining = async (req, res) => {
               );
 
               await userDetails.save();
-              // sync with whiteLable
 
               const dataToSend = {
                 amount: userDetails.balance,
                 userId: userDetails.userId,
               };
-              console.log("data", dataToSend);
+
               const { data: response } = await axios.post(
-                "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+                "https://wl.server.dummydoma.in/api/admin/external/balance-update",
                 dataToSend
               );
 
-              // console.log('Reset password response:', response.data);
-
-              if (!response.success) {
-                message = "Sync not successful";
-              } else {
-                message = "Sync data successful";
-              }
+              message = response.success
+                ? "Sync data successful"
+                : "Sync not successful";
 
               await MarketBalance.destroy({
                 where: { marketId, runnerId, userId: user.userId },
@@ -462,10 +441,9 @@ export const afterWining = async (req, res) => {
       }
     }
 
+    // Process and move current orders to BetHistory
     if (isWin) {
-      const orders = await CurrentOrder.findAll({
-        where: { marketId },
-      });
+      const orders = await CurrentOrder.findAll({ where: { marketId } });
 
       for (const order of orders) {
         await BetHistory.create({
@@ -486,9 +464,58 @@ export const afterWining = async (req, res) => {
         });
       }
 
-      await CurrentOrder.destroy({
-        where: { marketId },
-      });
+      await CurrentOrder.destroy({ where: { marketId } });
+    }
+
+    // Handle market result and move data to InactiveGame
+    if (isWin) {
+      market.announcementResult = true;
+
+      const game = await Game.findOne({ where: { gameId } });
+
+      if (game) {
+        const existingInactiveGame = await InactiveGame.findOne({
+          where: { 'game.gameId': gameId },
+        });
+
+        if (existingInactiveGame) {
+          // Update the existing InactiveGame record
+          await InactiveGame.update(
+            {
+              game: game.toJSON(),
+              market: market.toJSON(),
+              runner: market.runners
+                ? market.runners.map((runner) => runner.toJSON())
+                : [],
+            },
+            { where: { 'game.gameId': gameId } }
+          );
+        } else {
+          // Create a new InactiveGame record
+          await InactiveGame.create({
+            game: game.toJSON(),
+            market: market.toJSON(),
+            runner: market.runners
+              ? market.runners.map((runner) => runner.toJSON())
+              : [],
+          });
+        }
+
+        // Hide the game, market, and runners
+        await Game.update({ hideGame: true }, { where: { gameId } });
+        await Market.update({ hideMarket: true }, { where: { marketId } });
+
+        if (market.runners) {
+          await Promise.all(
+            market.runners.map((runner) =>
+              Runner.update(
+                { hideRunner: true },
+                { where: { runnerId: runner.runnerId } }
+              )
+            )
+          );
+        }
+      }
     }
 
     return res
@@ -515,6 +542,7 @@ export const afterWining = async (req, res) => {
       );
   }
 };
+
 
 // Authenticate by user Password
 
@@ -671,7 +699,6 @@ export const updateByAdmin = async (req, res) => {
 //   }
 // };
 
-
 export const buildRootPath = async (req, res) => {
   try {
     const { action } = req.params;
@@ -679,26 +706,42 @@ export const buildRootPath = async (req, res) => {
     let data;
 
     // Find data based on the id
-    data = await Game.findOne({ where: { gameId: id } }) ||
-           await Market.findOne({ where: { marketId: id } }) ||
-           await Runner.findOne({ where: { runnerId: id } });
+    data =
+      (await Game.findOne({ where: { gameId: id } })) ||
+      (await Market.findOne({ where: { marketId: id } })) ||
+      (await Runner.findOne({ where: { runnerId: id } }));
 
     if (!data) {
-      return res.status(statusCode.badRequest).json(
-        apiResponseErr(null, false, statusCode.badRequest, "Data not found for the specified criteria")
-      );
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Data not found for the specified criteria"
+          )
+        );
     }
 
-    const entityName = data instanceof Game ? data.gameName
-                          : data instanceof Market ? data.marketName
-                          : data.runnerName;
+    const entityName =
+      data instanceof Game
+        ? data.gameName
+        : data instanceof Market
+          ? data.marketName
+          : data.runnerName;
 
     // Map name to identifier in an array format
-    const nameIdMap = globalName.map(item => ({ name: item.name, id: item.id }));
+    const nameIdMap = globalName.map((item) => ({
+      name: item.name,
+      id: item.id,
+    }));
 
     if (action === "store") {
       const newPath = { name: entityName, id };
-      const indexToRemove = globalName.findIndex(item => item.id === newPath.id);
+      const indexToRemove = globalName.findIndex(
+        (item) => item.id === newPath.id
+      );
 
       if (indexToRemove !== -1) {
         globalName.splice(indexToRemove + 1); // Remove elements after the found index
@@ -709,14 +752,23 @@ export const buildRootPath = async (req, res) => {
       // Update user's path
       await data.update({ path: JSON.stringify(globalName) });
 
-      return res.status(statusCode.success).json(
-        apiResponseSuccess(globalName, true, statusCode.success, "Path stored successfully")
-      );
+      return res
+        .status(statusCode.success)
+        .json(
+          apiResponseSuccess(
+            globalName,
+            true,
+            statusCode.success,
+            "Path stored successfully"
+          )
+        );
     } else if (action === "clear") {
       const lastItem = globalName.pop();
 
       if (lastItem) {
-        const indexToRemove = globalName.findIndex(item => item.id === lastItem.id);
+        const indexToRemove = globalName.findIndex(
+          (item) => item.id === lastItem.id
+        );
 
         if (indexToRemove !== -1) {
           globalName.splice(indexToRemove, 1); // Remove specific element
@@ -725,22 +777,41 @@ export const buildRootPath = async (req, res) => {
     } else if (action === "clearAll") {
       globalName.length = 0; // Clear the entire array
     } else {
-      return res.status(statusCode.badRequest).json(
-        apiResponseErr(null, false, statusCode.badRequest, "Invalid action provided")
-      );
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Invalid action provided"
+          )
+        );
     }
 
     // Update user's path after clear or clearAll actions
     await data.update({ path: JSON.stringify(globalName) });
 
-    const successMessage = action === "store" ? "Path stored successfully" : "Path cleared successfully";
-    return res.status(statusCode.success).json(
-      apiResponseSuccess(globalName, true, statusCode.success, successMessage)
-    );
+    const successMessage =
+      action === "store"
+        ? "Path stored successfully"
+        : "Path cleared successfully";
+    return res
+      .status(statusCode.success)
+      .json(
+        apiResponseSuccess(globalName, true, statusCode.success, successMessage)
+      );
   } catch (error) {
-    console.error('Error occurred:', error); // Log error for debugging
-    return res.status(statusCode.internalServerError).json(
-      apiResponseErr(null, false, statusCode.internalServerError, error.message)
-    );
+    console.error("Error occurred:", error); // Log error for debugging
+    return res
+      .status(statusCode.internalServerError)
+      .json(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };

@@ -15,6 +15,9 @@ import Runner from './models/runner.model.js';
 import { authRoute } from './routes/auth.route.js';
 import CurrentOrder from './models/currentOrder.model.js';
 import BetHistory from './models/betHistory.model.js';
+import MarketBalance from './models/marketBalance.js';
+import { InactiveGameRoute } from './routes/inactiveGame.route.js';
+import InactiveGame from './models/inactiveGame.model.js';
 
 dotenv.config();
 const app = express();
@@ -55,6 +58,7 @@ UserRoute(app);
 GameRoute(app);
 AnnouncementRoute(app);
 SliderRoute(app);
+InactiveGameRoute(app)
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
 Market.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
 
@@ -64,7 +68,17 @@ Runner.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId' });
 CurrentOrder.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', as: 'market' });
 BetHistory.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', as: 'market' });
 
+Market.hasMany(MarketBalance, { foreignKey: 'marketId', sourceKey: 'marketId' });
+MarketBalance.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId' });
 
+InactiveGame.belongsTo(Game, { foreignKey: 'gameId' });
+Game.hasMany(InactiveGame, { foreignKey: 'gameId' });
+
+InactiveGame.belongsTo(Market, { foreignKey: 'marketId' });
+Market.hasMany(InactiveGame, { foreignKey: 'marketId' });
+
+InactiveGame.belongsTo(Runner, { foreignKey: 'runnerId' });
+Runner.hasMany(InactiveGame, { foreignKey: 'runnerId' });
 sequelize
   .sync({ alter: true })
   .then(() => {

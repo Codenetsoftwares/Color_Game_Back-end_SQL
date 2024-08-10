@@ -46,6 +46,10 @@ Runner.init(
       allowNull: true,
       defaultValue: null,
     },
+    hideRunner : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    }
   },
   {
     sequelize,

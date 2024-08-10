@@ -12,6 +12,8 @@ import Runner from "../models/runner.model.js";
 import rateSchema from "../models/rate.model.js";
 import announcementSchema from "../models/announcement.model.js";
 import BetHistory from "../models/betHistory.model.js";
+import ProfitLoss from "../models/profitLoss.js";
+import CurrentOrder from "../models/currentOrder.model.js";
 
 // done
 export const createGame = async (req, res) => {
@@ -77,6 +79,7 @@ export const getAllGames = async (req, res) => {
         gameName: {
           [Op.like]: `%${searchQuery}%`,
         },
+      hideGame : false
       },
       offset: (page - 1) * pageSize,
       limit: pageSize,
@@ -310,6 +313,7 @@ export const getAllMarkets = async (req, res) => {
         marketName: {
           [Op.like]: `%${searchQuery}%`,
         },
+      hideMarket : false
       },
       offset: (page - 1) * pageSize,
       limit: pageSize,
@@ -757,6 +761,7 @@ export const getAllRunners = async (req, res) => {
 
     const whereConditions = {
       marketId: marketId,
+      hideRunner : false,
       ...(searchQuery && {
         runnerName: {
           [Op.like]: `%${searchQuery}%`,
@@ -846,6 +851,13 @@ export const deleteGame = async (req, res) => {
 
     const runnerIds = runners.map((runner) => runner.runnerId);
 
+    await CurrentOrder.destroy({
+      where: {
+        marketId: {
+          [Op.in]: marketIds,
+        },
+      },
+    });
     await BetHistory.destroy({
       where: {
         marketId: {
