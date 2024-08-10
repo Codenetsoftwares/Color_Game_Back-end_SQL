@@ -50,7 +50,8 @@ Market.init(
     sequelize,
     modelName: 'Market',
     tableName: 'market',
-    timestamps: false,
+    timestamps: true, 
+    updatedAt: false,
   },
 );
 

@@ -1,5 +1,5 @@
-import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db.js';
+import { DataTypes, Model } from "sequelize";
+import sequelize from "../db.js";
 
 class Game extends Model {}
 
@@ -27,13 +27,18 @@ Game.init(
       allowNull: false,
       defaultValue: false,
     },
+    activeInactive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
   },
   {
     sequelize,
-    modelName: 'Game',
-    tableName: 'game',
-    timestamps: false,
-  },
+    modelName: "Game",
+    tableName: "game",
+    timestamps: true,
+    updatedAt: false,
+  }
 );
 
 export default Game;

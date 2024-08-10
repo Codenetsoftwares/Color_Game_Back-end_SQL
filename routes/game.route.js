@@ -14,6 +14,7 @@ import {
   deleteGame,
   deleteMarket,
   deleteRunner,
+  gameActiveInactive,
 } from '../controller/game.controller.js';
 import { authorize } from '../middleware/auth.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
@@ -29,6 +30,7 @@ import {
   gameIdValidate,
   validateMarketId,
   validateDeleteRunner,
+  gameActiveInactiveValidate,
 } from '../schema/commonSchema.js';
 
 export const GameRoute = (app) => {
@@ -83,5 +85,13 @@ export const GameRoute = (app) => {
     customErrorHandler,
     authorize([string.Admin]),
     deleteRunner,
+  );
+
+  app.post(
+    '/api/game-active-inactive',
+    gameActiveInactiveValidate,
+    customErrorHandler,
+    authorize([string.Admin]),
+    gameActiveInactive,
   );
 };

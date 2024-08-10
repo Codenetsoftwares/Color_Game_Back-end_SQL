@@ -51,7 +51,8 @@ Runner.init(
     sequelize,
     modelName: 'Runner',
     tableName: 'runner',
-    timestamps: false,
+    timestamps: true, 
+    updatedAt: false,
     paranoid: true, // Enable soft delete
     deletedAt: 'deletedAt',
   },
