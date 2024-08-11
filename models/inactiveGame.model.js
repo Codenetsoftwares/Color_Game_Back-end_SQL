@@ -21,11 +21,7 @@ InactiveGame.init(
     runner: {
       type: DataTypes.JSON,
       allowNull: true,
-    },
-    hideGameDetails : {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    }
+    } 
   },
   {
     sequelize,
