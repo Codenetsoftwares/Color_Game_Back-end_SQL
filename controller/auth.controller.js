@@ -40,6 +40,9 @@ export const adminLogin = async (req, res) => {
       expiresIn: '1d',
     });
 
+    existingAdmin.token = accessToken
+    await existingAdmin.save()
+    
     return res.status(statusCode.success).send(
       apiResponseSuccess(
         {

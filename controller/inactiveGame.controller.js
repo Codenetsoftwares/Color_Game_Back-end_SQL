@@ -83,15 +83,19 @@ export const getInactiveGames = async (req, res) => {
 };
 
 export const moveToActiveGame = async (req, res) => {
-  const { gameId } = req.body;
+  const { marketId } = req.body;
 
   try {
-    const inactiveGame = await InactiveGame.findOne({ where: { 'game.gameId': gameId } });
+    const inactiveGame = await InactiveGame.findOne({
+      where: {
+        'market.marketId': marketId
+      }
+    });
 
     if (!inactiveGame) {
       return res
-        .status(statusCode.notFound)
-        .json(apiResponseErr(null, false, statusCode.notFound, 'Inactive game not found'));
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Inactive game not found for the given marketId'));
     }
 
     await Market.update(
@@ -104,7 +108,11 @@ export const moveToActiveGame = async (req, res) => {
       { where: { marketId: inactiveGame.market.marketId } }
     );
 
-    await InactiveGame.destroy({ where: { gameId: inactiveGame.gameId } });
+    await InactiveGame.destroy({
+      where: {
+        marketId: inactiveGame.market.marketId
+      }
+    });
 
     return res
       .status(statusCode.success)
@@ -115,3 +123,4 @@ export const moveToActiveGame = async (req, res) => {
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+

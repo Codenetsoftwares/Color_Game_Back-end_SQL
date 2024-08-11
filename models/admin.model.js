@@ -36,6 +36,9 @@ const admins = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+    token :{
+      type: DataTypes.STRING,
+    }
   },
   {
     timestamps: false,

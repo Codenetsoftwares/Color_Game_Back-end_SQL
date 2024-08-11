@@ -328,15 +328,31 @@ export const userRunners = async (req, res) => {
 export const getAllGameData = async (req, res) => {
   try {
     const gameData = await Game.findAll({
-      attributes: ['gameId', 'gameName', 'description', 'isBlink'],
+      attributes: ["gameId", "gameName", "description", "isBlink"],
       include: [
         {
           model: Market,
-          attributes: ['marketId', 'marketName', 'participants', 'timeSpan', 'announcementResult', 'isActive'],
+          attributes: [
+            "marketId",
+            "marketName",
+            "participants",
+            "timeSpan",
+            "announcementResult",
+            "isActive",
+            "hideMarket",
+          ],
           include: [
             {
               model: Runner,
-              attributes: ['runnerId', 'runnerName', 'isWin', 'bal', 'back', 'lay'],
+              attributes: [
+                "runnerId",
+                "runnerName",
+                "isWin",
+                "bal",
+                "back",
+                "lay",
+                "hideRunner",
+              ],
             },
           ],
         },
@@ -348,38 +364,57 @@ export const getAllGameData = async (req, res) => {
       gameName: game.gameName,
       description: game.description,
       isBlink: game.isBlink,
-      markets: game.Markets.map((market) => ({
-        marketId: market.marketId,
-        marketName: market.marketName,
-        participants: market.participants,
-        timeSpan: market.timeSpan,
-        announcementResult: market.announcementResult,
-        isActive: market.isActive,
-        runners: market.Runners.map((runner) => ({
-          runnerName: {
-            runnerId: runner.runnerId,
-            runnerName: runner.runnerName,
-            isWin: runner.isWin,
-            bal: runner.bal,
-          },
-          rate: [
-            {
-              back: runner.back,
-              lay: runner.lay,
-            },
-          ],
+      markets: game.Markets
+        .filter((market) => !market.hideMarket) 
+        .map((market) => ({
+          marketId: market.marketId,
+          marketName: market.marketName,
+          participants: market.participants,
+          timeSpan: market.timeSpan,
+          announcementResult: market.announcementResult,
+          isActive: market.isActive,
+          runners: market.Runners
+            .filter((runner) => !runner.hideRunner) 
+            .map((runner) => ({
+              runnerId: runner.runnerId,
+              runnerName: runner.runnerName,
+              isWin: runner.isWin,
+              bal: runner.bal,
+              rate: [
+                {
+                  back: runner.back,
+                  lay: runner.lay,
+                },
+              ],
+            })),
         })),
-      })),
     }));
 
-    res.status(statusCode.success).json(apiResponseSuccess(formattedGameData, true, statusCode.success, 'Success'));
+    res
+      .status(statusCode.success)
+      .json(
+        apiResponseSuccess(
+          formattedGameData,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-    console.error('Error retrieving game data:', error);
+    console.error("Error retrieving game data:", error);
     res
       .status(statusCode.internalServerError)
-      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .json(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
+
 // done
 export const filteredGameData = async (req, res) => {
   try {

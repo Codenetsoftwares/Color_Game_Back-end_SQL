@@ -48,12 +48,12 @@ export const authorize = (roles) => {
         });
       }
 
-      if (existingUser.token !== tokenParts[1]) {
+      if (roles.includes(string.User) && existingUser.token !== tokenParts[1]) {
         return res
           .status(statusCode.unauthorize)
           .send(apiResponseErr(null, false, statusCode.unauthorize, 'Unauthorized access'));
       }
-      
+
       if (!existingUser) {
         return res
           .status(statusCode.unauthorize)
