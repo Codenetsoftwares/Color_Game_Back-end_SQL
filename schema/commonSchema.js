@@ -314,5 +314,9 @@ export const gameActiveInactiveValidate = [
     .notEmpty()
     .withMessage("Game Id is required.")
     .isUUID(4)
-    .withMessage("Game Id is not valid."),
+    .withMessage("Game Id is not a valid."),
+];
+
+export const logOutValidate = [
+  body("userId").notEmpty().withMessage("User ID is required.").isUUID(4).withMessage("User Id is not a valid."),
 ];

@@ -100,6 +100,9 @@ export const loginUser = async (req, res) => {
       expiresIn: '1d',
     });
 
+    existingUser.token = accessToken
+    await existingUser.save()
+
     res
       .status(statusCode.success)
       .send(
@@ -235,13 +238,13 @@ export const restoreTrashUser = async (req, res) => {
     });
 
     if (!trashEntry) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, 'Failed to restore User'));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to restore User'));
     }
 
     const deleteUser = await existingUser.destroy();
 
     if (!deleteUser) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, `Failed to delete User with userId: ${userId} from trash`));
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Failed to delete User with userId: ${userId} from trash`));
     }
 
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User restored successfully'));
@@ -250,3 +253,38 @@ export const restoreTrashUser = async (req, res) => {
     return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
+
+export const logout = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const users = await userSchema.findOne({ where: { userId } });
+
+    if (!users) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found'));
+    }
+
+    users.token = null;
+    await users.save();
+
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Logged out successfully'));
+  } catch (error) {
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message
+        )
+      );
+  }
+};
+
+

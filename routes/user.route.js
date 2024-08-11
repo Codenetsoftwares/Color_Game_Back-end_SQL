@@ -50,7 +50,7 @@ export const UserRoute = (app) => {
     resetPassword,
   );
   // done
-  app.get('/api/user-games', customErrorHandler, userGame);
+  app.get('/api/user-games', customErrorHandler,authorize([string.User]), userGame);
   // done
   app.get('/api/user-markets/:gameId', customErrorHandler, authorize([string.User]), userMarket);
   // done
