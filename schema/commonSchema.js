@@ -92,10 +92,17 @@ export const createdGameSchema = [
 ];
 
 export const createdMarketSchema = [
-  body("marketName").notEmpty().withMessage("Market name is required"),
-  body("participants").notEmpty().withMessage("Participants is required"),
-  body("timeSpan").notEmpty().withMessage("Time span is required"),
   param("gameId").notEmpty().withMessage("Game ID is required"),
+  body("marketName")
+    .notEmpty().withMessage("Market name is required")
+    .isString().withMessage("Market name must be a string"),
+  body("participants")
+    .notEmpty().withMessage("Participants is required")
+    .isInt({ min: 1 }).withMessage("Participants must be a positive integer"),
+  body("startTime")
+    .notEmpty().withMessage("Start time is required"),
+  body("endTime")
+    .notEmpty().withMessage("End time is required")
 ];
 
 export const createdRunnerSchema = [

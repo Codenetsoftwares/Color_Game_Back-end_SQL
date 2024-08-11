@@ -26,8 +26,12 @@ Market.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    timeSpan: {
-      type: DataTypes.STRING(255),
+    startTime: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    endTime: {
+      type: DataTypes.DATE,
       allowNull: false,
     },
     announcementResult: {
@@ -45,7 +49,7 @@ Market.init(
       allowNull: false,
       defaultValue: true,
     },
-    hideMarket : {
+    hideMarket: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     }
@@ -54,9 +58,9 @@ Market.init(
     sequelize,
     modelName: 'Market',
     tableName: 'market',
-    timestamps: true, 
+    timestamps: true,
     updatedAt: false,
   },
 );
 
-export default Market; 
+export default Market;

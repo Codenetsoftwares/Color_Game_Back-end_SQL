@@ -22,6 +22,7 @@ import { Op } from "sequelize";
 import axios from "axios";
 import Game from "../models/game.model.js";
 import InactiveGame from "../models/inactiveGame.model.js";
+import CustomError from "../helper/extendError.js";
 
 dotenv.config();
 const globalName = [];
@@ -77,44 +78,7 @@ export const createAdmin = async (req, res) => {
       );
   }
 };
-// done
-export const checkMarketStatus = async (req, res) => {
-  const marketId = req.params.marketId;
-  const { status } = req.body;
 
-  try {
-    const market = await marketSchema.findOne({ where: { marketId } });
-
-    if (!market) {
-      return res
-        .status(statusCode.notFound)
-        .json(
-          apiResponseErr(null, false, statusCode.notFound, "Market not found")
-        );
-    }
-
-    market.isActive = status;
-    await market.save();
-
-    const statusMessage = status ? "Market is active" : "Market is suspended";
-    res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(statusMessage, true, statusCode.success, "success")
-      );
-  } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message
-        )
-      );
-  }
-};
 // done
 export const getAllUsers = async (req, res) => {
   try {
@@ -348,7 +312,9 @@ export const afterWining = async (req, res) => {
     if (!market) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, "Market not found"));
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
+        );
     }
 
     gameId = market.gameId;
@@ -360,7 +326,7 @@ export const afterWining = async (req, res) => {
         } else {
           runner.isWin = false;
         }
-        await runner.save(); 
+        await runner.save();
       }
     }
 
@@ -479,7 +445,7 @@ export const afterWining = async (req, res) => {
 
       if (game) {
         const existingInactiveGame = await InactiveGame.findOne({
-          where: { 'market.marketId': marketId },
+          where: { "market.marketId": marketId },
         });
 
         if (existingInactiveGame) {
@@ -491,7 +457,7 @@ export const afterWining = async (req, res) => {
                 ? market.runners.map((runner) => runner.toJSON())
                 : [],
             },
-            { where: { 'market.marketId': marketId } }
+            { where: { "market.marketId": marketId } }
           );
         } else {
           // Create a new InactiveGame record
@@ -503,7 +469,7 @@ export const afterWining = async (req, res) => {
               : [],
           });
         }
-        
+
         await Market.update({ hideMarket: true }, { where: { marketId } });
 
         if (market.runners) {
@@ -543,7 +509,6 @@ export const afterWining = async (req, res) => {
       );
   }
 };
-
 
 // Authenticate by user Password
 
@@ -815,4 +780,89 @@ export const buildRootPath = async (req, res) => {
         )
       );
   }
+};
+
+// done
+export const checkMarketStatus = async (req, res) => {
+  const marketId = req.params.marketId;
+  const { status } = req.body;
+
+  try {
+    const market = await Market.findOne({ where: { marketId } });
+
+    if (!market) {
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
+        );
+    }
+
+    market.isActive = status;
+    await market.save();
+
+    if (status === true) {
+      if (market.endTime) {
+        startMarketCountdown(market);
+      } else {
+      throw new CustomError('Market end time is not set.', null, statusCode.badRequest)
+      }
+    }
+
+    const statusMessage = status ? "Market is active" : "Market is suspended";
+    res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(statusMessage, true, statusCode.success, "success")
+      );
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message
+        )
+      );
+  }
+};
+
+// Countdown function
+const startMarketCountdown = (market) => {
+  const endTime = new Date(market.endTime);
+  const currentTime = new Date();
+
+  // If the current time is past the end time, do nothing
+  if (currentTime >= endTime) {
+    console.log("Market time has already passed.");
+    return;
+  }
+
+  // Calculate the remaining time
+  const remainingTime = endTime - currentTime;
+  console.log("remainingtime",remainingTime)
+
+  // Start a countdown
+  setTimeout(async () => {
+    console.log(`Market ${market.marketName} has ended.`);
+
+    try {
+      market.isActive = false;
+      await market.save();
+
+      throw new CustomError(
+       `Market ${market.marketName} has been deactivated after the countdown ended.`,
+        null,
+        statusCode.badRequest
+      );
+    } catch (error) {
+      throw new CustomError(
+        error.message,
+        null,
+        statusCode.internalServerError
+      );
+    }
+  }, remainingTime);
 };

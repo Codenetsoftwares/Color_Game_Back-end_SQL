@@ -14,6 +14,8 @@ import announcementSchema from "../models/announcement.model.js";
 import BetHistory from "../models/betHistory.model.js";
 import ProfitLoss from "../models/profitLoss.js";
 import CurrentOrder from "../models/currentOrder.model.js";
+import { format } from 'date-fns';
+
 
 // done
 export const createGame = async (req, res) => {
@@ -216,10 +218,11 @@ export const updateGame = async (req, res) => {
   }
 };
 // done
+
 export const createMarket = async (req, res) => {
   try {
     const gameId = req.params.gameId;
-    const { marketName, participants, timeSpan } = req.body;
+    const { marketName, participants, startTime, endTime } = req.body;
 
     const existingMarket = await Market.findOne({
       where: {
@@ -235,7 +238,7 @@ export const createMarket = async (req, res) => {
           apiResponseErr(
             existingMarket,
             false,
-            statusCode.badRequest,
+            409,
             "Market already exists for this game"
           )
         );
@@ -256,14 +259,16 @@ export const createMarket = async (req, res) => {
     }
 
     const marketId = uuidv4();
+
     const newMarket = await Market.create({
       gameId: gameId,
       marketId: marketId,
       marketName: marketName,
       participants: participants,
-      timeSpan: timeSpan,
-      announcementResult: 0,
-      isActive: 1,
+      startTime: new Date(startTime), 
+      endTime: new Date(endTime),   
+      announcementResult: false,     
+      isActive: true,
       isDisplay: true,
     });
 
@@ -278,7 +283,7 @@ export const createMarket = async (req, res) => {
       .status(statusCode.create)
       .json(
         apiResponseSuccess(
-          { marketList: marketList },
+          newMarket,
           true,
           statusCode.create,
           "Market created successfully"
@@ -298,6 +303,7 @@ export const createMarket = async (req, res) => {
       );
   }
 };
+
 // done
 export const getAllMarkets = async (req, res) => {
   try {
@@ -360,7 +366,7 @@ export const getAllMarkets = async (req, res) => {
 };
 // done
 export const updateMarket = async (req, res) => {
-  const { marketId, marketName, participants, timeSpan } = req.body;
+  const { marketId, marketName, participants, startTime, endTime } = req.body;
   try {
     const market = await Market.findOne({
       where: {
@@ -381,26 +387,6 @@ export const updateMarket = async (req, res) => {
         );
     }
 
-    const runners = await Runner.findAll({
-      where: {
-        marketId: marketId,
-      },
-    });
-
-    for (const runner of runners) {
-      await rateSchema.destroy({
-        where: {
-          runnerId: runner.runnerId,
-        },
-      });
-    }
-
-    await Runner.destroy({
-      where: {
-        marketId: marketId,
-      },
-    });
-
     if (marketName !== undefined) {
       market.marketName = marketName;
     }
@@ -409,8 +395,12 @@ export const updateMarket = async (req, res) => {
       market.participants = participants;
     }
 
-    if (timeSpan !== undefined) {
-      market.timeSpan = timeSpan;
+    if (startTime !== undefined) {
+      market.startTime = new Date(startTime);
+    }
+
+    if (endTime !== undefined) {
+      market.endTime = new Date(endTime);
     }
 
     await market.save();
