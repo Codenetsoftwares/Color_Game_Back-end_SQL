@@ -500,9 +500,7 @@ export const afterWining = async (req, res) => {
               : [],
           });
         }
-
-        // Hide the game, market, and runners
-        await Game.update({ hideGame: true }, { where: { gameId } });
+        
         await Market.update({ hideMarket: true }, { where: { marketId } });
 
         if (market.runners) {

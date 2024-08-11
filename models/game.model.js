@@ -26,10 +26,6 @@ Game.init(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    hideGame : {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    }
   },
   {
     sequelize,

@@ -79,7 +79,6 @@ export const getAllGames = async (req, res) => {
         gameName: {
           [Op.like]: `%${searchQuery}%`,
         },
-      hideGame : false
       },
       offset: (page - 1) * pageSize,
       limit: pageSize,

@@ -94,11 +94,6 @@ export const moveToActiveGame = async (req, res) => {
         .json(apiResponseErr(null, false, statusCode.notFound, 'Inactive game not found'));
     }
 
-    await Game.update(
-      { hideGame: false },
-      { where: { gameId: inactiveGame.game.gameId } }
-    );
-
     await Market.update(
       { hideMarket: false },
       { where: { marketId: inactiveGame.market.marketId } }

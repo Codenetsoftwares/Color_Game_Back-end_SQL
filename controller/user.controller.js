@@ -329,7 +329,6 @@ export const getAllGameData = async (req, res) => {
   try {
     const gameData = await Game.findAll({
       attributes: ['gameId', 'gameName', 'description', 'isBlink'],
-      where : {hideGame : false},
       include: [
         {
           model: Market,
@@ -386,7 +385,7 @@ export const filteredGameData = async (req, res) => {
   try {
     const gameId = req.params.gameId;
     const gameData = await Game.findAll({
-    where: { gameId , hideGame : false},
+    where: { gameId },
       attributes: ['gameId', 'gameName', 'description', 'isBlink'],
       include: [
         {
