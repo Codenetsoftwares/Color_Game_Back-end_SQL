@@ -467,7 +467,6 @@ export const afterWining = async (req, res) => {
       await CurrentOrder.destroy({ where: { marketId } });
     }
 
-    // Handle market result and move data to InactiveGame
     if (isWin) {
       market.announcementResult = true;
 
@@ -475,11 +474,10 @@ export const afterWining = async (req, res) => {
 
       if (game) {
         const existingInactiveGame = await InactiveGame.findOne({
-          where: { 'game.gameId': gameId },
+          where: { 'market.marketId': marketId },
         });
 
         if (existingInactiveGame) {
-          // Update the existing InactiveGame record
           await InactiveGame.update(
             {
               game: game.toJSON(),
@@ -488,7 +486,7 @@ export const afterWining = async (req, res) => {
                 ? market.runners.map((runner) => runner.toJSON())
                 : [],
             },
-            { where: { 'game.gameId': gameId } }
+            { where: { 'market.marketId': marketId } }
           );
         } else {
           // Create a new InactiveGame record
@@ -515,6 +513,7 @@ export const afterWining = async (req, res) => {
         }
       }
     }
+
 
     return res
       .status(statusCode.success)

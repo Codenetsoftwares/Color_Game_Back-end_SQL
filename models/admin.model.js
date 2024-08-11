@@ -35,9 +35,6 @@ const admins = sequelize.define(
     balance: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-    },
-    token :{
-      type: DataTypes.STRING,
     }
   },
   {
