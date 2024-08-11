@@ -354,9 +354,14 @@ export const afterWining = async (req, res) => {
     gameId = market.gameId;
 
     if (market.runners && Array.isArray(market.runners)) {
-      market.runners.forEach((runner) => {
-        runner.isWin = String(runner.runnerId) === runnerId ? isWin : false;
-      });
+      for (const runner of market.runners) {
+        if (String(runner.runnerId) === runnerId) {
+          runner.isWin = isWin;
+        } else {
+          runner.isWin = false;
+        }
+        await runner.save(); 
+      }
     }
 
     const users = await MarketBalance.findAll({ where: { marketId } });
@@ -513,7 +518,6 @@ export const afterWining = async (req, res) => {
         }
       }
     }
-
 
     return res
       .status(statusCode.success)

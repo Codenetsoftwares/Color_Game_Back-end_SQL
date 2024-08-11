@@ -88,36 +88,51 @@ export const moveToActiveGame = async (req, res) => {
   try {
     const inactiveGame = await InactiveGame.findOne({
       where: {
-        'market.marketId': marketId
+        'market.marketId': marketId 
       }
     });
 
     if (!inactiveGame) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Inactive game not found for the given marketId'));
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Inactive game not found'));
     }
 
-    await Market.update(
+    const [marketUpdateCount] = await Market.update(
       { hideMarket: false },
-      { where: { marketId: inactiveGame.market.marketId } }
+      { where: { marketId } } 
     );
 
-    await Runner.update(
+    if (marketUpdateCount === 0) {
+      console.error('Market not found or not updated:', marketId);
+    }
+
+    const [runnerUpdateCount] = await Runner.update(
       { hideRunner: false },
-      { where: { marketId: inactiveGame.market.marketId } }
+      { where: { marketId } }
     );
 
-    await InactiveGame.destroy({
+    if (runnerUpdateCount === 0) {
+      console.error('Runners not found or not updated for Market:', marketId);
+    }
+
+    const deleteCount = await InactiveGame.destroy({
       where: {
-        marketId: inactiveGame.market.marketId
+        id: inactiveGame.id 
       }
     });
+
+    if (deleteCount === 0) {
+      console.error('InactiveGame not found or not deleted for Market:', marketId);
+    } else {
+      console.log('InactiveGame deleted successfully');
+    }
 
     return res
       .status(statusCode.success)
       .json(apiResponseSuccess(null, true, statusCode.success, 'Game moved to active status successfully'));
   } catch (error) {
+    console.error('Error moving game to active status:', error);
     return res
       .status(statusCode.internalServerError)
       .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
