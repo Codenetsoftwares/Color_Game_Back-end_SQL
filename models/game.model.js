@@ -22,10 +22,6 @@ Game.init(
       allowNull: false,
       defaultValue: false,
     },
-    activeInactive: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
   },
   {
     sequelize,

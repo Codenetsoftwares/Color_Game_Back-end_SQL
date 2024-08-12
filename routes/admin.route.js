@@ -9,7 +9,8 @@ import {
   getAllUsers,
   afterWining,
   updateByAdmin,
-  buildRootPath
+  buildRootPath,
+  revokeWinningAnnouncement
 } from '../controller/admin.controller.js';
 import { depositSchema, exUpdateBalanceSchema, winningSchema, suspendedMarketSchema } from '../schema/commonSchema.js';
 import { string } from '../constructor/string.js';
@@ -39,8 +40,9 @@ export const AdminRoute = (app) => {
 
   app.post('/api/extrnal/balance-update', exUpdateBalanceSchema, customErrorHandler, updateByAdmin);
 
-  app.post('/api/root-path/:action',  buildRootPath);
+   app.post('/api/root-path/:action',  buildRootPath);
 
+  app.post('/api/revoke-winning-announcement', revokeWinningAnnouncement);
 };
 
 

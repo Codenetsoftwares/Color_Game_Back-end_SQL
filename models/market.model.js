@@ -52,7 +52,7 @@ Market.init(
     hideMarket: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-    }
+    },
   },
   {
     sequelize,
