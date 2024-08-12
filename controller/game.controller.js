@@ -224,6 +224,9 @@ export const createMarket = async (req, res) => {
     const gameId = req.params.gameId;
     const { marketName, participants, startTime, endTime } = req.body;
 
+    console.log(typeof startTime , typeof endTime)
+    // console.log(instanceof(startTime) , endTime)
+
     const existingMarket = await Market.findOne({
       where: {
         gameId: gameId,

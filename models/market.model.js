@@ -53,6 +53,14 @@ Market.init(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    hideMarketUser :{
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isRevoke :{
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    }
   },
   {
     sequelize,

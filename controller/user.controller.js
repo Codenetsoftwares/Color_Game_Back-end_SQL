@@ -579,7 +579,7 @@ export const filterMarketData = async (req, res) => {
 
     // Fetch market data
     const marketDataRows = await Market.findAll({
-      where: { marketId ,hideMarket: false},
+      where: { marketId ,hideMarketUser: false},
       include: [
         {
           model: Runner,
