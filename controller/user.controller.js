@@ -341,7 +341,7 @@ export const getAllGameData = async (req, res) => {
             "endTime",
             "announcementResult",
             "isActive",
-            "hideMarket",
+            "hideMarketUser",
           ],
           include: [
             {
@@ -353,7 +353,7 @@ export const getAllGameData = async (req, res) => {
                 "bal",
                 "back",
                 "lay",
-                "hideRunner",
+                "hideRunnerUser",
               ],
             },
           ],
@@ -367,7 +367,7 @@ export const getAllGameData = async (req, res) => {
       description: game.description,
       isBlink: game.isBlink,
       markets: game.Markets
-        .filter((market) => !market.hideMarket) 
+        .filter((market) => !market.hideMarketUser) 
         .map((market) => ({
           marketId: market.marketId,
           marketName: market.marketName,
@@ -376,7 +376,7 @@ export const getAllGameData = async (req, res) => {
           announcementResult: market.announcementResult,
           isActive: market.isActive,
           runners: market.Runners
-            .filter((runner) => !runner.hideRunner) 
+            .filter((runner) => !runner.hideRunnerUser) 
             .map((runner) => ({
               runnerId: runner.runnerId,
               runnerName: runner.runnerName,

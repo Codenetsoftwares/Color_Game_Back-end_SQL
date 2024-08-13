@@ -512,9 +512,6 @@ export const afterWining = async (req, res) => {
     }
 
     if (isWin) {
-      market.announcementResult = true;
-      await market.save();
-
       const runners = await Runner.findAll({ where: { runnerId } });
 
       for (const runner of runners) {
@@ -523,6 +520,10 @@ export const afterWining = async (req, res) => {
       }
     }
 
+    if (isWin) {
+      market.announcementResult = true;
+    }
+    await market.save();
 
     const game = await Game.findOne({
       where: { gameId },
@@ -716,30 +717,36 @@ export const afterWining = async (req, res) => {
     }
 
     await Market.update(
-      { isRevoke: false },
+      { isRevoke: false, hideMarketUser: true, hideRunnerUser: true },
       { where: { marketId } }
     );
 
-    await Market.update(
-      { hideMarketUser: true },
-      { where: { marketId } }
-    );
 
-    await InactiveGame.create({
-      game: game ? game.toJSON() : null,
-      market: market ? market.toJSON() : null,
-      runner: market.runners ? market.runners.map(runner => runner.toJSON()) : null,
-    });
+    try {
+      const existingEntry = await InactiveGame.findOne({
+        where: {
+          marketId: market.marketId,
+          runnerId: market.runners ? market.runners.map(runner => runner.runnerId) : null
+        }
+      });
 
-    await Market.update(
-      { hideMarket: true },
-      { where: { marketId } }
-    );
-
-    await Market.update(
-      { hideRunner: true },
-      { where: { marketId } }
-    );
+      if (existingEntry) {
+        await existingEntry.update({
+          game: game ? game.toJSON() : null,
+          market: market ? market.toJSON() : null,
+          runner: market.runners ? market.runners.map(runner => runner.toJSON()) : null,
+        });
+      } else {
+        await InactiveGame.create({
+          game: game ? game.toJSON() : null,
+          market: market ? market.toJSON() : null,
+          runner: market.runners ? market.runners.map(runner => runner.toJSON()) : null,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing InactiveGame entry:', error);
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
 
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success' + " " + message));
   } catch (error) {
@@ -796,10 +803,14 @@ export const revokeWinningAnnouncement = async (req, res) => {
 
     console.log(
       await Market.update(
-      { isRevoke: true, isActive: false, hideMarketUser: false },
-      { where: { marketId } }, { new: true }
-    ))
+        { isRevoke: true, isActive: false, hideMarketUser: false,},
+        { where: { marketId } }, { new: true }
+      ))
 
+    await Runner.update(
+      { hideRunnerUser: false },
+      { where: { runnerId } }
+    )
     const inactiveGame = await InactiveGame.findOne({
       where: {
         'market.marketId': marketId

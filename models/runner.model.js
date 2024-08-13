@@ -49,7 +49,11 @@ Runner.init(
     hideRunner : {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-    }
+    },
+    hideRunnerUser :{
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     sequelize,
