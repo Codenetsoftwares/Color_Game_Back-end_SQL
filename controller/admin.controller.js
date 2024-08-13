@@ -717,7 +717,7 @@ export const afterWining = async (req, res) => {
     }
 
     await Market.update(
-      { isRevoke: false, hideMarketUser: true, hideRunnerUser: true },
+      { isRevoke: false, hideMarketUser: true, hideRunnerUser: true, hideMarket: true, hideRunner: true },
       { where: { marketId } }
     );
 
@@ -803,7 +803,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
 
     console.log(
       await Market.update(
-        { isRevoke: true, isActive: false, hideMarketUser: false,},
+        { isRevoke: true, isActive: false, hideMarketUser: false },
         { where: { marketId } }, { new: true }
       ))
 
@@ -811,6 +811,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
       { hideRunnerUser: false },
       { where: { runnerId } }
     )
+    
     const inactiveGame = await InactiveGame.findOne({
       where: {
         'market.marketId': marketId
