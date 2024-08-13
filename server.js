@@ -80,6 +80,7 @@ Market.hasMany(InactiveGame, { foreignKey: 'marketId' });
 
 InactiveGame.belongsTo(Runner, { foreignKey: 'runnerId' });
 Runner.hasMany(InactiveGame, { foreignKey: 'runnerId' });
+
 sequelize
   .sync({ alter: true })
   .then(() => {
