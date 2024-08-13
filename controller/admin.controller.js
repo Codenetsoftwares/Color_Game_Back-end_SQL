@@ -811,7 +811,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
       { hideRunnerUser: false },
       { where: { runnerId } }
     )
-    
+ 
     const inactiveGame = await InactiveGame.findOne({
       where: {
         'market.marketId': marketId
@@ -853,6 +853,13 @@ export const revokeWinningAnnouncement = async (req, res) => {
     } else {
       console.log('InactiveGame deleted successfully');
     }
+
+    const runners = await Runner.findAll({ where: { runnerId } });
+    for (const runner of runners) {
+      runner.isWin = false;
+      await runner.save();
+    }
+
 
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Winning announcement revoked successfully'));
   } catch (error) {
