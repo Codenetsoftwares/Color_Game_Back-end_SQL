@@ -513,9 +513,16 @@ export const afterWining = async (req, res) => {
 
     if (isWin) {
       market.announcementResult = true;
+      await market.save();
+
+      const runners = await Runner.findAll({ where: { runnerId } });
+
+      for (const runner of runners) {
+        runner.isWin = true;
+        await runner.save();
+      }
     }
 
-    await market.save();
 
     const game = await Game.findOne({
       where: { gameId },
@@ -787,20 +794,11 @@ export const revokeWinningAnnouncement = async (req, res) => {
       { where: { marketId, runnerId } }
     );
 
-    await Market.update(
-      { isRevoke: true },
-      { where: { marketId } }
-    );
-
-    await Market.update(
-      { isActive: false },
-      { where: { marketId } }
-    );
-
-    await Market.update(
-      { hideMarketUser: false },
-      { where: { marketId } }
-    );
+    console.log(
+      await Market.update(
+      { isRevoke: true, isActive: false, hideMarketUser: false },
+      { where: { marketId } }, { new: true }
+    ))
 
     const inactiveGame = await InactiveGame.findOne({
       where: {
@@ -906,24 +904,3 @@ export const checkMarketStatus = async (req, res) => {
   }
 };
 
-// cron.schedule('* * * * *', async () => {
-//   try {
-//     console.log('Checking market statuses...');
-    
-//     const markets = await Market.findAll({
-//       where: { isActive: true, endTime: { [Op.lte]: new Date() } },
-//     });
-
-//     for (const market of markets) {
-//       // Deactivate the market and perform necessary actions
-//       market.isActive = false;
-//       await market.save();
-
-//       console.log(`Market ${market.marketName} has been deactivated.`);
-
-//       // You can perform other actions here, like updating related tables or sending notifications
-//     }
-//   } catch (error) {
-//     console.error('Error checking market statuses:', error);
-//   }
-// });

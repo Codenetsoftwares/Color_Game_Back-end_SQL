@@ -18,6 +18,7 @@ import BetHistory from './models/betHistory.model.js';
 import MarketBalance from './models/marketBalance.js';
 import { InactiveGameRoute } from './routes/inactiveGame.route.js';
 import InactiveGame from './models/inactiveGame.model.js';
+import { startMarketCountdown } from './cron/startMarketCountdown.js';
 
 dotenv.config();
 const app = express();
@@ -83,6 +84,7 @@ sequelize
   .sync({ alter: true })
   .then(() => {
     console.log('Database & tables created!');
+    startMarketCountdown()
     app.listen(process.env.PORT, () => {
       console.log(`App is running on  - http://localhost:${process.env.PORT || 7000}`);
     });
