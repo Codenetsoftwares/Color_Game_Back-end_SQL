@@ -501,6 +501,7 @@ export const afterWining = async (req, res) => {
 
     gameId = market.gameId;
 
+    // winning runner of a market 
     if (market.runners) {
       market.runners.forEach(runner => {
         if (String(runner.runnerId) === runnerId) {
@@ -511,23 +512,57 @@ export const afterWining = async (req, res) => {
       });
     }
 
+    // save runner isWin in db
     if (isWin) {
       const runners = await Runner.findAll({ where: { runnerId } });
-
       for (const runner of runners) {
         runner.isWin = true;
         await runner.save();
       }
     }
 
+    const game = await Game.findOne({
+      where: { gameId },
+    });
+
+    // saving game details into inactive game which game is win
+    try {
+      const runnersData = market.runners ? market.runners.map(runner => ({
+        runnerId: runner.runnerId,
+        runnerName: runner.runnerName,
+        back: runner.back,
+        lay: runner.lay,
+        isWin: runner.isWin,
+      })) : null;
+
+      const existingEntry = await InactiveGame.findOne({
+        where: {
+          marketId: market.marketId,
+        }
+      });
+
+      if (existingEntry) {
+        await existingEntry.update({
+          game: game ? game.toJSON() : null,
+          market: market ? market.toJSON() : null,
+          runner: runnersData,
+        });
+      } else {
+        await InactiveGame.create({
+          game: game ? game.toJSON() : null,
+          market: market ? market.toJSON() : null,
+          runner: runnersData,
+        });
+      }
+    } catch (error) {
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
+
+
     if (isWin) {
       market.announcementResult = true;
     }
     await market.save();
-
-    const game = await Game.findOne({
-      where: { gameId },
-    });
 
     const users = await MarketBalance.findAll({
       where: { marketId },
@@ -538,7 +573,7 @@ export const afterWining = async (req, res) => {
     });
 
     let message = '';
-
+// calculate winning balance of a user if isRevoke true or not based
     if (market.isRevoke === true) {
       for (const user of previousStateUsers) {
         try {
@@ -687,6 +722,7 @@ export const afterWining = async (req, res) => {
       }
     }
 
+    // removing currentOrder and create bet history after win
     if (isWin) {
       const orders = await CurrentOrder.findAll({
         where: { marketId },
@@ -721,40 +757,12 @@ export const afterWining = async (req, res) => {
       { where: { marketId } }
     );
 
-
-    try {
-      const existingEntry = await InactiveGame.findOne({
-        where: {
-          marketId: market.marketId,
-          runnerId: market.runners ? market.runners.map(runner => runner.runnerId) : null
-        }
-      });
-
-      if (existingEntry) {
-        await existingEntry.update({
-          game: game ? game.toJSON() : null,
-          market: market ? market.toJSON() : null,
-          runner: market.runners ? market.runners.map(runner => runner.toJSON()) : null,
-        });
-      } else {
-        await InactiveGame.create({
-          game: game ? game.toJSON() : null,
-          market: market ? market.toJSON() : null,
-          runner: market.runners ? market.runners.map(runner => runner.toJSON()) : null,
-        });
-      }
-    } catch (error) {
-      console.error('Error processing InactiveGame entry:', error);
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
-    }
-
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success' + " " + message));
   } catch (error) {
     console.error('Error sending balance:', error);
     return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
-
 
 export const revokeWinningAnnouncement = async (req, res) => {
   try {
@@ -853,13 +861,6 @@ export const revokeWinningAnnouncement = async (req, res) => {
     } else {
       console.log('InactiveGame deleted successfully');
     }
-
-    const runners = await Runner.findAll({ where: { runnerId } });
-    for (const runner of runners) {
-      runner.isWin = false;
-      await runner.save();
-    }
-
 
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Winning announcement revoked successfully'));
   } catch (error) {
