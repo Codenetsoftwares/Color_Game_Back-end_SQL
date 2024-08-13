@@ -816,51 +816,14 @@ export const revokeWinningAnnouncement = async (req, res) => {
       ))
 
     await Runner.update(
-      { hideRunnerUser: false },
+      { hideRunnerUser: false , hideRunner: false , isWin: false},
       { where: { runnerId } }
     )
  
-    const inactiveGame = await InactiveGame.findOne({
-      where: {
-        'market.marketId': marketId
-      }
-    });
-
-    if (!inactiveGame) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Inactive game not found'));
-    }
-
-    const [marketUpdateCount] = await Market.update(
+  await Market.update(
       { hideMarket: false },
       { where: { marketId } }
     );
-
-    if (marketUpdateCount === 0) {
-      console.error('Market not found or not updated:', marketId);
-    }
-
-    const [runnerUpdateCount] = await Runner.update(
-      { hideRunner: false },
-      { where: { marketId } }
-    );
-
-    if (runnerUpdateCount === 0) {
-      console.error('Runners not found or not updated for Market:', marketId);
-    }
-
-    const deleteCount = await InactiveGame.destroy({
-      where: {
-        id: inactiveGame.id
-      }
-    });
-
-    if (deleteCount === 0) {
-      console.error('InactiveGame not found or not deleted for Market:', marketId);
-    } else {
-      console.log('InactiveGame deleted successfully');
-    }
 
     return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Winning announcement revoked successfully'));
   } catch (error) {

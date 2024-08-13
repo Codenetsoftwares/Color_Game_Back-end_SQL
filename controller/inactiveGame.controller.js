@@ -4,49 +4,96 @@ import {
   apiResponseSuccess,
 } from "../middleware/serverError.js";
 import Game from "../models/game.model.js";
-import InactiveGame from "../models/inactiveGame.model.js";
 import Market from "../models/market.model.js";
 import Runner from "../models/runner.model.js";
 
 export const getInactiveGames = async (req, res) => {
   try {
-    const inactiveGames = await InactiveGame.findAll();
+    const winningRunners = await Runner.findAll({
+      where: { isWin: true },
+      attributes: ["runnerId", "marketId"],
+    });
 
-    if (inactiveGames.length === 0) {
+    if (winningRunners.length === 0) {
       return res
         .status(statusCode.success)
-        .json(
-          apiResponseSuccess(
-            [],
-            true,
-            statusCode.success,
-            "No inactive games found"
-          )
-        );
+        .json(apiResponseSuccess([], true, statusCode.success, "No winning runners found"));
     }
 
-    const formattedData = inactiveGames.map((inactiveGame) => {
-      const { game, market } = inactiveGame;
-      const runners = market.Runners || [];
+    const marketIds = [...new Set(winningRunners.map(runner => runner.marketId))];
 
-      return {
+    // Fetch all markets with winning runners
+    const markets = await Market.findAll({
+      where: { marketId: marketIds },
+      attributes: [
+        "marketId",
+        "marketName",
+        "gameId",
+      ],
+      include: [
+        {
+          model: Runner,
+          attributes: [
+            "runnerId",
+            "runnerName",
+            "id",
+            "bal",
+            "back",
+            "lay",
+            "isWin",
+          ],
+          where: { isWin: true },
+        },
+      ],
+    });
+
+    // Extract gameIds from markets
+    const gameIds = [...new Set(markets.map(market => market.gameId))];
+
+    // Fetch games that have markets with winning runners
+    const games = await Game.findAll({
+      where: { gameId: gameIds },
+      attributes: ["gameId", "gameName", "description", "isBlink"],
+      include: [
+        {
+          model: Market,
+          attributes: [
+            "marketId",
+            "marketName",
+           
+          ],
+          include: [
+            {
+              model: Runner,
+              attributes: [
+                "runnerId",
+                "runnerName",
+                "id",
+                "bal",
+                "back",
+                "lay",
+                "isWin",
+              ],
+              where: { isWin: true },
+            },
+          ],
+        },
+      ],
+    });
+
+    // Format the game data
+    const formattedGameData = games.flatMap((game) => 
+      game.Markets.map((market) => ({
         game: {
-          id: game.id,
           gameId: game.gameId,
-          isBlink: game.isBlink,
           gameName: game.gameName,
-          description: game.description,
         },
         market: {
           marketId: market.marketId,
           marketName: market.marketName,
-          isActive: market.isActive,
-          timeSpan: market.timeSpan,
-          isDisplay: market.isDisplay,
-          participants: market.participants,
-          announcementResult: market.announcementResult,
+        
         },
-        runners: runners.map((runner) => ({
+        runners: market.Runners.map((runner) => ({
           runnerId: runner.runnerId,
           runnerName: runner.runnerName,
           id: runner.id,
@@ -55,21 +102,22 @@ export const getInactiveGames = async (req, res) => {
           back: runner.back,
           isWin: runner.isWin,
         })),
-      };
-    });
+      }))
+    );
 
-    return res
+    res
       .status(statusCode.success)
       .json(
         apiResponseSuccess(
-          formattedData,
+          formattedGameData,
           true,
           statusCode.success,
-          "Inactive games retrieved successfully"
+          "Success"
         )
       );
   } catch (error) {
-    return res
+    console.error("Error retrieving game data:", error);
+    res
       .status(statusCode.internalServerError)
       .json(
         apiResponseErr(
@@ -82,60 +130,7 @@ export const getInactiveGames = async (req, res) => {
   }
 };
 
-export const moveToActiveGame = async (req, res) => {
-  const { marketId } = req.body;
 
-  try {
-    const inactiveGame = await InactiveGame.findOne({
-      where: {
-        'market.marketId': marketId 
-      }
-    });
 
-    if (!inactiveGame) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, 'Inactive game not found'));
-    }
 
-    const [marketUpdateCount] = await Market.update(
-      { hideMarket: false },
-      { where: { marketId } } 
-    );
-
-    if (marketUpdateCount === 0) {
-      console.error('Market not found or not updated:', marketId);
-    }
-
-    const [runnerUpdateCount] = await Runner.update(
-      { hideRunner: false },
-      { where: { marketId } }
-    );
-
-    if (runnerUpdateCount === 0) {
-      console.error('Runners not found or not updated for Market:', marketId);
-    }
-
-    const deleteCount = await InactiveGame.destroy({
-      where: {
-        id: inactiveGame.id 
-      }
-    });
-
-    if (deleteCount === 0) {
-      console.error('InactiveGame not found or not deleted for Market:', marketId);
-    } else {
-      console.log('InactiveGame deleted successfully');
-    }
-
-    return res
-      .status(statusCode.success)
-      .json(apiResponseSuccess(null, true, statusCode.success, 'Game moved to active status successfully'));
-  } catch (error) {
-    console.error('Error moving game to active status:', error);
-    return res
-      .status(statusCode.internalServerError)
-      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
-  }
-};
 
