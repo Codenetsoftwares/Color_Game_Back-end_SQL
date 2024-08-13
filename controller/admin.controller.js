@@ -848,7 +848,7 @@ export const checkMarketStatus = async (req, res) => {
     }
 
     await Market.update(
-      { hideMarketUser: false },
+      { hideMarketUser: false, isRevoke: false },
       { where: { marketId } }
     );
 
