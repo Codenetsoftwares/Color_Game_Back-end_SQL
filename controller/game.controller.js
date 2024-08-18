@@ -88,11 +88,16 @@ export const getAllGames = async (req, res) => {
     });
 
     if (!rows || rows.length === 0) {
+      const paginationData = apiResponsePagination(0, 0, count);
+
+      const response = {
+        games: [],
+        pagination: paginationData,
+      };
+
       return res
-        .status(statusCode.badRequest)
-        .json(
-          apiResponseErr(null, false, statusCode.badRequest, "Data Not Found")
-        );
+        .status(statusCode.success)
+        .json(apiResponseSuccess(response, true, statusCode.success, "Success"));
     }
 
     const gameData = await Promise.all(
@@ -224,8 +229,6 @@ export const createMarket = async (req, res) => {
     const gameId = req.params.gameId;
     const { marketName, participants, startTime, endTime } = req.body;
 
-    console.log(typeof startTime , typeof endTime)
-    // console.log(instanceof(startTime) , endTime)
 
     const existingMarket = await Market.findOne({
       where: {
@@ -936,19 +939,21 @@ export const deleteMarket = async (req, res) => {
 
     const runnerIds = runners.map((runner) => runner.runnerId);
 
-    await rateSchema.destroy({
-      where: {
-        runnerId: {
-          [Op.in]: runnerIds,
+    if (runnerIds.length) {
+      await rateSchema.destroy({
+        where: {
+          runnerId: {
+            [Op.in]: runnerIds,
+          },
         },
-      },
-    });
+      });
 
-    await Runner.destroy({
-      where: {
-        marketId: marketId,
-      },
-    });
+      await Runner.destroy({
+        where: {
+          marketId: marketId,
+        },
+      });
+    }
 
     const deletedMarketCount = await Market.destroy({
       where: {

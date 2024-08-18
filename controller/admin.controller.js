@@ -80,19 +80,33 @@ export const createAdmin = async (req, res) => {
   }
 };
 
-// done
 export const getAllUsers = async (req, res) => {
   try {
-    const page = req.query.page ? parseInt(req.query.page) : 1;
-    const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : "";
+    // Destructure with defaults
+    let { page = 1, pageSize = 10, search = "" } = req.query;
 
-    const countQuery = await userSchema.count({
+    page = parseInt(page);
+    pageSize = parseInt(pageSize);
+
+    if (page < 1 || pageSize < 1) {
+      return res.status(statusCode.badRequest).json(
+        apiResponseErr(null, false, statusCode.badRequest, "Invalid pagination parameters")
+      );
+    }
+
+    const searchQuery = search.toLowerCase();
+
+    const totalItems = await userSchema.count({
       where: {
         userName: { [Op.like]: `%${searchQuery}%` },
       },
     });
-    const totalItems = countQuery;
+
+    if (totalItems === 0) {
+      return res.status(statusCode.badRequest).json(
+        apiResponseErr(null, false, statusCode.badRequest, "data not found")
+      );
+    }
 
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
@@ -104,15 +118,6 @@ export const getAllUsers = async (req, res) => {
       limit: pageSize,
       offset: offset,
     });
-
-    if (!users || users.length === 0) {
-      throw apiResponseErr(
-        null,
-        false,
-        statusCode.badRequest,
-        "User not found"
-      );
-    }
 
     const paginationData = {
       page,
@@ -127,12 +132,11 @@ export const getAllUsers = async (req, res) => {
           users,
           true,
           statusCode.success,
-          "success",
+          "Success",
           paginationData
         )
       );
   } catch (error) {
-    console.log(error);
     res
       .status(statusCode.internalServerError)
       .json(
@@ -140,7 +144,7 @@ export const getAllUsers = async (req, res) => {
           null,
           false,
           statusCode.internalServerError,
-          error.message
+          error.message,
         )
       );
   }
@@ -343,7 +347,6 @@ export const updateByAdmin = async (req, res) => {
       transferFromUserAccount: transferFromUserAccount,
       transferToUserAccount: transferToUserAccount,
     });
-    console.log("uddbvbdvb", createTransaction);
     if (!createTransaction) {
       return res
         .status(statusCode.badRequest)
@@ -871,8 +874,14 @@ export const checkMarketStatus = async (req, res) => {
     res
       .status(statusCode.success)
       .send(
-        apiResponseSuccess(statusMessage, true, statusCode.success, "success")
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          statusMessage
+        )
       );
+
   } catch (error) {
     res
       .status(statusCode.internalServerError)
