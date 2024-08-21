@@ -773,12 +773,12 @@ export const createBid = async (req, res) => {
         exposure: exposure,
       });
       await user.save();
-
-      await Runner.update(
-        { isBidding: true },
-        { where: { marketId } } 
-      );
     }
+    
+    await Runner.update(
+      { isBidding: true },
+      { where: { marketId } } 
+    );
 
     return res
       .status(statusCode.success)
