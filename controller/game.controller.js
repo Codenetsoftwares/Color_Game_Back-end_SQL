@@ -774,6 +774,7 @@ export const getAllRunners = async (req, res) => {
     const transformedRunners = runners.map((runner) => ({
       runnerId: runner.runnerId,
       runnerName: runner.runnerName,
+      isBidding: runner.isBidding,
       rates: [
         {
           Back: runner.back,

@@ -783,12 +783,12 @@ export const revokeWinningAnnouncement = async (req, res) => {
 
       if (user) {
 
-        user.marketListExposure = JSON.parse(prevState.marketListExposure);
-
+        const marketExposureEntry = user.marketListExposure = JSON.parse(prevState.marketListExposure);
+        const marketExposureValue = Number(marketExposureEntry[marketId]);
         const allRunnerBalances = JSON.parse(prevState.allRunnerBalances);
         const runnerBalance = allRunnerBalances[runnerId];
         if (runnerBalance > 0) {
-          user.balance -= runnerBalance;
+          user.balance -= runnerBalance + marketExposureValue;
         }
         else {
           user.balance += runnerBalance;
