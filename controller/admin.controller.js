@@ -24,6 +24,7 @@ import Game from "../models/game.model.js";
 import InactiveGame from "../models/inactiveGame.model.js";
 import CustomError from "../helper/extendError.js";
 import { PreviousState } from "../models/previousState.model.js";
+import sequelize from "../db.js";
 
 dotenv.config();
 const globalName = [];
@@ -458,7 +459,13 @@ export const buildRootPath = async (req, res) => {
   }
 };
 
-export const storePreviousState = async (user, marketId, runnerId, gameId, runnerBalanceValue) => {
+export const storePreviousState = async (
+  user,
+  marketId,
+  runnerId,
+  gameId,
+  runnerBalanceValue
+) => {
   // Fetch all runner balances for the given market and user
   const allRunnerBalances = await MarketBalance.findAll({
     where: { marketId, userId: user.userId },
@@ -467,7 +474,7 @@ export const storePreviousState = async (user, marketId, runnerId, gameId, runne
 
   // Convert the runner balances to an object
   const allRunnerBalancesObj = {};
-  allRunnerBalances.forEach(item => {
+  allRunnerBalances.forEach((item) => {
     allRunnerBalancesObj[item.runnerId] = Number(item.bal);
   });
 
@@ -499,90 +506,44 @@ export const afterWining = async (req, res) => {
     });
 
     if (!market) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
+        );
     }
 
     gameId = market.gameId;
 
-    // winning runner of a market 
+    // Update market runners with win status
     if (market.runners) {
-      market.runners.forEach(runner => {
-        if (String(runner.runnerId) === runnerId) {
-          runner.isWin = isWin;
-        } else {
-          runner.isWin = false;
-        }
+      market.runners.forEach((runner) => {
+        runner.isWin = String(runner.runnerId) === runnerId ? isWin : false;
       });
     }
 
-    // save runner isWin in db
     if (isWin) {
       const runners = await Runner.findAll({ where: { runnerId } });
       for (const runner of runners) {
         runner.isWin = true;
         await runner.save();
       }
-    }
-
-    const game = await Game.findOne({
-      where: { gameId },
-    });
-
-    // saving game details into inactive game which game is win
-    try {
-      const runnersData = market.runners ? market.runners.map(runner => ({
-        runnerId: runner.runnerId,
-        runnerName: runner.runnerName,
-        back: runner.back,
-        lay: runner.lay,
-        isWin: runner.isWin,
-      })) : null;
-
-      const existingEntry = await InactiveGame.findOne({
-        where: {
-          marketId: market.marketId,
-        }
-      });
-
-      if (existingEntry) {
-        await existingEntry.update({
-          game: game ? game.toJSON() : null,
-          market: market ? market.toJSON() : null,
-          runner: runnersData,
-        });
-      } else {
-        await InactiveGame.create({
-          game: game ? game.toJSON() : null,
-          market: market ? market.toJSON() : null,
-          runner: runnersData,
-        });
-      }
-    } catch (error) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
-    }
-
-
-    if (isWin) {
       market.announcementResult = true;
     }
     await market.save();
 
-    const users = await MarketBalance.findAll({
-      where: { marketId },
-    });
+    // Fetch users and previous state data
+    const users = await MarketBalance.findAll({ where: { marketId } });
+    const previousStateUsers = await PreviousState.findAll({ where: { marketId } });
 
-    const previousStateUsers = await PreviousState.findAll({
-      where: { marketId },
-    });
+    let message = "";
 
-    let message = '';
-// calculate winning balance of a user if isRevoke true or not based
-    if (market.isRevoke === true) {
+    if (market.isRevoke) {
       for (const user of previousStateUsers) {
         try {
-          const runnerBalance = await PreviousState.findOne({
-            where: { marketId, runnerId, userId: user.userId },
-          });
+          let allRunnerBalances = JSON.parse(user.allRunnerBalances);
+
+          const runnerBalance = allRunnerBalances[runnerId];
 
           if (runnerBalance) {
             const userDetails = await userSchema.findOne({
@@ -590,16 +551,24 @@ export const afterWining = async (req, res) => {
             });
 
             if (userDetails) {
-              const marketExposureEntry = userDetails.marketListExposure.find(item => Object.keys(item)[0] === marketId);
+              await storePreviousState(
+                userDetails,
+                marketId,
+                runnerId,
+                gameId,
+                Number(runnerBalance)
+              );
+
+              const marketExposureEntry = userDetails.marketListExposure.find(
+                (item) => Object.keys(item)[0] === marketId
+              );
+
               if (marketExposureEntry) {
-                const previousRunnerBalances = JSON.parse(runnerBalance.allRunnerBalances);
                 const marketExposureValue = Number(marketExposureEntry[marketId]);
-                const runnerBalanceValue = Number(previousRunnerBalances[runnerId]);
+                const runnerBalanceValue = Number(runnerBalance);
 
                 if (isWin) {
-                  userDetails.balance += (runnerBalanceValue + marketExposureValue);
-                } else {
-                  console.log(`No win. Balance remains the same: ${userDetails.balance}`);
+                  userDetails.balance += runnerBalanceValue + marketExposureValue;
                 }
 
                 await ProfitLoss.create({
@@ -611,27 +580,28 @@ export const afterWining = async (req, res) => {
                   profitLoss: runnerBalanceValue,
                 });
 
-                userDetails.marketListExposure = userDetails.marketListExposure.filter(item => Object.keys(item)[0] !== marketId);
+                userDetails.marketListExposure =
+                  userDetails.marketListExposure.filter(
+                    (item) => Object.keys(item)[0] !== marketId
+                  );
 
                 await userSchema.update(
                   { marketListExposure: userDetails.marketListExposure },
-                  { where: { userId: user.userId } },
+                  { where: { userId: user.userId } }
                 );
 
                 await userDetails.save();
 
                 const dataToSend = {
                   amount: userDetails.balance,
-                  userId: userDetails.userId,
+                  userId: user.userId,
                 };
-                console.log("data", dataToSend);
-                const { data: response } = await axios.post('https://wl.server.dummydoma.in/api/admin/extrnal/balance-update', dataToSend);
+                const { data: response } = await axios.post(
+                  "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+                  dataToSend
+                );
 
-                if (!response.success) {
-                  message = 'Sync not successful';
-                } else {
-                  message = 'Sync data successful';
-                }
+                message = response.success ? "Sync data successful" : "Sync not successful";
 
                 await MarketBalance.destroy({
                   where: { marketId, runnerId, userId: user.userId },
@@ -646,7 +616,7 @@ export const afterWining = async (req, res) => {
             console.error(`Runner balance not found for marketId ${marketId} and runnerId ${runnerId}`);
           }
         } catch (error) {
-          console.error('Error processing user:', error);
+          console.error("Error processing user:", error);
         }
       }
     } else {
@@ -662,18 +632,23 @@ export const afterWining = async (req, res) => {
             });
 
             if (userDetails) {
-              // Store previous state before making any changes
-              await storePreviousState(userDetails, marketId, runnerId, gameId, Number(runnerBalance.bal));
+              await storePreviousState(
+                userDetails,
+                marketId,
+                runnerId,
+                gameId,
+                Number(runnerBalance.bal)
+              );
 
-              const marketExposureEntry = userDetails.marketListExposure.find(item => Object.keys(item)[0] === marketId);
+              const marketExposureEntry = userDetails.marketListExposure.find(
+                (item) => Object.keys(item)[0] === marketId
+              );
               if (marketExposureEntry) {
                 const marketExposureValue = Number(marketExposureEntry[marketId]);
                 const runnerBalanceValue = Number(runnerBalance.bal);
 
                 if (isWin) {
-                  userDetails.balance += (runnerBalanceValue + marketExposureValue);
-                } else {
-                  console.log(`No win. Balance remains the same: ${userDetails.balance}`);
+                  userDetails.balance += runnerBalanceValue + marketExposureValue;
                 }
 
                 await ProfitLoss.create({
@@ -685,11 +660,14 @@ export const afterWining = async (req, res) => {
                   profitLoss: runnerBalanceValue,
                 });
 
-                userDetails.marketListExposure = userDetails.marketListExposure.filter(item => Object.keys(item)[0] !== marketId);
+                userDetails.marketListExposure =
+                  userDetails.marketListExposure.filter(
+                    (item) => Object.keys(item)[0] !== marketId
+                  );
 
                 await userSchema.update(
                   { marketListExposure: userDetails.marketListExposure },
-                  { where: { userId: user.userId } },
+                  { where: { userId: user.userId } }
                 );
 
                 await userDetails.save();
@@ -698,14 +676,12 @@ export const afterWining = async (req, res) => {
                   amount: userDetails.balance,
                   userId: userDetails.userId,
                 };
-                console.log("data", dataToSend);
-                const { data: response } = await axios.post('https://wl.server.dummydoma.in/api/admin/extrnal/balance-update', dataToSend);
+                const { data: response } = await axios.post(
+                  "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+                  dataToSend
+                );
 
-                if (!response.success) {
-                  message = 'Sync not successful';
-                } else {
-                  message = 'Sync data successful';
-                }
+                message = response.success ? "Sync data successful" : "Sync not successful";
 
                 await MarketBalance.destroy({
                   where: { marketId, runnerId, userId: user.userId },
@@ -720,16 +696,13 @@ export const afterWining = async (req, res) => {
             console.error(`Runner balance not found for marketId ${marketId} and runnerId ${runnerId}`);
           }
         } catch (error) {
-          console.error('Error processing user:', error);
+          console.error("Error processing user:", error);
         }
       }
     }
 
-    // removing currentOrder and create bet history after win
     if (isWin) {
-      const orders = await CurrentOrder.findAll({
-        where: { marketId },
-      });
+      const orders = await CurrentOrder.findAll({ where: { marketId } });
 
       for (const order of orders) {
         await BetHistory.create({
@@ -750,90 +723,157 @@ export const afterWining = async (req, res) => {
         });
       }
 
-      await CurrentOrder.destroy({
-        where: { marketId },
-      });
+      await CurrentOrder.destroy({ where: { marketId } });
     }
 
     await Market.update(
-      { isRevoke: false, hideMarketUser: true, hideRunnerUser: true, hideMarket: true, hideRunner: true },
+      {
+        isRevoke: false,
+        hideMarketUser: true,
+        hideRunnerUser: true,
+        hideMarket: true,
+        hideRunner: true,
+      },
       { where: { marketId } }
     );
-
-    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Success' + " " + message));
+    await Runner.update(
+      { isBidding: false },
+      { where: { marketId } }
+    );
+    return res
+      .status(statusCode.success)
+      .json(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Success" + " " + message
+        )
+      );
   } catch (error) {
-    console.error('Error sending balance:', error);
-    return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    console.error("Error sending balance:", error);
+    return res
+      .status(statusCode.internalServerError)
+      .json(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
 export const revokeWinningAnnouncement = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { marketId, runnerId } = req.body;
+
     const previousStates = await PreviousState.findAll({
       where: { marketId, runnerId },
+      transaction,
     });
 
     for (const prevState of previousStates) {
       const user = await userSchema.findOne({
         where: { userId: prevState.userId },
+        transaction,
       });
+
       if (user) {
-        user.balance = prevState.balance;
+
         user.marketListExposure = JSON.parse(prevState.marketListExposure);
 
-        // Restore all runner balances from previous state
         const allRunnerBalances = JSON.parse(prevState.allRunnerBalances);
+        const runnerBalance = allRunnerBalances[runnerId];
+        if (runnerBalance > 0) {
+          user.balance -= runnerBalance;
+        }
+        else {
+          user.balance += runnerBalance;
+        }
+
         for (const [runnerId, balance] of Object.entries(allRunnerBalances)) {
-          const runnerBalance = await MarketBalance.findOne({
-            where: { marketId, runnerId, userId: user.userId },
-          });
-          if (runnerBalance) {
-            runnerBalance.bal = balance;
-            await runnerBalance.save();
-          } else {
-            // If the runner balance does not exist, create it
-            await MarketBalance.create({
-              marketId,
-              runnerId,
-              userId: user.userId,
-              bal: balance,
+          try {
+            let runnerBalance = await MarketBalance.findOne({
+              where: { marketId, runnerId, userId: user.userId },
+              transaction,
             });
+
+            if (runnerBalance) {
+              runnerBalance.bal = balance.toString();
+              await runnerBalance.save({ transaction });
+            } else {
+              await MarketBalance.create(
+                {
+                  marketId,
+                  runnerId,
+                  userId: user.userId,
+                  bal: balance.toString(),
+                },
+                { transaction }
+              );
+            }
+          } catch (error) {
+            console.error("Error processing runner balance:", error);
           }
         }
 
-        await user.save();
+        await user.save({ transaction });
+      } else {
+        console.log("User Not Found for userId:", prevState.userId);
       }
     }
-
-    // Set the isReverted flag to true
     await PreviousState.update(
       { isReverted: true },
-      { where: { marketId, runnerId } }
+      { where: { marketId, runnerId }, transaction }
     );
 
-    console.log(
-      await Market.update(
-        { isRevoke: true, isActive: false, hideMarketUser: false },
-        { where: { marketId } }, { new: true }
-      ))
+    console.log("Updating Market and Runner...");
+    await Market.update(
+      {
+        isRevoke: true,
+        isActive: false,
+        hideMarketUser: false,
+        hideMarket: false,
+      },
+      { where: { marketId }, transaction }
+    );
 
     await Runner.update(
-      { hideRunnerUser: false , hideRunner: false , isWin: false},
-      { where: { runnerId } }
-    )
- 
-  await Market.update(
-      { hideMarket: false },
-      { where: { marketId } }
+      { hideRunnerUser: false, hideRunner: false, isWin: false },
+      { where: { runnerId }, transaction }
     );
 
-    return res.status(statusCode.success).json(apiResponseSuccess(null, true, statusCode.success, 'Winning announcement revoked successfully'));
+    await transaction.commit();
+    console.log("Transaction Committed");
+
+    return res
+      .status(statusCode.success)
+      .json(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Winning announcement revoked successfully"
+        )
+      );
   } catch (error) {
-    return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    await transaction.rollback();
+    console.error("Error revoking winning announcement:", error);
+    return res
+      .status(statusCode.internalServerError)
+      .json(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
-
 // done
 export const checkMarketStatus = async (req, res) => {
   const marketId = req.params.marketId;

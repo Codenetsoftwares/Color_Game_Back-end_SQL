@@ -739,6 +739,10 @@ export const createBid = async (req, res) => {
     if (!market) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
     }
+    if (!market.isActive) {
+      throw apiResponseErr(null, false, statusCode.badRequest, 'Market is suspended. Bid cannot be placed.');
+    }
+
     const runner = await Runner.findOne({ where: { marketId, runnerId } });
     if (!runner) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Runner Not Found');
@@ -769,7 +773,13 @@ export const createBid = async (req, res) => {
         exposure: exposure,
       });
       await user.save();
+
+      await Runner.update(
+        { isBidding: true },
+        { where: { marketId } } 
+      );
     }
+
     return res
       .status(statusCode.success)
       .send(apiResponseSuccess(null, true, statusCode.success, 'Bid placed successfully'));
@@ -1030,8 +1040,8 @@ export const marketProfitLoss = async (req, res) => {
 
       if (profitLossEntries.length === 0) {
         return res
-        .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
+          .status(statusCode.success)
+          .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
       }
 
       const game = await Game.findOne({

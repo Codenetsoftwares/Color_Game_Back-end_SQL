@@ -54,6 +54,10 @@ Runner.init(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    isBidding : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    }
   },
   {
     sequelize,
