@@ -372,7 +372,8 @@ export const getAllGameData = async (req, res) => {
           marketId: market.marketId,
           marketName: market.marketName,
           participants: market.participants,
-          timeSpan: market.timeSpan,
+          startTime: market.startTime,
+          endTime: market.endTime,
           announcementResult: market.announcementResult,
           isActive: market.isActive,
           runners: market.Runners

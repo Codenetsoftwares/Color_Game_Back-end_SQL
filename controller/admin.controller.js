@@ -736,10 +736,7 @@ export const afterWining = async (req, res) => {
       },
       { where: { marketId } }
     );
-    await Runner.update(
-      { isBidding: false },
-      { where: { marketId } }
-    );
+
     return res
       .status(statusCode.success)
       .json(
@@ -782,16 +779,19 @@ export const revokeWinningAnnouncement = async (req, res) => {
       });
 
       if (user) {
-
-        const marketExposureEntry = user.marketListExposure = JSON.parse(prevState.marketListExposure);
-        const marketExposureValue = Number(marketExposureEntry[marketId]);
+        user.marketListExposure = JSON.parse(prevState.marketListExposure);
         const allRunnerBalances = JSON.parse(prevState.allRunnerBalances);
         const runnerBalance = allRunnerBalances[runnerId];
+        const marketExposureEntry = user.marketListExposure.find(
+          (item) => Object.keys(item)[0] === marketId
+        );
+        const marketExposureValue = Number(marketExposureEntry[marketId]);
+        console.log("market exposure value",marketExposureValue)
         if (runnerBalance > 0) {
-          user.balance -= runnerBalance + marketExposureValue;
+          user.balance -= Number(runnerBalance + marketExposureValue);
         }
         else {
-          user.balance += runnerBalance;
+          user.balance += Number(runnerBalance);
         }
 
         for (const [runnerId, balance] of Object.entries(allRunnerBalances)) {
@@ -842,7 +842,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
     );
 
     await Runner.update(
-      { hideRunnerUser: false, hideRunner: false, isWin: false },
+      { hideRunnerUser: false, hideRunner: false, isWin: false , isBidding : true},
       { where: { runnerId }, transaction }
     );
 
