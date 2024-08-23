@@ -428,7 +428,7 @@ export const filteredGameData = async (req, res) => {
       include: [
         {
           model: Market,
-          attributes: ['marketId', 'marketName', 'participants', 'timeSpan', 'announcementResult', 'isActive'],
+          attributes: ['marketId', 'marketName', 'participants','startTime', 'endTime', 'announcementResult', 'isActive'],
           include: [
             {
               model: Runner,
@@ -452,7 +452,8 @@ export const filteredGameData = async (req, res) => {
         marketId: market.marketId,
         marketName: market.marketName,
         participants: market.participants,
-        timeSpan: market.timeSpan,
+        startTime: market.startTime,
+        endTime: market.endTime,
         announcementResult: market.announcementResult,
         isActive: market.isActive,
         runners: market.Runners.map((runner) => ({

@@ -149,10 +149,6 @@ export const updateMarketSchema = [
     .optional()
     .notEmpty()
     .withMessage("Participants is required"),
-  body("timeSpan")
-    .optional()
-    .isString()
-    .withMessage("Time span must be a string"),
 ];
 
 export const updateRunnerSchema = [
