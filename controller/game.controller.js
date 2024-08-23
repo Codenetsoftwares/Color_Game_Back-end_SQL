@@ -15,6 +15,7 @@ import BetHistory from "../models/betHistory.model.js";
 import ProfitLoss from "../models/profitLoss.js";
 import CurrentOrder from "../models/currentOrder.model.js";
 import { format } from 'date-fns';
+import moment from 'moment';
 
 
 // done
@@ -271,9 +272,11 @@ export const createMarket = async (req, res) => {
       marketId: marketId,
       marketName: marketName,
       participants: participants,
-      startTime: new Date(startTime), 
-      endTime: new Date(endTime),   
-      announcementResult: false,     
+      startTime: moment(startTime).utc().format(),
+      endTime: moment(endTime).utc().format(),
+      // startTime: new Date(startTime), 
+      // endTime: new Date(endTime),   
+      announcementResult: false,
       isActive: true,
       isDisplay: true,
     });
@@ -324,7 +327,7 @@ export const getAllMarkets = async (req, res) => {
         marketName: {
           [Op.like]: `%${searchQuery}%`,
         },
-      hideMarket : false
+        hideMarket: false
       },
       offset: (page - 1) * pageSize,
       limit: pageSize,
@@ -756,7 +759,7 @@ export const getAllRunners = async (req, res) => {
 
     const whereConditions = {
       marketId: marketId,
-      hideRunner : false,
+      hideRunner: false,
       ...(searchQuery && {
         runnerName: {
           [Op.like]: `%${searchQuery}%`,
@@ -1058,7 +1061,7 @@ export const gameActiveInactive = async (req, res) => {
         apiResponseErr(null, false, statusCode.badRequest, "Status must be a boolean")
       );
   }
-  
+
   try {
     const games = await Game.findOne({ where: { gameId } });
 

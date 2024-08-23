@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { AdminRoute } from './routes/admin.route.js';
 import { UserRoute } from './routes/user.route.js';
 import { GameRoute } from './routes/game.route.js';
+import moment from 'moment';
 import { SliderRoute } from './routes/slider.route.js';
 import cors from 'cors';
 import { AnnouncementRoute } from './routes/announcement.route.js';
@@ -19,12 +20,19 @@ import MarketBalance from './models/marketBalance.js';
 import { InactiveGameRoute } from './routes/inactiveGame.route.js';
 import InactiveGame from './models/inactiveGame.model.js';
 import { startMarketCountdown } from './cron/startMarketCountdown.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Op } from "sequelize";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+import cron from 'node-cron'
 
 dotenv.config();
 const app = express();
-app.use(express.json({ limit: '100mb' }));
-app.use(bodyParser.json({ limit: '100mb' }));
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = process.env.FRONTEND_URI.split(',');
@@ -81,11 +89,73 @@ Market.hasMany(InactiveGame, { foreignKey: 'marketId' });
 InactiveGame.belongsTo(Runner, { foreignKey: 'runnerId' });
 Runner.hasMany(InactiveGame, { foreignKey: 'runnerId' });
 
+// SSE endpoint
+const clients = [];
+app.get('/events', (req, res) => {
+  console.log("Client connected to events");
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.flushHeaders(); // Ensure headers are sent immediately
+
+  // Add the connected client to the list
+  clients.push(res);
+
+  // Send an initial message
+  const initialMessage = { message: "SSE service is connected successfully!" };
+  res.write(`data: ${JSON.stringify(initialMessage)}\n\n`);
+
+  // Handle client disconnection
+  req.on('close', () => {
+    console.log('Client disconnected');
+    const index = clients.indexOf(res);
+    if (index !== -1) {
+      clients.splice(index, 1); // Remove the client from the list
+    }
+    res.end(); // End the response
+  });
+});
+
+// Cron job to send a message to all clients every 5 seconds
+cron.schedule('*/2 * * * * *', async () => {
+  try {
+    const markets = await Market.findAll({
+      where: {
+        isActive: true,
+        endTime: { [Op.lte]: moment().utc().format() }
+      }
+    });
+
+    let updateMarket = []
+    for (const market of markets) {
+
+      market.isActive = false;
+      const response = await market.save();
+
+      console.log("Markets Inactivated:", JSON.stringify(response, null, 2));
+
+      console.log(`Market ${response.marketName} has been deactivated.`);
+      updateMarket.push(JSON.parse(JSON.stringify(response)))
+
+    }
+
+    clients.forEach((client) => {
+      client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
+    });
+    console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
+
+  } catch (error) {
+    console.error('Error checking market statuses:', error);
+  }
+});
+
 sequelize
   .sync({ alter: true })
   .then(() => {
     console.log('Database & tables created!');
-    startMarketCountdown()
+    // startMarketCountdown()
     app.listen(process.env.PORT, () => {
       console.log(`App is running on  - http://localhost:${process.env.PORT || 7000}`);
     });
