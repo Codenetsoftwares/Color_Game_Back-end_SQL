@@ -405,11 +405,11 @@ export const updateMarket = async (req, res) => {
     }
 
     if (startTime !== undefined) {
-      market.startTime = new Date(startTime);
+      market.startTime = moment(startTime).utc().format();
     }
 
     if (endTime !== undefined) {
-      market.endTime = new Date(endTime);
+      market.endTime = moment(endTime).utc().format();
     }
 
     await market.save();
