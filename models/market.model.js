@@ -26,8 +26,12 @@ Market.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    timeSpan: {
-      type: DataTypes.STRING(255),
+    startTime: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    endTime: {
+      type: DataTypes.DATE,
       allowNull: false,
     },
     announcementResult: {
@@ -45,12 +49,25 @@ Market.init(
       allowNull: false,
       defaultValue: true,
     },
+    hideMarket: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    hideMarketUser :{
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isRevoke :{
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    }
   },
   {
     sequelize,
     modelName: 'Market',
     tableName: 'market',
-    timestamps: false,
+    timestamps: true,
+    updatedAt: false,
   },
 );
 

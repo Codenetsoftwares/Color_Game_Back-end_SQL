@@ -59,6 +59,9 @@ userSchema.init(
       type: DataTypes.JSON,
       allowNull: true,
     },
+    token :{
+      type: DataTypes.STRING,
+    }
   },
   {
     sequelize,

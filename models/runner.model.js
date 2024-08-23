@@ -46,12 +46,25 @@ Runner.init(
       allowNull: true,
       defaultValue: null,
     },
+    hideRunner : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    hideRunnerUser :{
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isBidding : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    }
   },
   {
     sequelize,
     modelName: 'Runner',
     tableName: 'runner',
-    timestamps: false,
+    timestamps: true, 
+    updatedAt: false,
     paranoid: true, // Enable soft delete
     deletedAt: 'deletedAt',
   },

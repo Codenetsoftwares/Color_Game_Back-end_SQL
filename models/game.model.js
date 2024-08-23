@@ -1,15 +1,10 @@
-import { DataTypes, Model } from 'sequelize';
-import sequelize from '../db.js';
+import { DataTypes, Model } from "sequelize";
+import sequelize from "../db.js";
 
 class Game extends Model {}
 
 Game.init(
   {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
     gameId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
@@ -30,10 +25,11 @@ Game.init(
   },
   {
     sequelize,
-    modelName: 'Game',
-    tableName: 'game',
-    timestamps: false,
-  },
+    modelName: "Game",
+    tableName: "game",
+    timestamps: true,
+    updatedAt: false,
+  }
 );
 
 export default Game;

@@ -21,6 +21,10 @@ import BetHistory from "../models/betHistory.model.js";
 import { Op } from "sequelize";
 import axios from "axios";
 import Game from "../models/game.model.js";
+import InactiveGame from "../models/inactiveGame.model.js";
+import CustomError from "../helper/extendError.js";
+import { PreviousState } from "../models/previousState.model.js";
+import sequelize from "../db.js";
 
 dotenv.config();
 const globalName = [];
@@ -76,57 +80,34 @@ export const createAdmin = async (req, res) => {
       );
   }
 };
-// done
-export const checkMarketStatus = async (req, res) => {
-  const marketId = req.params.marketId;
-  const { status } = req.body;
 
-  try {
-    const market = await marketSchema.findOne({ where: { marketId } });
-
-    if (!market) {
-      return res
-        .status(statusCode.notFound)
-        .json(
-          apiResponseErr(null, false, statusCode.notFound, "Market not found")
-        );
-    }
-
-    market.isActive = status;
-    await market.save();
-
-    const statusMessage = status ? "Market is active" : "Market is suspended";
-    res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(statusMessage, true, statusCode.success, "success")
-      );
-  } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message
-        )
-      );
-  }
-};
-// done
 export const getAllUsers = async (req, res) => {
   try {
-    const page = req.query.page ? parseInt(req.query.page) : 1;
-    const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : "";
+    // Destructure with defaults
+    let { page = 1, pageSize = 10, search = "" } = req.query;
 
-    const countQuery = await userSchema.count({
+    page = parseInt(page);
+    pageSize = parseInt(pageSize);
+
+    if (page < 1 || pageSize < 1) {
+      return res.status(statusCode.badRequest).json(
+        apiResponseErr(null, false, statusCode.badRequest, "Invalid pagination parameters")
+      );
+    }
+
+    const searchQuery = search.toLowerCase();
+
+    const totalItems = await userSchema.count({
       where: {
         userName: { [Op.like]: `%${searchQuery}%` },
       },
     });
-    const totalItems = countQuery;
+
+    if (totalItems === 0) {
+      return res.status(statusCode.badRequest).json(
+        apiResponseErr(null, false, statusCode.badRequest, "data not found")
+      );
+    }
 
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
@@ -138,15 +119,6 @@ export const getAllUsers = async (req, res) => {
       limit: pageSize,
       offset: offset,
     });
-
-    if (!users || users.length === 0) {
-      throw apiResponseErr(
-        null,
-        false,
-        statusCode.badRequest,
-        "User not found"
-      );
-    }
 
     const paginationData = {
       page,
@@ -161,12 +133,11 @@ export const getAllUsers = async (req, res) => {
           users,
           true,
           statusCode.success,
-          "success",
+          "Success",
           paginationData
         )
       );
   } catch (error) {
-    console.log(error);
     res
       .status(statusCode.internalServerError)
       .json(
@@ -174,7 +145,7 @@ export const getAllUsers = async (req, res) => {
           null,
           false,
           statusCode.internalServerError,
-          error.message
+          error.message,
         )
       );
   }
@@ -334,188 +305,6 @@ export const sendBalance = async (req, res) => {
   }
 };
 
-export const afterWining = async (req, res) => {
-  try {
-    const { marketId, runnerId, isWin } = req.body;
-    let gameId = null;
-
-    const market = await Market.findOne({
-      where: { marketId },
-      include: [{ model: Runner, required: false }],
-    });
-
-    if (!market) {
-      return res
-        .status(statusCode.badRequest)
-        .json(
-          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
-        );
-    }
-
-    gameId = market.gameId;
-
-    if (market.runners) {
-      market.runners.forEach((runner) => {
-        if (String(runner.runnerId) === runnerId) {
-          runner.isWin = isWin;
-        } else {
-          runner.isWin = false;
-        }
-      });
-    }
-
-    if (isWin) {
-      market.announcementResult = true;
-    }
-
-    await market.save();
-
-    const users = await MarketBalance.findAll({
-      where: { marketId },
-    });
-    let message = "";
-    for (const user of users) {
-      try {
-        const runnerBalance = await MarketBalance.findOne({
-          where: { marketId, runnerId, userId: user.userId },
-        });
-
-        if (runnerBalance) {
-          const userDetails = await userSchema.findOne({
-            where: { userId: user.userId },
-          });
-
-          if (userDetails) {
-            const marketExposureEntry = userDetails.marketListExposure.find(
-              (item) => Object.keys(item)[0] === marketId
-            );
-            if (marketExposureEntry) {
-              const marketExposureValue = Number(marketExposureEntry[marketId]);
-              const runnerBalanceValue = Number(runnerBalance.bal);
-
-              if (isWin) {
-                userDetails.balance += runnerBalanceValue + marketExposureValue;
-              } else {
-                console.log(
-                  `No win. Balance remains the same: ${userDetails.balance}`
-                );
-              }
-
-              await ProfitLoss.create({
-                userId: user.userId,
-                gameId,
-                marketId,
-                runnerId,
-                date: new Date(),
-                profitLoss: runnerBalanceValue,
-              });
-
-              userDetails.marketListExposure =
-                userDetails.marketListExposure.filter(
-                  (item) => Object.keys(item)[0] !== marketId
-                );
-
-              await userSchema.update(
-                { marketListExposure: userDetails.marketListExposure },
-                { where: { userId: user.userId } }
-              );
-
-              await userDetails.save();
-              // sync with whiteLable
-
-              const dataToSend = {
-                amount: userDetails.balance,
-                userId: userDetails.userId,
-              };
-              console.log("data", dataToSend);
-              const { data: response } = await axios.post(
-                "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
-                dataToSend
-              );
-
-              // console.log('Reset password response:', response.data);
-
-              if (!response.success) {
-                message = "Sync not successful";
-              } else {
-                message = "Sync data successful";
-              }
-
-              await MarketBalance.destroy({
-                where: { marketId, runnerId, userId: user.userId },
-              });
-            } else {
-              console.error(
-                `Market exposure not found for marketId ${marketId}`
-              );
-            }
-          } else {
-            console.error(`User details not found for userId ${user.userId}`);
-          }
-        } else {
-          console.error(
-            `Runner balance not found for marketId ${marketId} and runnerId ${runnerId}`
-          );
-        }
-      } catch (error) {
-        console.error("Error processing user:", error);
-      }
-    }
-
-    if (isWin) {
-      const orders = await CurrentOrder.findAll({
-        where: { marketId },
-      });
-
-      for (const order of orders) {
-        await BetHistory.create({
-          userId: order.userId,
-          gameId: order.gameId,
-          gameName: order.gameName,
-          marketId: order.marketId,
-          marketName: order.marketName,
-          runnerId: order.runnerId,
-          runnerName: order.runnerName,
-          rate: order.rate,
-          value: order.value,
-          type: order.type,
-          date: new Date(),
-          bidAmount: order.bidAmount,
-          isWin: order.isWin,
-          profitLoss: order.profitLoss,
-        });
-      }
-
-      await CurrentOrder.destroy({
-        where: { marketId },
-      });
-    }
-
-    return res
-      .status(statusCode.success)
-      .json(
-        apiResponseSuccess(
-          null,
-          true,
-          statusCode.success,
-          "Success" + " " + message
-        )
-      );
-  } catch (error) {
-    console.error("Error sending balance:", error);
-    return res
-      .status(statusCode.internalServerError)
-      .json(
-        apiResponseErr(
-          null,
-          false,
-          statusCode.internalServerError,
-          error.message
-        )
-      );
-  }
-};
-
 // Authenticate by user Password
 
 export const updateByAdmin = async (req, res) => {
@@ -559,7 +348,6 @@ export const updateByAdmin = async (req, res) => {
       transferFromUserAccount: transferFromUserAccount,
       transferToUserAccount: transferToUserAccount,
     });
-    console.log("uddbvbdvb", createTransaction);
     if (!createTransaction) {
       return res
         .status(statusCode.badRequest)
@@ -601,73 +389,367 @@ export const updateByAdmin = async (req, res) => {
 export const buildRootPath = async (req, res) => {
   try {
     const { action } = req.params;
-    const { name } = req.query;
-    let user;
+    const { id } = req.query;
+    let data;
 
-    // Find user based on the name
-    user =
-      (await Game.findOne({ where: { gameName: name } })) ||
-      (await Market.findOne({ where: { marketName: name } })) ||
-      (await Runner.findOne({ where: { runnerName: name } }));
+    // Find data based on the id
+    data = await Game.findOne({ where: { gameId: id } }) ||
+      await Market.findOne({ where: { marketId: id } }) ||
+      await Runner.findOne({ where: { runnerId: id } });
 
-    if (!user) {
-      return res
-      .status(statusCode.success)
-      .json(
+    if (!data) {
+      return res.status(statusCode.badRequest).json(
         apiResponseErr(null, false, statusCode.badRequest, "Data not found for the specified criteria")
       );
     }
 
+    const entityName = data instanceof Game ? data.gameName
+      : data instanceof Market ? data.marketName
+        : data.runnerName;
+
+    // Map name to identifier in an array format
+    const nameIdMap = globalName.map(item => ({ name: item.name, id: item.id }));
+
     if (action === "store") {
-      const newPath = name;
-      const indexToRemove = globalName.indexOf(newPath);
+      const newPath = { name: entityName, id };
+      const indexToRemove = globalName.findIndex(item => item.id === newPath.id);
 
       if (indexToRemove !== -1) {
-        globalName.splice(indexToRemove + 1);
+        globalName.splice(indexToRemove + 1); // Remove elements after the found index
       } else {
-        globalName.push(newPath);
+        globalName.push(newPath); // Add new path
       }
 
-      await user.update({ path: JSON.stringify(globalName) });
+      // Update user's path
+      await data.update({ path: JSON.stringify(globalName) });
 
-      return res
-      .status(statusCode.success)
-      .json(
+      return res.status(statusCode.success).json(
         apiResponseSuccess(globalName, true, statusCode.success, "Path stored successfully")
       );
     } else if (action === "clear") {
-      const lastUsername = globalName.pop();
+      const lastItem = globalName.pop();
 
-      if (lastUsername) {
-        const indexToRemove = globalName.indexOf(lastUsername);
+      if (lastItem) {
+        const indexToRemove = globalName.findIndex(item => item.id === lastItem.id);
 
         if (indexToRemove !== -1) {
-          globalName.splice(indexToRemove, 1);
+          globalName.splice(indexToRemove, 1); // Remove specific element
         }
       }
     } else if (action === "clearAll") {
-      globalName.length = 0;
+      globalName.length = 0; // Clear the entire array
     } else {
-      return res
-      .status(statusCode.success)
-      .json(
+      return res.status(statusCode.badRequest).json(
         apiResponseErr(null, false, statusCode.badRequest, "Invalid action provided")
       );
     }
 
-    await user.update({ path: JSON.stringify(globalName) });
+    // Update user's path after clear or clearAll actions
+    await data.update({ path: JSON.stringify(globalName) });
 
-    const successMessage =
-      action === "store"
-        ? "Path stored successfully"
-        : "Path cleared successfully";
+    const successMessage = action === "store" ? "Path stored successfully" : "Path cleared successfully";
+    return res.status(statusCode.success).json(
+      apiResponseSuccess(globalName, true, statusCode.success, successMessage)
+    );
+  } catch (error) {
+    console.error('Error occurred:', error); // Log error for debugging
+    return res.status(statusCode.internalServerError).json(
+      apiResponseErr(null, false, statusCode.internalServerError, error.message)
+    );
+  }
+};
+
+export const storePreviousState = async (
+  user,
+  marketId,
+  runnerId,
+  gameId,
+  runnerBalanceValue
+) => {
+  // Fetch all runner balances for the given market and user
+  const allRunnerBalances = await MarketBalance.findAll({
+    where: { marketId, userId: user.userId },
+    attributes: ['runnerId', 'bal']
+  });
+
+  // Convert the runner balances to an object
+  const allRunnerBalancesObj = {};
+  allRunnerBalances.forEach((item) => {
+    allRunnerBalancesObj[item.runnerId] = Number(item.bal);
+  });
+
+  // Create the previous state object
+  const previousState = {
+    userId: user.userId,
+    marketId: marketId,
+    runnerId: runnerId,
+    gameId: gameId,
+    balance: user.balance,
+    marketListExposure: JSON.stringify(user.marketListExposure),
+    runnerBalance: runnerBalanceValue,
+    allRunnerBalances: JSON.stringify(allRunnerBalancesObj),
+    isReverted: false,
+  };
+
+  // Save the previous state
+  await PreviousState.create(previousState);
+};
+
+export const afterWining = async (req, res) => {
+  try {
+    const { marketId, runnerId, isWin } = req.body;
+    let gameId = null;
+
+    const market = await Market.findOne({
+      where: { marketId },
+      include: [{ model: Runner, required: false }],
+    });
+
+    if (!market) {
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
+        );
+    }
+
+    gameId = market.gameId;
+
+    // Update market runners with win status
+    if (market.runners) {
+      market.runners.forEach((runner) => {
+        runner.isWin = String(runner.runnerId) === runnerId ? isWin : false;
+      });
+    }
+
+    if (isWin) {
+      const runners = await Runner.findAll({ where: { runnerId } });
+      for (const runner of runners) {
+        runner.isWin = true;
+        await runner.save();
+      }
+      market.announcementResult = true;
+    }
+    await market.save();
+
+    // Fetch users and previous state data
+    const users = await MarketBalance.findAll({ where: { marketId } });
+    const previousStateUsers = await PreviousState.findAll({ where: { marketId } });
+
+    let message = "";
+
+    if (market.isRevoke) {
+      for (const user of previousStateUsers) {
+        try {
+          let allRunnerBalances = JSON.parse(user.allRunnerBalances);
+
+          const runnerBalance = allRunnerBalances[runnerId];
+
+          if (runnerBalance) {
+            const userDetails = await userSchema.findOne({
+              where: { userId: user.userId },
+            });
+
+            if (userDetails) {
+              await storePreviousState(
+                userDetails,
+                marketId,
+                runnerId,
+                gameId,
+                Number(runnerBalance)
+              );
+
+              const marketExposureEntry = userDetails.marketListExposure.find(
+                (item) => Object.keys(item)[0] === marketId
+              );
+
+              if (marketExposureEntry) {
+                const marketExposureValue = Number(marketExposureEntry[marketId]);
+                const runnerBalanceValue = Number(runnerBalance);
+
+                if (isWin) {
+                  userDetails.balance += runnerBalanceValue + marketExposureValue;
+                }
+
+                await ProfitLoss.create({
+                  userId: user.userId,
+                  gameId,
+                  marketId,
+                  runnerId,
+                  date: new Date(),
+                  profitLoss: runnerBalanceValue,
+                });
+
+                userDetails.marketListExposure =
+                  userDetails.marketListExposure.filter(
+                    (item) => Object.keys(item)[0] !== marketId
+                  );
+
+                await userSchema.update(
+                  { marketListExposure: userDetails.marketListExposure },
+                  { where: { userId: user.userId } }
+                );
+
+                await userDetails.save();
+
+                const dataToSend = {
+                  amount: userDetails.balance,
+                  userId: user.userId,
+                };
+                const { data: response } = await axios.post(
+                  "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+                  dataToSend
+                );
+
+                message = response.success ? "Sync data successful" : "Sync not successful";
+
+                await MarketBalance.destroy({
+                  where: { marketId, runnerId, userId: user.userId },
+                });
+              } else {
+                console.error(`Market exposure not found for marketId ${marketId}`);
+              }
+            } else {
+              console.error(`User details not found for userId ${user.userId}`);
+            }
+          } else {
+            console.error(`Runner balance not found for marketId ${marketId} and runnerId ${runnerId}`);
+          }
+        } catch (error) {
+          console.error("Error processing user:", error);
+        }
+      }
+    } else {
+      for (const user of users) {
+        try {
+          const runnerBalance = await MarketBalance.findOne({
+            where: { marketId, runnerId, userId: user.userId },
+          });
+
+          if (runnerBalance) {
+            const userDetails = await userSchema.findOne({
+              where: { userId: user.userId },
+            });
+
+            if (userDetails) {
+              await storePreviousState(
+                userDetails,
+                marketId,
+                runnerId,
+                gameId,
+                Number(runnerBalance.bal)
+              );
+
+              const marketExposureEntry = userDetails.marketListExposure.find(
+                (item) => Object.keys(item)[0] === marketId
+              );
+              if (marketExposureEntry) {
+                const marketExposureValue = Number(marketExposureEntry[marketId]);
+                const runnerBalanceValue = Number(runnerBalance.bal);
+
+                if (isWin) {
+                  userDetails.balance += runnerBalanceValue + marketExposureValue;
+                }
+
+                await ProfitLoss.create({
+                  userId: user.userId,
+                  gameId,
+                  marketId,
+                  runnerId,
+                  date: new Date(),
+                  profitLoss: runnerBalanceValue,
+                });
+
+                userDetails.marketListExposure =
+                  userDetails.marketListExposure.filter(
+                    (item) => Object.keys(item)[0] !== marketId
+                  );
+
+                await userSchema.update(
+                  { marketListExposure: userDetails.marketListExposure },
+                  { where: { userId: user.userId } }
+                );
+
+                await userDetails.save();
+
+                const dataToSend = {
+                  amount: userDetails.balance,
+                  userId: userDetails.userId,
+                };
+                const { data: response } = await axios.post(
+                  "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+                  dataToSend
+                );
+
+                message = response.success ? "Sync data successful" : "Sync not successful";
+
+                await MarketBalance.destroy({
+                  where: { marketId, runnerId, userId: user.userId },
+                });
+              } else {
+                console.error(`Market exposure not found for marketId ${marketId}`);
+              }
+            } else {
+              console.error(`User details not found for userId ${user.userId}`);
+            }
+          } else {
+            console.error(`Runner balance not found for marketId ${marketId} and runnerId ${runnerId}`);
+          }
+        } catch (error) {
+          console.error("Error processing user:", error);
+        }
+      }
+    }
+
+    if (isWin) {
+      const orders = await CurrentOrder.findAll({ where: { marketId } });
+
+      for (const order of orders) {
+        await BetHistory.create({
+          userId: order.userId,
+          gameId: order.gameId,
+          gameName: order.gameName,
+          marketId: order.marketId,
+          marketName: order.marketName,
+          runnerId: order.runnerId,
+          runnerName: order.runnerName,
+          rate: order.rate,
+          value: order.value,
+          type: order.type,
+          date: new Date(),
+          bidAmount: order.bidAmount,
+          isWin: order.isWin,
+          profitLoss: order.profitLoss,
+        });
+      }
+
+      await CurrentOrder.destroy({ where: { marketId } });
+    }
+
+    await Market.update(
+      {
+        isRevoke: false,
+        hideMarketUser: true,
+        hideRunnerUser: true,
+        hideMarket: true,
+        hideRunner: true,
+      },
+      { where: { marketId } }
+    );
+
     return res
       .status(statusCode.success)
       .json(
-        apiResponseSuccess(globalName, true, statusCode.success, successMessage)
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Success" + " " + message
+        )
       );
   } catch (error) {
-    res
+    console.error("Error sending balance:", error);
+    return res
       .status(statusCode.internalServerError)
       .json(
         apiResponseErr(
@@ -679,3 +761,178 @@ export const buildRootPath = async (req, res) => {
       );
   }
 };
+
+export const revokeWinningAnnouncement = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { marketId, runnerId } = req.body;
+
+    const previousStates = await PreviousState.findAll({
+      where: { marketId, runnerId },
+      transaction,
+    });
+
+    for (const prevState of previousStates) {
+      const user = await userSchema.findOne({
+        where: { userId: prevState.userId },
+        transaction,
+      });
+
+      if (user) {
+        user.marketListExposure = JSON.parse(prevState.marketListExposure);
+        const allRunnerBalances = JSON.parse(prevState.allRunnerBalances);
+        const runnerBalance = allRunnerBalances[runnerId];
+        const marketExposureEntry = user.marketListExposure.find(
+          (item) => Object.keys(item)[0] === marketId
+        );
+        const marketExposureValue = Number(marketExposureEntry[marketId]);
+        console.log("market exposure value",marketExposureValue)
+        if (runnerBalance > 0) {
+          user.balance -= Number(runnerBalance + marketExposureValue);
+        }
+        else {
+          user.balance += Number(runnerBalance);
+        }
+
+        for (const [runnerId, balance] of Object.entries(allRunnerBalances)) {
+          try {
+            let runnerBalance = await MarketBalance.findOne({
+              where: { marketId, runnerId, userId: user.userId },
+              transaction,
+            });
+
+            if (runnerBalance) {
+              runnerBalance.bal = balance.toString();
+              await runnerBalance.save({ transaction });
+            } else {
+              await MarketBalance.create(
+                {
+                  marketId,
+                  runnerId,
+                  userId: user.userId,
+                  bal: balance.toString(),
+                },
+                { transaction }
+              );
+            }
+          } catch (error) {
+            console.error("Error processing runner balance:", error);
+          }
+        }
+
+        await user.save({ transaction });
+      } else {
+        console.log("User Not Found for userId:", prevState.userId);
+      }
+    }
+    await PreviousState.update(
+      { isReverted: true },
+      { where: { marketId, runnerId }, transaction }
+    );
+
+    console.log("Updating Market and Runner...");
+    await Market.update(
+      {
+        isRevoke: true,
+        isActive: false,
+        hideMarketUser: false,
+        hideMarket: false,
+      },
+      { where: { marketId }, transaction }
+    );
+
+    await Runner.update(
+      { hideRunnerUser: false, hideRunner: false, isWin: false , isBidding : true},
+      { where: { runnerId }, transaction }
+    );
+
+    await transaction.commit();
+    console.log("Transaction Committed");
+
+    return res
+      .status(statusCode.success)
+      .json(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Winning announcement revoked successfully"
+        )
+      );
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error revoking winning announcement:", error);
+    return res
+      .status(statusCode.internalServerError)
+      .json(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
+// done
+export const checkMarketStatus = async (req, res) => {
+  const marketId = req.params.marketId;
+  const { status } = req.body;
+
+  try {
+    const market = await Market.findOne({ where: { marketId } });
+
+    if (!market) {
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, "Market not found")
+        );
+    }
+
+    await Market.update(
+      { hideMarketUser: false, isRevoke: false },
+      { where: { marketId } }
+    );
+
+    await PreviousState.destroy({
+      where: { marketId },
+    });
+
+    market.isActive = status;
+    await market.save();
+
+    // if (status === true) {
+    //   if (market.endTime) {
+    //     startMarketCountdown(market);
+    //   } else {
+    //     throw new CustomError('Market end time is not set.', null, statusCode.badRequest)
+    //   }
+    // }
+
+    const statusMessage = status ? "Market is active" : "Market is suspended";
+    res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          statusMessage
+        )
+      );
+
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message
+        )
+      );
+  }
+};
+

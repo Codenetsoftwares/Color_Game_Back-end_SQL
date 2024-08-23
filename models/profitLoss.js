@@ -19,15 +19,15 @@ ProfitLoss.init(
     },
     gameId: {
       type: DataTypes.CHAR(36),
-      allowNull: false,
+      allowNull: true,
     },
     marketId: {
       type: DataTypes.CHAR(36),
-      allowNull: false,
+      allowNull: true,
     },
     runnerId: {
       type: DataTypes.CHAR(36),
-      allowNull: false,
+      allowNull: true,
     },
     profitLoss: {
       type: DataTypes.DECIMAL(10, 2),
@@ -53,12 +53,12 @@ ProfitLoss.init(
     ],
   },
 );
-ProfitLoss.belongsTo(Runner, { foreignKey: 'runnerId', targetKey: 'runnerId' });
+ProfitLoss.belongsTo(Runner, { foreignKey: 'runnerId', targetKey: 'runnerId', onDelete: 'SET NULL' });
 Runner.hasMany(ProfitLoss, { foreignKey: 'runnerId', sourceKey: 'runnerId' });
 
-ProfitLoss.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId' });
+ProfitLoss.belongsTo(Market, { foreignKey: 'marketId', targetKey: 'marketId', onDelete: 'SET NULL' });
 Market.hasMany(ProfitLoss, { foreignKey: 'marketId', sourceKey: 'marketId' });
 
-ProfitLoss.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
+ProfitLoss.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId', onDelete: 'SET NULL' });
 Game.hasMany(ProfitLoss, { foreignKey: 'gameId', sourceKey: 'gameId' });
 export default ProfitLoss;

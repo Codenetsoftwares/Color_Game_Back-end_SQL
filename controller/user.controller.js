@@ -16,6 +16,7 @@ import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
 import exp from 'constants';
 import sequelize from '../db.js';
+import { PreviousState } from '../models/previousState.model.js';
 
 // done
 export const createUser = async (req, res) => {
@@ -328,15 +329,32 @@ export const userRunners = async (req, res) => {
 export const getAllGameData = async (req, res) => {
   try {
     const gameData = await Game.findAll({
-      attributes: ['gameId', 'gameName', 'description', 'isBlink'],
+      attributes: ["gameId", "gameName", "description", "isBlink"],
       include: [
         {
           model: Market,
-          attributes: ['marketId', 'marketName', 'participants', 'timeSpan', 'announcementResult', 'isActive'],
+          attributes: [
+            "marketId",
+            "marketName",
+            "participants",
+            "startTime",
+            "endTime",
+            "announcementResult",
+            "isActive",
+            "hideMarketUser",
+          ],
           include: [
             {
               model: Runner,
-              attributes: ['runnerId', 'runnerName', 'isWin', 'bal', 'back', 'lay'],
+              attributes: [
+                "runnerId",
+                "runnerName",
+                "isWin",
+                "bal",
+                "back",
+                "lay",
+                "hideRunnerUser",
+              ],
             },
           ],
         },
@@ -348,44 +366,64 @@ export const getAllGameData = async (req, res) => {
       gameName: game.gameName,
       description: game.description,
       isBlink: game.isBlink,
-      markets: game.Markets.map((market) => ({
-        marketId: market.marketId,
-        marketName: market.marketName,
-        participants: market.participants,
-        timeSpan: market.timeSpan,
-        announcementResult: market.announcementResult,
-        isActive: market.isActive,
-        runners: market.Runners.map((runner) => ({
-          runnerName: {
-            runnerId: runner.runnerId,
-            runnerName: runner.runnerName,
-            isWin: runner.isWin,
-            bal: runner.bal,
-          },
-          rate: [
-            {
-              back: runner.back,
-              lay: runner.lay,
-            },
-          ],
+      markets: game.Markets
+        .filter((market) => !market.hideMarketUser) 
+        .map((market) => ({
+          marketId: market.marketId,
+          marketName: market.marketName,
+          participants: market.participants,
+          startTime: market.startTime,
+          endTime: market.endTime,
+          announcementResult: market.announcementResult,
+          isActive: market.isActive,
+          runners: market.Runners
+            .filter((runner) => !runner.hideRunnerUser) 
+            .map((runner) => ({
+              runnerId: runner.runnerId,
+              runnerName: runner.runnerName,
+              isWin: runner.isWin,
+              bal: runner.bal,
+              rate: [
+                {
+                  back: runner.back,
+                  lay: runner.lay,
+                },
+              ],
+            })),
         })),
-      })),
     }));
 
-    res.status(statusCode.success).json(apiResponseSuccess(formattedGameData, true, statusCode.success, 'Success'));
+    res
+      .status(statusCode.success)
+      .json(
+        apiResponseSuccess(
+          formattedGameData,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-    console.error('Error retrieving game data:', error);
+    console.error("Error retrieving game data:", error);
     res
       .status(statusCode.internalServerError)
-      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .json(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
+
 // done
 export const filteredGameData = async (req, res) => {
   try {
     const gameId = req.params.gameId;
     const gameData = await Game.findAll({
-      where: { gameId },
+    where: { gameId },
       attributes: ['gameId', 'gameName', 'description', 'isBlink'],
       include: [
         {
@@ -540,8 +578,9 @@ export const filterMarketData = async (req, res) => {
     const marketId = req.params.marketId;
     const userId = req.body?.userId;
 
+    // Fetch market data
     const marketDataRows = await Market.findAll({
-      where: { marketId },
+      where: { marketId ,hideMarketUser: false},
       include: [
         {
           model: Runner,
@@ -551,19 +590,21 @@ export const filterMarketData = async (req, res) => {
     });
 
     if (marketDataRows.length === 0) {
-      throw apiResponseErr(null, false, statusCode.badRequest, 'Market not found with MarketId');
+      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found with MarketId'));
     }
 
     let marketDataObj = {
       marketId: marketDataRows[0].marketId,
       marketName: marketDataRows[0].marketName,
       participants: marketDataRows[0].participants,
-      timeSpan: marketDataRows[0].timeSpan,
+      startTime: marketDataRows[0].startTime,
+      endTime: marketDataRows[0].endTime,
       announcementResult: marketDataRows[0].announcementResult,
       isActive: marketDataRows[0].isActive,
       runners: [],
     };
 
+    // Initialize runner data
     marketDataRows[0].Runners.forEach((runner) => {
       marketDataObj.runners.push({
         id: runner.id,
@@ -583,6 +624,7 @@ export const filterMarketData = async (req, res) => {
     });
 
     if (userId) {
+      // Fetch current orders
       const currentOrdersRows = await CurrentOrder.findAll({
         where: {
           userId,
@@ -590,6 +632,7 @@ export const filterMarketData = async (req, res) => {
         },
       });
 
+      // Calculate user market balance
       const userMarketBalance = {
         userId,
         marketId,
@@ -597,73 +640,77 @@ export const filterMarketData = async (req, res) => {
       };
 
       marketDataObj.runners.forEach((runner) => {
+        let runnerBalance = 0;
         currentOrdersRows.forEach((order) => {
           if (order.type === 'back') {
             if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runner.runnerName.bal += Number(order.bidAmount);
+              runnerBalance += Number(order.bidAmount);
             } else {
-              runner.runnerName.bal -= Number(order.value);
+              runnerBalance -= Number(order.value);
             }
           } else if (order.type === 'lay') {
             if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runner.runnerName.bal -= Number(order.bidAmount);
+              runnerBalance -= Number(order.bidAmount);
             } else {
-              runner.runnerName.bal += Number(order.value);
+              runnerBalance += Number(order.value);
             }
           }
         });
 
         userMarketBalance.runnerBalance.push({
           runnerId: runner.runnerName.runnerId,
-          bal: runner.runnerName.bal,
+          bal: runnerBalance,
         });
+
+        // Update the runner balance in marketDataObj
+        runner.runnerName.bal = runnerBalance;
       });
 
-      for (const balance of userMarketBalance.runnerBalance) {
-        const userMarketBalanceRows = await MarketBalance.findAll({
-          where: {
-            userId,
-            marketId,
-            runnerId: balance.runnerId,
-          },
-        });
+      // Clear existing MarketBalance entries for the user and market
+      const deleteResult = await MarketBalance.destroy({
+        where: {
+          userId,
+          marketId,
+        },
+      });
 
-        if (userMarketBalanceRows.length > 0) {
-          await MarketBalance.update(
-            { bal: balance.bal },
-            {
-              where: {
-                userId,
-                marketId,
-                runnerId: balance.runnerId,
-              },
-            },
-          );
-        } else {
-          await MarketBalance.create({
-            userId,
-            marketId,
-            runnerId: balance.runnerId,
-            bal: balance.bal,
-          });
-        }
+      console.log(`Deleted ${deleteResult} MarketBalance entries for userId ${userId} and marketId ${marketId}`);
+
+      // Save or update the balances in MarketBalance
+      for (const balance of userMarketBalance.runnerBalance) {
+        await MarketBalance.create({
+          userId,
+          marketId,
+          runnerId: balance.runnerId,
+          bal: balance.bal,
+        });
+      }
+
+      // Check if previous state should be shown
+      const previousState = await PreviousState.findOne({
+        where: { marketId, userId, isReverted: true },
+      });
+
+      if (previousState) {
+        // Fetch previously stored balances from PreviousState
+        const previousBalances = JSON.parse(previousState.allRunnerBalances);
+
+        // Update the marketDataObj with previous balances
+        marketDataObj.runners.forEach((runner) => {
+          if (previousBalances[runner.runnerName.runnerId]) {
+            runner.runnerName.bal = previousBalances[runner.runnerName.runnerId];
+          }
+        });
       }
     }
 
-    res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
+    return res.status(statusCode.success).json(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
+    console.error('Error fetching market data:', error);
+    return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+
 export const createBid = async (req, res) => {
   const { userId, gameId, marketId, runnerId, value, bidType, exposure, wallet, marketListExposure } = req.body;
   try {
@@ -694,6 +741,10 @@ export const createBid = async (req, res) => {
     if (!market) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Market Not Found');
     }
+    if (!market.isActive) {
+      throw apiResponseErr(null, false, statusCode.badRequest, 'Market is suspended. Bid cannot be placed.');
+    }
+
     const runner = await Runner.findOne({ where: { marketId, runnerId } });
     if (!runner) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Runner Not Found');
@@ -725,6 +776,12 @@ export const createBid = async (req, res) => {
       });
       await user.save();
     }
+    
+    await Runner.update(
+      { isBidding: true },
+      { where: { marketId } } 
+    );
+
     return res
       .status(statusCode.success)
       .send(apiResponseSuccess(null, true, statusCode.success, 'Bid placed successfully'));
@@ -985,8 +1042,8 @@ export const marketProfitLoss = async (req, res) => {
 
       if (profitLossEntries.length === 0) {
         return res
-        .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
+          .status(statusCode.success)
+          .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
       }
 
       const game = await Game.findOne({
