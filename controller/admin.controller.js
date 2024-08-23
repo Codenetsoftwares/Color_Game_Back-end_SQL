@@ -790,9 +790,6 @@ export const revokeWinningAnnouncement = async (req, res) => {
         if (runnerBalance > 0) {
           user.balance -= Number(runnerBalance + marketExposureValue);
         }
-        else {
-          user.balance += Number(runnerBalance);
-        }
 
         for (const [runnerId, balance] of Object.entries(allRunnerBalances)) {
           try {
