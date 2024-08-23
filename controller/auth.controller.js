@@ -139,23 +139,37 @@ export const resetPassword = async (req, res) => {
     const { userName, oldPassword, newPassword } = req.body;
 
     const existingUser = await userSchema.findOne({ where: { userName } });
+    console.log('existingUser', existingUser)
 
+    // if user exist then reset password
     if (existingUser) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists.'));
-    }
+      const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
+      if (!isPasswordMatch) {
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
+      }
+      console.log('existingUser', existingUser)
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    const dataToSend = {
-      userName,
-      oldPassword,
-      newPassword
-    };
+      await existingUser.update({ password: hashedPassword });
+    
+      const dataToSend = {
+        userName,
+        oldPassword,
+        newPassword
+      };
+  
+      console.log("dataToSend", dataToSend)
+      const response = await axios.post('https://wl.server.dummydoma.in/api/external/reset-password', dataToSend);
+      console.log("response", response)
+  
+      console.log('Reset password response:', response.data);
+  
+      if (!response.data.success) {
+        return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact admin.'));
+      }
 
-    const response = await axios.post('https://wl.server.dummydoma.in/api/external/reset-password', dataToSend);
-
-    console.log('Reset password response:', response.data);
-
-    if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact admin.'));
+      return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
     }
 
     const salt = await bcrypt.genSalt(10);
