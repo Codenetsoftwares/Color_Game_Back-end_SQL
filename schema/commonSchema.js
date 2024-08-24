@@ -23,7 +23,7 @@ export const bidTypeSchema = [
 ];
 
 export const bidHistorySchema = [
-  param("marketId").exists().withMessage("Market ID is required."),
+  param("gameId").exists().withMessage("game ID is required."),
   query("page")
     .optional()
     .toInt()

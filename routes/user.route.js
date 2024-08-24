@@ -71,7 +71,7 @@ export const UserRoute = (app) => {
   app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, authorize([string.User]), createBid);
   // done
   app.get(
-    '/api/user-betHistory/:marketId',
+    '/api/user-betHistory/:gameId',
     bidHistorySchema,
     customErrorHandler,
     authorize([string.User]),

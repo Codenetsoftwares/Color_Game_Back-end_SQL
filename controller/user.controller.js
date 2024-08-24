@@ -804,10 +804,10 @@ export const getUserBetHistory = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    const marketId = req.params.marketId;
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
-    const { startDate, endDate } = req.query;
+    const gameId = req.params.gameId;
+    // const page = parseInt(req.query.page, 10) || 1;
+    // const limit = parseInt(req.query.limit, 1) || 5;
+    const { startDate, endDate,page=1,limit =5 }= req.query;
 
     let start = null;
     let end = null;
@@ -836,7 +836,7 @@ export const getUserBetHistory = async (req, res) => {
 
     const whereClause = {
       userId,
-      marketId,
+      gameId,
     };
 
     if (start && end) {
@@ -867,10 +867,10 @@ export const getUserBetHistory = async (req, res) => {
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
-          error.data ?? null,
+          null,
           false,
-          error.successCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
+         statusCode.internalServerError,
+           error.message,
         ),
       );
   }
