@@ -21,6 +21,7 @@ Runner.init(
     runnerId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
+      unique: true, 
     },
     runnerName: {
       type: DataTypes.STRING(255),

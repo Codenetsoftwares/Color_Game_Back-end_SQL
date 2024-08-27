@@ -17,6 +17,7 @@ Market.init(
     marketId: {
       type: DataTypes.CHAR(150),
       allowNull: false,
+      unique: true, 
     },
     marketName: {
       type: DataTypes.STRING(255),

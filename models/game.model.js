@@ -8,6 +8,7 @@ Game.init(
     gameId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
+      unique : true
     },
     gameName: {
       type: DataTypes.STRING(255),
