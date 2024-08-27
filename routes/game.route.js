@@ -32,6 +32,7 @@ import {
   validateMarketId,
   validateDeleteRunner,
   gameActiveInactiveValidate,
+  validateUpdateGameStatus,
 } from '../schema/commonSchema.js';
 
 export const GameRoute = (app) => {
@@ -96,7 +97,7 @@ export const GameRoute = (app) => {
     gameActiveInactive,
   );
 
-  app.post('/api/game-active-suspended/:gameId',updateGameStatus );
+  app.post('/api/game-active-suspended/:gameId',validateUpdateGameStatus,customErrorHandler,authorize([string.Admin]),updateGameStatus );
 
 
 };
