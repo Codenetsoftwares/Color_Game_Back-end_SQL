@@ -66,10 +66,7 @@ export const trashUserSchema = [
 ];
 
 export const createdUserSchema = [
-  body("firstName").trim().notEmpty().withMessage("First name is required"),
-  body("lastName").trim().notEmpty().withMessage("Last name is required"),
   body("userName").trim().notEmpty().withMessage("Username is required"),
-  body("phoneNumber").trim().notEmpty().withMessage("Phone number is required"),
   body("password")
     .trim()
     .notEmpty()

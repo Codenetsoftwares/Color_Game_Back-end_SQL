@@ -23,6 +23,11 @@ Game.init(
       allowNull: false,
       defaultValue: false,
     },
+    isGameActive:{
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue:true,
+    }
   },
   {
     sequelize,

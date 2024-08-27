@@ -20,7 +20,7 @@ import { PreviousState } from '../models/previousState.model.js';
 
 // done
 export const createUser = async (req, res) => {
-  const { firstName, lastName, userName, phoneNumber, password } = req.body;
+  const { userId, userName, password} = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -32,11 +32,8 @@ export const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = await userSchema.create({
-      firstName,
-      lastName,
+      userId,
       userName,
-      userId: uuidv4(),
-      phoneNumber,
       password: hashedPassword,
       roles: string.User,
     });
@@ -46,6 +43,7 @@ export const createUser = async (req, res) => {
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
   }
 };
+
 // done
 export const userUpdate = async (req, res) => {
   const { userId } = req.params;
@@ -367,7 +365,7 @@ export const getAllGameData = async (req, res) => {
       description: game.description,
       isBlink: game.isBlink,
       markets: game.Markets
-        .filter((market) => !market.hideMarketUser) 
+        .filter((market) => !market.hideMarketUser)
         .map((market) => ({
           marketId: market.marketId,
           marketName: market.marketName,
@@ -377,7 +375,7 @@ export const getAllGameData = async (req, res) => {
           announcementResult: market.announcementResult,
           isActive: market.isActive,
           runners: market.Runners
-            .filter((runner) => !runner.hideRunnerUser) 
+            .filter((runner) => !runner.hideRunnerUser)
             .map((runner) => ({
               runnerId: runner.runnerId,
               runnerName: runner.runnerName,
@@ -423,12 +421,12 @@ export const filteredGameData = async (req, res) => {
   try {
     const gameId = req.params.gameId;
     const gameData = await Game.findAll({
-    where: { gameId },
+      where: { gameId },
       attributes: ['gameId', 'gameName', 'description', 'isBlink'],
       include: [
         {
           model: Market,
-          attributes: ['marketId', 'marketName', 'participants','startTime', 'endTime', 'announcementResult', 'isActive'],
+          attributes: ['marketId', 'marketName', 'participants', 'startTime', 'endTime', 'announcementResult', 'isActive'],
           include: [
             {
               model: Runner,
@@ -581,7 +579,7 @@ export const filterMarketData = async (req, res) => {
 
     // Fetch market data
     const marketDataRows = await Market.findAll({
-      where: { marketId ,hideMarketUser: false},
+      where: { marketId, hideMarketUser: false },
       include: [
         {
           model: Runner,
@@ -777,10 +775,10 @@ export const createBid = async (req, res) => {
       });
       await user.save();
     }
-    
+
     await Runner.update(
       { isBidding: true },
-      { where: { marketId } } 
+      { where: { marketId } }
     );
 
     return res
@@ -1138,7 +1136,7 @@ export const runnerProfitLoss = async (req, res) => {
       });
 
       if (!game) {
-       return apiResponseErr(null, false, statusCode.badRequest, `Game data not found for gameId: ${entry.gameId}`);
+        return apiResponseErr(null, false, statusCode.badRequest, `Game data not found for gameId: ${entry.gameId}`);
       }
 
       const gameName = game.gameName;
