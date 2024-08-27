@@ -707,6 +707,7 @@ export const afterWining = async (req, res) => {
       for (const order of orders) {
         await BetHistory.create({
           userId: order.userId,
+          userName : order.userName,
           gameId: order.gameId,
           gameName: order.gameName,
           marketId: order.marketId,

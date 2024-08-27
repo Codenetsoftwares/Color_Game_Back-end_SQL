@@ -19,6 +19,7 @@ import {
   createUser,
   userUpdate,
   userMarketData,
+  getExternalUserBetHistory,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -69,7 +70,7 @@ export const UserRoute = (app) => {
   app.post('/api/user-bidding', bidTypeSchema, customErrorHandler, authorize([string.User]), createBid);
   // done
   app.get(
-    '/api/user-betHistory/:marketId',
+    '/api/user-betHistory/:gameId',
     bidHistorySchema,
     customErrorHandler,
     authorize([string.User]),
@@ -109,4 +110,7 @@ export const UserRoute = (app) => {
   );
 
   app.get('/api/user-market-data', customErrorHandler, authorize([string.User]), userMarketData);
+
+
+  app.get('/api/external-user-betHistory/:userName/:gameId', getExternalUserBetHistory);
 };

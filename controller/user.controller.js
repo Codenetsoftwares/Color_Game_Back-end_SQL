@@ -751,6 +751,7 @@ export const createBid = async (req, res) => {
     const gameName = game.gameName;
     const marketName = market.marketName;
     const runnerName = runner.runnerName;
+    const userName = user.userName
     if (bidType === 'back' || bidType === 'lay') {
       const adjustedRate = runner[bidType.toLowerCase()] - 1;
       const mainValue = Math.round(adjustedRate * value);
@@ -760,6 +761,7 @@ export const createBid = async (req, res) => {
       user.marketListExposure = marketListExposure;
       const currentOrder = await CurrentOrder.create({
         userId: userId,
+        userName: userName,
         gameId: gameId,
         gameName: gameName,
         marketId: marketId,
@@ -800,9 +802,9 @@ export const createBid = async (req, res) => {
 // done
 export const getUserBetHistory = async (req, res) => {
   try {
-    const user = req.user;
-    const userId = user.userId;
-    const marketId = req.params.marketId;
+    const user = req.user
+    const userId = user.userId
+    const { gameId } = req.params;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
     const { startDate, endDate } = req.query;
@@ -834,7 +836,7 @@ export const getUserBetHistory = async (req, res) => {
 
     const whereClause = {
       userId,
-      marketId,
+      gameId,
     };
 
     if (start && end) {
@@ -842,7 +844,6 @@ export const getUserBetHistory = async (req, res) => {
         [Op.between]: [start.format('YYYY-MM-DD HH:mm:ss'), end.endOf('day').format('YYYY-MM-DD HH:mm:ss')],
       };
     }
-
     const { count, rows } = await BetHistory.findAndCountAll({
       where: whereClause,
       attributes: ['gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
@@ -1250,6 +1251,80 @@ export const userMarketData = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
+  }
+};
+
+export const getExternalUserBetHistory = async (req, res) => {
+  try {
+    const { gameId, userName } = req.params;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 5;
+    const { startDate, endDate } = req.query;
+
+    let start = null;
+    let end = null;
+
+    if (startDate) {
+      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+      if (!start.isValid()) {
+        throw new Error('startDate is not a valid date');
+      }
+    }
+
+    if (endDate) {
+      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
+      if (!end.isValid()) {
+        throw new Error('endDate is not a valid date');
+      }
+
+      if (end.isAfter(moment())) {
+        throw new Error('Invalid End Date');
+      }
+    }
+
+    if (start && end && end.isBefore(start)) {
+      throw new Error('endDate should be after startDate');
+    }
+
+    const whereClause = {
+      userName,
+      gameId,
+    };
+
+    if (start && end) {
+      whereClause.date = {
+        [Op.between]: [start.format('YYYY-MM-DD HH:mm:ss'), end.endOf('day').format('YYYY-MM-DD HH:mm:ss')],
+      };
+    }
+    const { count, rows } = await BetHistory.findAndCountAll({
+      where: whereClause,
+      attributes: ['gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    const pageSize = limit;
+    const totalItems = count;
+
+    res.status(statusCode.success).send(apiResponseSuccess(
+      rows,
+      true,
+      statusCode.success,
+      'Success',
+      { totalPages, pageSize, totalItems, page }
+    ));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.successCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message,
         ),
       );
