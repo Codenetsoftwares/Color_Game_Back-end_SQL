@@ -15,6 +15,7 @@ import {
   deleteMarket,
   deleteRunner,
   gameActiveInactive,
+  updateGameStatus,
 } from '../controller/game.controller.js';
 import { authorize } from '../middleware/auth.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
@@ -31,6 +32,7 @@ import {
   validateMarketId,
   validateDeleteRunner,
   gameActiveInactiveValidate,
+  validateUpdateGameStatus,
 } from '../schema/commonSchema.js';
 
 export const GameRoute = (app) => {
@@ -94,4 +96,10 @@ export const GameRoute = (app) => {
     authorize([string.Admin]),
     gameActiveInactive,
   );
+
+  app.post('/api/game-active-suspended/:gameId',validateUpdateGameStatus,customErrorHandler,authorize([string.Admin]),updateGameStatus );
+
+
 };
+
+

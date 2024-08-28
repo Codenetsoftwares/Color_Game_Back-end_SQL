@@ -323,3 +323,8 @@ export const gameActiveInactiveValidate = [
 export const logOutValidate = [
   body("userId").notEmpty().withMessage("User ID is required.").isUUID(4).withMessage("User Id is not a valid."),
 ];
+
+export const validateUpdateGameStatus = [
+  param('gameId').isUUID().withMessage('Game ID must be a valid UUID'),
+  body('status').notEmpty().withMessage("status is required.").isBoolean().withMessage('Status must be a boolean'),
+];
