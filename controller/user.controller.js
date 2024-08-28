@@ -1,6 +1,4 @@
-import { database } from '../controller/database.controller.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../middleware/serverError.js';
 import moment from 'moment';
 import { string } from '../constructor/string.js';
@@ -14,8 +12,6 @@ import CurrentOrder from '../models/currentOrder.model.js';
 import Game from '../models/game.model.js';
 import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
-import exp from 'constants';
-import sequelize from '../db.js';
 import { PreviousState } from '../models/previousState.model.js';
 
 // done
@@ -1011,6 +1007,7 @@ export const marketProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
+    const gameId = req.params.gameId; 
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
@@ -1024,7 +1021,7 @@ export const marketProfitLoss = async (req, res) => {
       attributes: [
         [Sequelize.fn('DISTINCT', Sequelize.col('marketId')), 'marketId']
       ],
-      where: { userId: userId }
+      where: { userId: userId, gameId: gameId } 
     });
 
     const marketsProfitLoss = await Promise.all(distinctMarketIds.map(async market => {
@@ -1049,7 +1046,14 @@ export const marketProfitLoss = async (req, res) => {
       const game = await Game.findOne({
         include: [{ model: Market, where: { marketId: market.marketId }, attributes: ['marketName'] }],
         attributes: ['gameName'],
+        where: { gameId: gameId }
       });
+
+      if (!game) {
+        return res
+          .status(statusCode.badRequest)
+          .send(apiResponseSuccess([], true, statusCode.badRequest, 'Game not found'));
+      }
 
       const gameName = game.gameName;
       const marketName = game.Markets[0].marketName;
@@ -1060,10 +1064,13 @@ export const marketProfitLoss = async (req, res) => {
       return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss };
     }));
 
+    // Filter out null values (markets with no entries or missing game data)
+    const filteredMarketsProfitLoss = marketsProfitLoss.filter(item => item !== null);
+
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const paginatedProfitLossData = marketsProfitLoss.slice(startIndex, endIndex);
-    const totalItems = marketsProfitLoss.length;
+    const paginatedProfitLossData = filteredMarketsProfitLoss.slice(startIndex, endIndex);
+    const totalItems = filteredMarketsProfitLoss.length;
     const totalPages = Math.ceil(totalItems / limit);
 
     const paginationData = {
@@ -1096,6 +1103,7 @@ export const marketProfitLoss = async (req, res) => {
       );
   }
 };
+
 export const runnerProfitLoss = async (req, res) => {
   try {
     const user = req.user;
@@ -1251,80 +1259,6 @@ export const userMarketData = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
-        ),
-      );
-  }
-};
-
-export const getExternalUserBetHistory = async (req, res) => {
-  try {
-    const { gameId, userName } = req.params;
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
-    const { startDate, endDate } = req.query;
-
-    let start = null;
-    let end = null;
-
-    if (startDate) {
-      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!start.isValid()) {
-        throw new Error('startDate is not a valid date');
-      }
-    }
-
-    if (endDate) {
-      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!end.isValid()) {
-        throw new Error('endDate is not a valid date');
-      }
-
-      if (end.isAfter(moment())) {
-        throw new Error('Invalid End Date');
-      }
-    }
-
-    if (start && end && end.isBefore(start)) {
-      throw new Error('endDate should be after startDate');
-    }
-
-    const whereClause = {
-      userName,
-      gameId,
-    };
-
-    if (start && end) {
-      whereClause.date = {
-        [Op.between]: [start.format('YYYY-MM-DD HH:mm:ss'), end.endOf('day').format('YYYY-MM-DD HH:mm:ss')],
-      };
-    }
-    const { count, rows } = await BetHistory.findAndCountAll({
-      where: whereClause,
-      attributes: ['gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
-      limit,
-      offset: (page - 1) * limit,
-    });
-
-    const totalPages = Math.ceil(count / limit);
-    const pageSize = limit;
-    const totalItems = count;
-
-    res.status(statusCode.success).send(apiResponseSuccess(
-      rows,
-      true,
-      statusCode.success,
-      'Success',
-      { totalPages, pageSize, totalItems, page }
-    ));
-  } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          error.data ?? null,
-          false,
-          error.successCode ?? statusCode.internalServerError,
           error.errMessage ?? error.message,
         ),
       );
