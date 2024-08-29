@@ -360,3 +360,55 @@ export const betHistorySchema = [
     .notEmpty()
     .withMessage("Game Id is required.")
 ];
+
+export const createUserValidate = [
+  body("userId").notEmpty().withMessage("User ID is required"),
+  body("userName").optional().notEmpty().withMessage("Username is required"),
+  body("password")
+    .optional()
+    .notEmpty()
+    .withMessage("Password is required")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters"),
+]
+
+export const calculateProfitLossValidate = [
+  query("startDate")
+    .notEmpty()
+    .withMessage("Start date is required.")
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .notEmpty()
+    .withMessage("End date is required.")
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];
+
+export const marketProfitLossValidate = [
+  param("gameId").notEmpty().withMessage("Game ID is required"),
+  query("startDate")
+    .notEmpty()
+    .withMessage("Start date is required.")
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .notEmpty()
+    .withMessage("End date is required.")
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];
+
+export const runnerProfitLossValidate= [
+  param("marketId").notEmpty().withMessage("Market ID is required"),
+  query("startDate")
+    .notEmpty()
+    .withMessage("Start date is required.")
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .notEmpty()
+    .withMessage("End date is required.")
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];

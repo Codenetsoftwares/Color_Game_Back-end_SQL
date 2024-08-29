@@ -138,9 +138,10 @@ export const loginUser = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { userName, oldPassword, newPassword } = req.body;
+    const user = req.user
+    const { oldPassword, newPassword } = req.body;
 
-    const existingUser = await userSchema.findOne({ where: { userName } });
+    const existingUser = await userSchema.findOne({ where: { userName: user.userName } });
     console.log('existingUser', existingUser)
 
     const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);

@@ -24,18 +24,22 @@ import { authorize } from '../middleware/auth.js';
 import {
   bidHistorySchema,
   bidTypeSchema,
-  calculateProfitLossSchema,
+  calculateProfitLossValidate,
+  createUserValidate,
   currentOrderSchema,
+  marketProfitLossValidate,
+  runnerProfitLossValidate,
   validateUserResetPassword,
 } from '../schema/commonSchema.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
 import { string } from '../constructor/string.js';
+import { authenticateSuperAdmin } from '../middleware/whiteLabelAuth.js';
 
 export const UserRoute = (app) => {
   // done
-  app.post('/api/user-create',  customErrorHandler, createUser); // pending : authentication
+  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser); // pending : authentication
   // done
-  app.put('/api/users-update/:userId',  customErrorHandler, authorize([string.Admin]), userUpdate);
+  app.put('/api/users-update/:userId', authorize([string.Admin]), userUpdate);
 
   // done
   app.post('/api/eligibilityCheck/:userId', authorize([string.User]), eligibilityCheck);
@@ -86,7 +90,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss',
-    // calculateProfitLossSchema,
+    calculateProfitLossValidate,
     customErrorHandler,
     authorize([string.User]),
     calculateProfitLoss,
@@ -94,7 +98,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss_market/:gameId',
-    // calculateProfitLossSchema,
+    marketProfitLossValidate,
     customErrorHandler,
     authorize([string.User]),
     marketProfitLoss,
@@ -102,7 +106,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss_runner/:marketId',
-    // calculateProfitLossSchema,
+    runnerProfitLossValidate,
     customErrorHandler,
     authorize([string.User]),
     runnerProfitLoss,
