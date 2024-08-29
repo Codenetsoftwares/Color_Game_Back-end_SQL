@@ -107,7 +107,7 @@ export const loginUser = async (req, res) => {
             },
             true,
             statusCode.success,
-            'Login successful',
+            'Password reset required.',
           ),
         );
     }
