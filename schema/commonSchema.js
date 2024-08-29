@@ -56,7 +56,6 @@ export const loginSchema = [
 ];
 
 export const resetPasswordSchema = [
-  body("userName").trim().notEmpty().withMessage("Username is required"),
   body("oldPassword").notEmpty().withMessage("Old Password is required"),
   body("newPassword").notEmpty().withMessage("New Password is required"),
 ];
