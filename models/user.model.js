@@ -61,7 +61,11 @@ userSchema.init(
     },
     token :{
       type: DataTypes.STRING,
-    }
+    },
+    isReset: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
   },
   {
     sequelize,

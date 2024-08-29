@@ -1003,6 +1003,7 @@ export const calculateProfitLoss = async (req, res) => {
       );
   }
 };
+// doubt regarding response structure
 export const marketProfitLoss = async (req, res) => {
   try {
     const user = req.user;

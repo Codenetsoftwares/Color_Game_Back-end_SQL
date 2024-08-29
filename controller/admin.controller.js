@@ -573,7 +573,7 @@ export const afterWining = async (req, res) => {
 
                 await ProfitLoss.create({
                   userId: user.userId,
-                  userName: user.userName || userDetails.userName,
+                  userName: userDetails.userName,
                   gameId,
                   marketId,
                   runnerId,
@@ -654,7 +654,7 @@ export const afterWining = async (req, res) => {
 
                 await ProfitLoss.create({
                   userId: user.userId,
-                  userName: user.userName || userDetails.userName,
+                  userName: userDetails.userName,
                   gameId,
                   marketId,
                   runnerId,

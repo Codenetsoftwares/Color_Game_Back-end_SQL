@@ -33,7 +33,7 @@ import { string } from '../constructor/string.js';
 
 export const UserRoute = (app) => {
   // done
-  app.post('/api/user-create',  customErrorHandler, createUser);
+  app.post('/api/user-create',  customErrorHandler, createUser); // pending : authentication
   // done
   app.put('/api/users-update/:userId',  customErrorHandler, authorize([string.Admin]), userUpdate);
 
@@ -86,7 +86,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss',
-    calculateProfitLossSchema,
+    // calculateProfitLossSchema,
     customErrorHandler,
     authorize([string.User]),
     calculateProfitLoss,
@@ -94,7 +94,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss_market/:gameId',
-    calculateProfitLossSchema,
+    // calculateProfitLossSchema,
     customErrorHandler,
     authorize([string.User]),
     marketProfitLoss,
@@ -102,7 +102,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss_runner/:marketId',
-    calculateProfitLossSchema,
+    // calculateProfitLossSchema,
     customErrorHandler,
     authorize([string.User]),
     runnerProfitLoss,
