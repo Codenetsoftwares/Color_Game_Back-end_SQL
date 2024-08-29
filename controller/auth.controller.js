@@ -88,40 +88,66 @@ export const loginUser = async (req, res) => {
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password'));
     }
 
-    const accessTokenResponse = {
-      id: existingUser.id,
-      userName: existingUser.userName,
-      isEighteen: existingUser.eligibilityCheck,
-      userType: existingUser.userType || 'user',
-      wallet: existingUser.wallet,
-      isReset: existingUser.isReset,
-    };
+    if (existingUser.isReset === true) {
+      const resetTokenResponse = {
+        id: null,
+        userName: null,
+        isEighteen: null,
+        userType: null,
+        wallet: null,
+        isReset: existingUser.isReset,
+      };
 
-    const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1d',
-    });
+      return res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            {
+              ...resetTokenResponse,
+            },
+            true,
+            statusCode.success,
+            'Login successful',
+          ),
+        );
+    }
+    else {
+      const accessTokenResponse = {
+        id: existingUser.id,
+        userName: existingUser.userName,
+        isEighteen: existingUser.eligibilityCheck,
+        userType: existingUser.userType || 'user',
+        wallet: existingUser.wallet,
+        isReset: existingUser.isReset,
+      };
 
-    existingUser.token = accessToken
-    await existingUser.save()
+      const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
+        expiresIn: '1d',
+      });
 
-    res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          {
-            accessToken,
-            userId: existingUser.userId,
-            userName: existingUser.userName,
-            isEighteen: existingUser.eligibilityCheck,
-            userType: existingUser.userType || 'user',
-            wallet: existingUser.wallet,
-            isReset: existingUser.isReset,
-          },
-          true,
-          statusCode.success,
-          'Login successful',
-        ),
-      );
+      existingUser.token = accessToken
+      await existingUser.save()
+
+
+      res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            {
+              accessToken,
+              userId: existingUser.userId,
+              userName: existingUser.userName,
+              isEighteen: existingUser.eligibilityCheck,
+              userType: existingUser.userType || 'user',
+              wallet: existingUser.wallet,
+              isReset: existingUser.isReset,
+            },
+            true,
+            statusCode.success,
+            'Login successful',
+          ),
+        );
+    }
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -138,10 +164,9 @@ export const loginUser = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const user = req.user
-    const { oldPassword, newPassword } = req.body;
+    const { userName, oldPassword, newPassword } = req.body;
 
-    const existingUser = await userSchema.findOne({ where: { userName: user.userName } });
+    const existingUser = await userSchema.findOne({ where: { userName } });
     console.log('existingUser', existingUser)
 
     const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
