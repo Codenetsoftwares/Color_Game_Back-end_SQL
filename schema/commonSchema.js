@@ -293,13 +293,11 @@ export const validateDeleteRunner = [
 export const calculateProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
   query("startDate")
-    .notEmpty()
-    .withMessage("Start date is required.")
+    .optional()
     .isISO8601()
     .withMessage("Invalid start date format."),
   query("endDate")
-    .notEmpty()
-    .withMessage("End date is required.")
+    .optional()
     .isISO8601()
     .withMessage("Invalid end date format."),
 ];
@@ -308,30 +306,26 @@ export const marketProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
   param("gameId").notEmpty().withMessage("Game ID is required"),
   query("startDate")
-    .notEmpty()
-    .withMessage("Start date is required.")
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .notEmpty()
-    .withMessage("End date is required.")
-    .isISO8601()
-    .withMessage("Invalid end date format."),
+  .optional()
+  .isISO8601()
+  .withMessage("Invalid start date format."),
+query("endDate")
+  .optional()
+  .isISO8601()
+  .withMessage("Invalid end date format."),
 ];
 
 export const runnerProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
   param("marketId").notEmpty().withMessage("Market ID is required"),
   query("startDate")
-    .notEmpty()
-    .withMessage("Start date is required.")
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .notEmpty()
-    .withMessage("End date is required.")
-    .isISO8601()
-    .withMessage("Invalid end date format."),
+  .optional()
+  .isISO8601()
+  .withMessage("Invalid start date format."),
+query("endDate")
+  .optional()
+  .isISO8601()
+  .withMessage("Invalid end date format."),
 ];
 
 export const gameActiveInactiveValidate = [

@@ -52,7 +52,7 @@ export const getExternalUserBetHistory = async (req, res) => {
     }
     const { count, rows } = await BetHistory.findAndCountAll({
       where: whereClause,
-      attributes: ['userName','gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
+      attributes: ['userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
       limit,
       offset: (page - 1) * limit,
     });
@@ -88,7 +88,6 @@ export const calculateExternalProfitLoss = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
 
-    // Use moment to parse and format dates
     const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
     const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
 
@@ -165,8 +164,8 @@ export const calculateExternalProfitLoss = async (req, res) => {
         apiResponseErr(
           null,
           false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
+          statusCode.internalServerError,
+          error.message,
         ),
       );
   }
@@ -179,7 +178,11 @@ export const marketExternalProfitLoss = async (req, res) => {
     const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-
+    if (!startDate || !endDate) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No date range provided.'));
+    }
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
@@ -259,15 +262,15 @@ export const marketExternalProfitLoss = async (req, res) => {
       );
   } catch (error) {
     res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          null,
-          false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
-        ),
-      );
+    .status(statusCode.internalServerError)
+    .send(
+      apiResponseErr(
+        null,
+        false,
+        statusCode.internalServerError,
+        error.message,
+      ),
+    );
   }
 };
 
@@ -278,7 +281,11 @@ export const runnerExternalProfitLoss = async (req, res) => {
     const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-
+    if (!startDate || !endDate) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No date range provided.'));
+    }
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     endDateObj.setHours(23, 59, 59, 999);
@@ -362,8 +369,8 @@ export const runnerExternalProfitLoss = async (req, res) => {
         apiResponseErr(
           null,
           false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
+          statusCode.internalServerError,
+          error.message,
         ),
       );
   }
