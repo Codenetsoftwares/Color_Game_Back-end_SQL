@@ -174,19 +174,9 @@ export const calculateExternalProfitLoss = async (req, res) => {
 export const marketExternalProfitLoss = async (req, res) => {
   try {
     const { gameId, userName } = req.params;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    if (!startDate || !endDate) {
-      return res
-        .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'No date range provided.'));
-    }
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
-
+ 
     const distinctMarketIds = await ProfitLoss.findAll({
       attributes: [
         [Sequelize.fn('DISTINCT', Sequelize.col('marketId')), 'marketId']
@@ -203,7 +193,6 @@ export const marketExternalProfitLoss = async (req, res) => {
         where: {
           userName: userName,
           marketId: market.marketId,
-          date: { [Op.between]: [startDateObj, endDateObj] }
         }
       });
 
@@ -277,24 +266,14 @@ export const marketExternalProfitLoss = async (req, res) => {
 export const runnerExternalProfitLoss = async (req, res) => {
   try {
     const { marketId, userName } = req.params;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+   
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    if (!startDate || !endDate) {
-      return res
-        .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'No date range provided.'));
-    }
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
 
     const profitLossEntries = await ProfitLoss.findAll({
       where: {
         userName: userName,
         marketId: marketId,
-        date: { [Op.between]: [startDateObj, endDateObj] }
       }
     });
 

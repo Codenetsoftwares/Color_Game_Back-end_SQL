@@ -16,7 +16,7 @@ BetHistory.init(
     },
     userName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     gameId: {
       type: DataTypes.CHAR(36),

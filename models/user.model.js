@@ -20,7 +20,7 @@ userSchema.init(
     },
     userName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     userId: {
       type: DataTypes.STRING,
