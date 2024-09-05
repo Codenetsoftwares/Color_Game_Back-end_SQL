@@ -73,10 +73,10 @@ export const getExternalUserBetHistory = async (req, res) => {
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
-          error.data ?? null,
+          null,
           false,
-          error.successCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
+          statusCode.internalServerError,
+          error.message,
         ),
       );
   }
@@ -280,7 +280,7 @@ export const marketExternalProfitLoss = async (req, res) => {
       );
   } catch (error) {
     console.error("Error from API:", error.message);
-    res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
