@@ -16,7 +16,7 @@ userTrashData.init(
     },
     userId: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     data: {
       type: DataTypes.JSON,

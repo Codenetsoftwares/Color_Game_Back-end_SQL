@@ -20,7 +20,7 @@ userSchema.init(
     },
     userName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
     userId: {
       type: DataTypes.STRING,
@@ -61,7 +61,11 @@ userSchema.init(
     },
     token :{
       type: DataTypes.STRING,
-    }
+    },
+    isReset: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
   },
   {
     sequelize,

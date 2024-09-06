@@ -23,7 +23,7 @@ export const bidTypeSchema = [
 ];
 
 export const bidHistorySchema = [
-  param("marketId").exists().withMessage("Market ID is required."),
+  param("gameId").exists().withMessage("Game ID is required."),
   query("page")
     .optional()
     .toInt()
@@ -56,7 +56,6 @@ export const loginSchema = [
 ];
 
 export const resetPasswordSchema = [
-  body("userName").trim().notEmpty().withMessage("Username is required"),
   body("oldPassword").notEmpty().withMessage("Old Password is required"),
   body("newPassword").notEmpty().withMessage("New Password is required"),
 ];
@@ -66,10 +65,7 @@ export const trashUserSchema = [
 ];
 
 export const createdUserSchema = [
-  body("firstName").trim().notEmpty().withMessage("First name is required"),
-  body("lastName").trim().notEmpty().withMessage("Last name is required"),
   body("userName").trim().notEmpty().withMessage("Username is required"),
-  body("phoneNumber").trim().notEmpty().withMessage("Phone number is required"),
   body("password")
     .trim()
     .notEmpty()
@@ -295,16 +291,25 @@ export const validateDeleteRunner = [
 ];
 
 export const calculateProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
   query("startDate")
-    .notEmpty()
-    .withMessage("Start date is required.")
+    .optional()
     .isISO8601()
     .withMessage("Invalid start date format."),
   query("endDate")
-    .notEmpty()
-    .withMessage("End date is required.")
+    .optional()
     .isISO8601()
     .withMessage("Invalid end date format."),
+];
+
+export const marketProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("gameId").notEmpty().withMessage("Game ID is required"),
+];
+
+export const runnerProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("marketId").notEmpty().withMessage("Market ID is required"),
 ];
 
 export const gameActiveInactiveValidate = [
@@ -324,7 +329,63 @@ export const logOutValidate = [
   body("userId").notEmpty().withMessage("User ID is required.").isUUID(4).withMessage("User Id is not a valid."),
 ];
 
-export const validateUpdateGameStatus = [
-  param('gameId').isUUID().withMessage('Game ID must be a valid UUID'),
-  body('status').notEmpty().withMessage("status is required.").isBoolean().withMessage('Status must be a boolean'),
+export const betHistorySchema = [
+  param("userName")
+    .notEmpty()
+    .withMessage("Username is required."),
+    param("gameId")
+    .notEmpty()
+    .withMessage("Game Id is required.")
+];
+
+export const createUserValidate = [
+  body("userId").notEmpty().withMessage("User ID is required"),
+  body("userName").optional().notEmpty().withMessage("Username is required"),
+  body("password")
+    .optional()
+    .notEmpty()
+    .withMessage("Password is required")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters"),
+]
+
+export const calculateProfitLossValidate = [
+  query("startDate")
+    .notEmpty()
+    .withMessage("Start date is required.")
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .notEmpty()
+    .withMessage("End date is required.")
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];
+
+export const marketProfitLossValidate = [
+  param("gameId").notEmpty().withMessage("Game ID is required"),
+  query("startDate")
+    .notEmpty()
+    .withMessage("Start date is required.")
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .notEmpty()
+    .withMessage("End date is required.")
+    .isISO8601()
+    .withMessage("Invalid end date format."),
+];
+
+export const runnerProfitLossValidate= [
+  param("marketId").notEmpty().withMessage("Market ID is required"),
+  query("startDate")
+    .notEmpty()
+    .withMessage("Start date is required.")
+    .isISO8601()
+    .withMessage("Invalid start date format."),
+  query("endDate")
+    .notEmpty()
+    .withMessage("End date is required.")
+    .isISO8601()
+    .withMessage("Invalid end date format."),
 ];
