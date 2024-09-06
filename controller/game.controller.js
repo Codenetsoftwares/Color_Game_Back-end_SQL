@@ -1095,3 +1095,55 @@ export const gameActiveInactive = async (req, res) => {
       );
   }
 };
+
+
+export const updateGameStatus=async (req, res) => {
+  const { status } = req.body; 
+  const { gameId } = req.params;
+
+  try {
+    const game = await Game.findOne({ where: { gameId } });
+    if (!game) {
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, "Game not found")
+        );
+    }
+    game.isGameActive = status;
+    await game.save();
+
+    const markets = await Market.findAll({ where: { gameId } });
+    if (markets.length > 0) {
+      for (const market of markets) {
+        market.isActive = status; 
+        await market.save();
+      }
+    }
+   const marketsUpdated= markets.map(market => ({
+      marketId: market.marketId,
+      status: market.isActive,
+    }))
+
+    const statusMessage = `Game ${status ? 'activated' : 'suspended'} successfully.`
+   
+    res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(marketsUpdated, true, statusCode.success, statusMessage)
+      );
+   
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+         null,
+          false,
+           statusCode.internalServerError,
+           error.message
+        )
+      );
+  }
+};
+
