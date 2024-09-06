@@ -302,16 +302,6 @@ export const calculateProfitLossSchema = [
     .withMessage("Invalid end date format."),
 ];
 
-export const marketProfitLossSchema = [
-  param("userName").notEmpty().withMessage("Username is required"),
-  param("gameId").notEmpty().withMessage("Game ID is required"),
-];
-
-export const runnerProfitLossSchema = [
-  param("userName").notEmpty().withMessage("Username is required"),
-  param("marketId").notEmpty().withMessage("Market ID is required"),
-];
-
 export const gameActiveInactiveValidate = [
   body("status")
     .notEmpty()
@@ -327,6 +317,21 @@ export const gameActiveInactiveValidate = [
 
 export const logOutValidate = [
   body("userId").notEmpty().withMessage("User ID is required.").isUUID(4).withMessage("User Id is not a valid."),
+];
+
+export const validateUpdateGameStatus = [
+  param('gameId').isUUID().withMessage('Game ID must be a valid UUID'),
+  body('status').notEmpty().withMessage("status is required.").isBoolean().withMessage('Status must be a boolean'),
+];
+
+export const marketProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("gameId").notEmpty().withMessage("Game ID is required"),
+];
+
+export const runnerProfitLossSchema = [
+  param("userName").notEmpty().withMessage("Username is required"),
+  param("marketId").notEmpty().withMessage("Market ID is required"),
 ];
 
 export const betHistorySchema = [
