@@ -27,6 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import cron from 'node-cron'
 import { externalApisRoute } from './routes/externalApis.route.js';
+import { lotteryRoute } from './routes/lotteryGame.route.js';
 
 dotenv.config();
 const app = express();
@@ -70,6 +71,7 @@ AnnouncementRoute(app);
 SliderRoute(app);
 InactiveGameRoute(app);
 externalApisRoute(app);
+lotteryRoute(app)
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
 Market.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
 
@@ -146,7 +148,7 @@ cron.schedule('*/2 * * * * *', async () => {
     clients.forEach((client) => {
       client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
     });
-    console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
+    // console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
 
   } catch (error) {
     console.error('Error checking market statuses:', error);
