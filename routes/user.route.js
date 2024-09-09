@@ -37,7 +37,7 @@ import { authenticateSuperAdmin } from '../middleware/whiteLabelAuth.js';
 
 export const UserRoute = (app) => {
   // done
-  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser); // pending : authentication
+  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser); 
   // done
   app.put('/api/users-update/:userId', authorize([string.Admin]), userUpdate);
 

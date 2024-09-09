@@ -389,3 +389,8 @@ export const runnerProfitLossValidate= [
     .isISO8601()
     .withMessage("Invalid end date format."),
 ];
+
+export const validateUpdateGameStatus = [
+  param('gameId').isUUID().withMessage('Game ID must be a valid UUID'),
+  body('status').notEmpty().withMessage("status is required.").isBoolean().withMessage('Status must be a boolean'),
+];
