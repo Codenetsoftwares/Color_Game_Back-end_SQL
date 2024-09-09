@@ -28,6 +28,7 @@ const __dirname = path.dirname(__filename);
 import cron from 'node-cron'
 import { externalApisRoute } from './routes/externalApis.route.js';
 import { checkAndManageIndexes } from './helper/indexManager.js';
+import { voidGameRoute } from './routes/voidGame.route.js';
 
 dotenv.config();
 const app = express();
@@ -71,6 +72,8 @@ AnnouncementRoute(app);
 SliderRoute(app);
 InactiveGameRoute(app);
 externalApisRoute(app);
+voidGameRoute(app);
+
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
 Market.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
 
