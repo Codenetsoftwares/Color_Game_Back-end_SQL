@@ -397,5 +397,4 @@ export const validateUpdateGameStatus = [
 
 export const validateVoidGame = [
   body('marketId').notEmpty().withMessage("Market Id is required.").isUUID().withMessage('Market ID must be a valid UUID'),
-  body('isVoid').notEmpty().withMessage("isVoid is required.").isBoolean().withMessage('isVoid must be a boolean'),
 ];

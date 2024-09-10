@@ -13,19 +13,13 @@ import Runner from "../models/runner.model.js";
 
 export const voidMarket = async (req, res) => {
   try {
-    const { marketId, isVoid } = req.body;
+    const { marketId } = req.body;
 
     const market = await Market.findOne({ where: { marketId } });
     if (!market) {
       return res
         .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, "Market not found"));
-    }
-
-    if (!isVoid) {
-      return res
-        .status(statusCode.badRequest)
-        .json(apiResponseErr(null, false, statusCode.badRequest, "Invalid request"));
+        .send(apiResponseErr(null, false, statusCode.badRequest, "Market not found"));
     }
 
     market.isVoid = true;
@@ -63,7 +57,7 @@ export const voidMarket = async (req, res) => {
           if (!response.data.success) {
             return res
               .status(statusCode.badRequest)
-              .json(apiResponseErr(null, false, statusCode.badRequest, "Failed to update balance"));
+              .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to update balance"));
           }
 
           await MarketBalance.destroy({
@@ -78,12 +72,12 @@ export const voidMarket = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(apiResponseSuccess(null, true, statusCode.success, "Market voided successfully"));
+      .send(apiResponseSuccess(null, true, statusCode.success, "Market voided successfully"));
   } catch (error) {
     console.error("Error voiding market:", error);
     return res
       .status(statusCode.internalServerError)
-      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -133,7 +127,7 @@ export const getAllVoidMarkets = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(apiResponseSuccess(
+      .send(apiResponseSuccess(
         formattedMarkets,
         true,
         statusCode.success,
@@ -148,7 +142,7 @@ export const getAllVoidMarkets = async (req, res) => {
     console.error('Error retrieving voided markets:', error);
     return res
       .status(statusCode.internalServerError)
-      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
