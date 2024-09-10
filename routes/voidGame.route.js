@@ -9,13 +9,14 @@ export const voidGameRoute = (app) => {
     "/api/void-market",
     validateVoidGame,
     customErrorHandler,
-    authorize([string.superAdmin]),
+    authorize([string.Admin]),
     voidMarket
   );
 
   app.get(
     "/api/get-Void-markets",
-    authorize([string.superAdmin]),
+    authorize([string.Admin]),
     getAllVoidMarkets
   );
+
 };
