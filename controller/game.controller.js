@@ -327,7 +327,9 @@ export const getAllMarkets = async (req, res) => {
         marketName: {
           [Op.like]: `%${searchQuery}%`,
         },
-        hideMarket: false
+        hideMarket: false,
+        isVoid: false
+
       },
       offset: (page - 1) * pageSize,
       limit: pageSize,
