@@ -89,93 +89,68 @@ export const voidMarket = async (req, res) => {
 
 export const getAllVoidMarkets = async (req, res) => {
   try {
-    const gameData = await Game.findAll({
-      attributes: ["gameId", "gameName", "description", "isBlink"],
-      include: [
-        {
-          model: Market,
-          attributes: [
-            "marketId",
-            "marketName",
-            "participants",
-            "startTime",
-            "endTime",
-            "announcementResult",
-            "isActive",
-            "hideMarketUser",
-            "isVoid",
-          ],
-          include: [
-            {
-              model: Runner,
-              attributes: [
-                "runnerId",
-                "runnerName",
-                "isWin",
-                "bal",
-                "back",
-                "lay",
-                "hideRunnerUser",
-              ],
-            },
-          ],
-          where: { isVoid: true }, 
-        },
-      ],
+    let { page = 1, pageSize = 10 } = req.query;
+    page = parseInt(page);
+    pageSize = parseInt(pageSize);
+
+    const offset = (page - 1) * pageSize;
+
+    const totalItems = await Market.count({
+      where: { isVoid: true }
     });
 
-    const formattedGameData = gameData
-      .filter(game => game.Markets && game.Markets.length > 0) // Filter out games with no void markets
-      .map((game) => ({
-        gameId: game.gameId,
-        gameName: game.gameName,
-        description: game.description,
-        isBlink: game.isBlink,
-        markets: game.Markets.map((market) => ({
-          marketId: market.marketId,
-          marketName: market.marketName,
-          participants: market.participants,
-          startTime: market.startTime,
-          endTime: market.endTime,
-          announcementResult: market.announcementResult,
-          isActive: market.isActive,
-          isVoid: market.isVoid,
-          runners: market.Runners.map((runner) => ({
-            runnerId: runner.runnerId,
-            runnerName: runner.runnerName,
-            isWin: runner.isWin,
-            bal: runner.bal,
-            rate: [
-              {
-                back: runner.back,
-                lay: runner.lay,
-              },
-            ],
-          })),
-        })),
-      }));
+    const markets = await Market.findAll({
+      where: { isVoid: true },
+      include: [
+        {
+          model: Game,
+          attributes: ['gameId', 'gameName']
+        },
+        {
+          model: Runner,
+          attributes: ['runnerId', 'runnerName', 'back', 'lay']
+        }
+      ],
+      attributes: ['marketId', 'marketName', 'gameId'],
+      limit: pageSize,
+      offset: offset
+    });
 
-    res
+    const formattedMarkets = markets.map(market => ({
+      gameId: market.Game.gameId,
+      gameName: market.Game.gameName,
+      marketId: market.marketId,
+      marketName: market.marketName,
+      Runners: market.Runners.map(runner => ({
+        runnerId: runner.runnerId,
+        runnerName: runner.runnerName,
+        back: runner.back,
+        lay: runner.lay
+      }))
+    }));
+
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    return res
       .status(statusCode.success)
-      .json(
-        apiResponseSuccess(
-          formattedGameData,
-          true,
-          statusCode.success,
-          "Success"
-        )
-      );
+      .json(apiResponseSuccess(
+        formattedMarkets,
+        true,
+        statusCode.success,
+        'Voided markets retrieved successfully',
+        {
+          page,
+          pageSize,
+          totalItems,
+          totalPages
+        }));
   } catch (error) {
-    console.error("Error retrieving game data:", error);
-    res
+    console.error('Error retrieving voided markets:', error);
+    return res
       .status(statusCode.internalServerError)
-      .json(
-        apiResponseErr(
-          null,
-          false,
-          statusCode.internalServerError,
-          error.message
-        )
-      );
+      .json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+
+
+
