@@ -61,6 +61,10 @@ Market.init(
     isRevoke :{
     type: DataTypes.BOOLEAN,
     defaultValue: false,
+    },
+    isVoid : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     }
   },
   {
