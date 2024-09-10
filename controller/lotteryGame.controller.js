@@ -43,12 +43,11 @@ export const getLotteryGame = async (req, res) => {
                 ),
             );
     } catch (error) {
-        console.error("Error from API:", error.response ? error.response.data : error.message);
         res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
 
 }
-
+//Not Use
 export const getUser = async (req, res) => {
     try {
         const users = await userSchema.findAll({
@@ -98,7 +97,7 @@ export const purchaseLotteryTicket = async (req, res) => {
         const updateBalance = {
             userId: users.userId,
             amount: users.balance
-        }
+        }  
         const updateWhiteLabelBalance = await axios.post(
             `http://localhost:8000/api/admin/extrnal/balance-update`, updateBalance
         );

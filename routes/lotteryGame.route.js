@@ -4,7 +4,7 @@ import { authorize } from "../middleware/auth.js";
 
 export const lotteryRoute = (app) => {
     app.get("/api/get-lottery-game", getLotteryGame)
-    app.get('/api/get-users', getUser);
+    app.get('/api/get-users', getUser);//Not use
     app.post("/api/purchase-lottery", authorize([string.User]), purchaseLotteryTicket)
     app.get("/api/user-purchases",authorize([string.User]),getUserPurchases)
 }
