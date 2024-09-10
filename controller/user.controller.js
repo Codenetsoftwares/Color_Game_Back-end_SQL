@@ -16,7 +16,7 @@ import { PreviousState } from '../models/previousState.model.js';
 
 // done
 export const createUser = async (req, res) => {
-  const { userId, userName, password} = req.body;
+  const { userId, userName, password } = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -336,6 +336,7 @@ export const getAllGameData = async (req, res) => {
             "announcementResult",
             "isActive",
             "hideMarketUser",
+            "isVoid",
           ],
           include: [
             {
@@ -361,7 +362,7 @@ export const getAllGameData = async (req, res) => {
       description: game.description,
       isBlink: game.isBlink,
       markets: game.Markets
-        .filter((market) => !market.hideMarketUser)
+        .filter((market) => !market.hideMarketUser && !market.isVoid)
         .map((market) => ({
           marketId: market.marketId,
           marketName: market.marketName,
@@ -370,6 +371,7 @@ export const getAllGameData = async (req, res) => {
           endTime: market.endTime,
           announcementResult: market.announcementResult,
           isActive: market.isActive,
+          isVoid: market.isVoid,
           runners: market.Runners
             .filter((runner) => !runner.hideRunnerUser)
             .map((runner) => ({
@@ -411,6 +413,7 @@ export const getAllGameData = async (req, res) => {
       );
   }
 };
+
 
 // done
 export const filteredGameData = async (req, res) => {
@@ -575,7 +578,7 @@ export const filterMarketData = async (req, res) => {
 
     // Fetch market data
     const marketDataRows = await Market.findAll({
-      where: { marketId, hideMarketUser: false },
+      where: { marketId, hideMarketUser: false, isVoid: false },
       include: [
         {
           model: Runner,
