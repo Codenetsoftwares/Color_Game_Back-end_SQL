@@ -17,6 +17,10 @@ ProfitLoss.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    userName :{
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
     gameId: {
       type: DataTypes.CHAR(36),
       allowNull: true,

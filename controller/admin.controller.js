@@ -573,6 +573,7 @@ export const afterWining = async (req, res) => {
 
                 await ProfitLoss.create({
                   userId: user.userId,
+                  userName: userDetails.userName,
                   gameId,
                   marketId,
                   runnerId,
@@ -653,6 +654,7 @@ export const afterWining = async (req, res) => {
 
                 await ProfitLoss.create({
                   userId: user.userId,
+                  userName: userDetails.userName,
                   gameId,
                   marketId,
                   runnerId,
@@ -707,6 +709,7 @@ export const afterWining = async (req, res) => {
       for (const order of orders) {
         await BetHistory.create({
           userId: order.userId,
+          userName : order.userName,
           gameId: order.gameId,
           gameName: order.gameName,
           marketId: order.marketId,

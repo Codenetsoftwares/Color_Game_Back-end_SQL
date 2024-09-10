@@ -26,6 +26,9 @@ import { Op } from "sequelize";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import cron from 'node-cron'
+import { externalApisRoute } from './routes/externalApis.route.js';
+import { checkAndManageIndexes } from './helper/indexManager.js';
+import { voidGameRoute } from './routes/voidGame.route.js';
 
 dotenv.config();
 const app = express();
@@ -67,7 +70,10 @@ UserRoute(app);
 GameRoute(app);
 AnnouncementRoute(app);
 SliderRoute(app);
-InactiveGameRoute(app)
+InactiveGameRoute(app);
+externalApisRoute(app);
+voidGameRoute(app);
+
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
 Market.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
 
@@ -88,6 +94,10 @@ Market.hasMany(InactiveGame, { foreignKey: 'marketId' });
 
 InactiveGame.belongsTo(Runner, { foreignKey: 'runnerId' });
 Runner.hasMany(InactiveGame, { foreignKey: 'runnerId' });
+
+checkAndManageIndexes('game'); 
+checkAndManageIndexes('runner'); 
+checkAndManageIndexes('market');
 
 // SSE endpoint
 const clients = [];

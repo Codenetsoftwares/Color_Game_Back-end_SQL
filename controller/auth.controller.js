@@ -88,38 +88,66 @@ export const loginUser = async (req, res) => {
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password'));
     }
 
-    const accessTokenResponse = {
-      id: existingUser.id,
-      userName: existingUser.userName,
-      isEighteen: existingUser.eligibilityCheck,
-      userType: existingUser.userType || 'user',
-      wallet: existingUser.wallet,
-    };
+    if (existingUser.isReset === true) {
+      const resetTokenResponse = {
+        id: null,
+        userName: null,
+        isEighteen: null,
+        userType: null,
+        wallet: null,
+        isReset: existingUser.isReset,
+      };
 
-    const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1d',
-    });
+      return res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            {
+              ...resetTokenResponse,
+            },
+            true,
+            statusCode.success,
+            'Password reset required.',
+          ),
+        );
+    }
+    else {
+      const accessTokenResponse = {
+        id: existingUser.id,
+        userName: existingUser.userName,
+        isEighteen: existingUser.eligibilityCheck,
+        userType: existingUser.userType || 'user',
+        wallet: existingUser.wallet,
+        isReset: existingUser.isReset,
+      };
 
-    existingUser.token = accessToken
-    await existingUser.save()
+      const accessToken = jwt.sign(accessTokenResponse, process.env.JWT_SECRET_KEY, {
+        expiresIn: '1d',
+      });
 
-    res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          {
-            accessToken,
-            userId: existingUser.userId,
-            userName: existingUser.userName,
-            isEighteen: existingUser.eligibilityCheck,
-            userType: existingUser.userType || 'user',
-            wallet: existingUser.wallet,
-          },
-          true,
-          statusCode.success,
-          'Login successful',
-        ),
-      );
+      existingUser.token = accessToken
+      await existingUser.save()
+
+
+      res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            {
+              accessToken,
+              userId: existingUser.userId,
+              userName: existingUser.userName,
+              isEighteen: existingUser.eligibilityCheck,
+              userType: existingUser.userType || 'user',
+              wallet: existingUser.wallet,
+              isReset: existingUser.isReset,
+            },
+            true,
+            statusCode.success,
+            'Login successful',
+          ),
+        );
+    }
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -139,37 +167,20 @@ export const resetPassword = async (req, res) => {
     const { userName, oldPassword, newPassword } = req.body;
 
     const existingUser = await userSchema.findOne({ where: { userName } });
+    console.log('existingUser', existingUser)
 
-    if (existingUser) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User already exists.'));
+    const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
+    if (!isPasswordMatch) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
     }
-
-    const dataToSend = {
-      userName,
-      oldPassword,
-      newPassword
-    };
-
-    const response = await axios.post('https://wl.server.dummydoma.in/api/external/reset-password', dataToSend);
-
-    console.log('Reset password response:', response.data);
-
-    if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Please contact admin.'));
-    }
+    console.log('existingUser', existingUser)
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    const newUser = await userSchema.create({
-      userName: response.data.data.userName,
-      userId: response.data.data.userId,
-      password: hashedPassword,
-      balance: response.data.data.balance,
-      roles: 'user',
-    });
+    await existingUser.update({ password: hashedPassword, isReset: false });
 
-    return res.status(statusCode.success).send(apiResponseSuccess(newUser, true, statusCode.success, 'User password reset successfully'));
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
   } catch (error) {
     console.error('Error resetting password:', error);
     res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));

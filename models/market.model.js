@@ -43,7 +43,7 @@ Market.init(
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: true,
+      defaultValue: false,
     },
     isDisplay: {
       type: DataTypes.BOOLEAN,
@@ -61,6 +61,10 @@ Market.init(
     isRevoke :{
     type: DataTypes.BOOLEAN,
     defaultValue: false,
+    },
+    isVoid : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     }
   },
   {
