@@ -393,7 +393,7 @@ export const runnerExternalProfitLoss = async (req, res) => {
 
 export const liveMarketBet = async (req, res) => {
   try {
-    const { marketId, userId } = req.params
+    const { marketId } = req.params;
 
     const marketDataRows = await Market.findAll({
       where: { marketId, hideMarketUser: false },
@@ -418,6 +418,7 @@ export const liveMarketBet = async (req, res) => {
       announcementResult: marketDataRows[0].announcementResult,
       isActive: marketDataRows[0].isActive,
       runners: [],
+      userNames: [], 
     };
 
     marketDataRows[0].Runners.forEach((runner) => {
@@ -438,47 +439,49 @@ export const liveMarketBet = async (req, res) => {
       });
     });
 
-    if (userId) {
-      const currentOrdersRows = await CurrentOrder.findAll({
-        where: {
-          userId,
-          marketId,
-        },
-      });
-
-      const userMarketBalance = {
-        userId,
+    const currentOrdersRows = await CurrentOrder.findAll({
+      where: {
         marketId,
-        runnerBalance: [],
-      };
+      },
+      attributes: ['userName', 'runnerId', 'type', 'bidAmount', 'value'],
+    });
 
-      marketDataObj.runners.forEach((runner) => {
-        let runnerBalance = 0;
-        currentOrdersRows.forEach((order) => {
+    const userMarketBalance = {
+      marketId,
+      runnerBalance: [],
+    };
+
+    let userNameSet = new Set(); 
+
+    marketDataObj.runners.forEach((runner) => {
+      let runnerBalance = 0;
+
+      currentOrdersRows.forEach((order) => {
+        if (order.runnerId === runner.runnerName.runnerId) {
+          userNameSet.add(order.userName);
           if (order.type === 'back') {
-            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runnerBalance += Number(order.bidAmount);
-            } else {
-              runnerBalance -= Number(order.value);
-            }
+            runnerBalance += Number(order.bidAmount);
           } else if (order.type === 'lay') {
-            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runnerBalance -= Number(order.bidAmount);
-            } else {
-              runnerBalance += Number(order.value);
-            }
+            runnerBalance -= Number(order.bidAmount);
           }
-        });
-
-        userMarketBalance.runnerBalance.push({
-          runnerId: runner.runnerName.runnerId,
-          bal: runnerBalance,
-        });
-
-        runner.runnerName.bal = runnerBalance;
+        } else {
+          if (order.type === 'back') {
+            runnerBalance -= Number(order.value);
+          } else if (order.type === 'lay') {
+            runnerBalance += Number(order.value);
+          }
+        }
       });
 
-    }
+      userMarketBalance.runnerBalance.push({
+        runnerId: runner.runnerName.runnerId,
+        bal: runnerBalance,
+      });
+
+      runner.runnerName.bal = runnerBalance;
+    });
+
+    marketDataObj.userNames = Array.from(userNameSet); 
 
     return res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
   } catch (error) {
