@@ -103,7 +103,9 @@ export const createdMarketSchema = [
 
 export const createdRunnerSchema = [
   param("marketId").notEmpty().withMessage("Market ID is required"),
-  body("runnerNames").notEmpty().withMessage("Runner names are required"),
+  body("runners")
+    .isArray().withMessage("Runners must be an array")
+    .notEmpty().withMessage("Runners array cannot be empty")
 ];
 
 export const createdRateSchema = [
