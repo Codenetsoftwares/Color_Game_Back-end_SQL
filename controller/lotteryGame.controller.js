@@ -130,61 +130,38 @@ export const purchaseLotteryTicket = async (req, res) => {
 };
 
 
-// export const getUserPurchases = async (req, res) => {
-//     try {
-//         const userId = req.user.userId
-
-//         const response = await axios.get(
-//             `http://localhost:8080/api/user-purchases/${userId}`,
-//         );
-
-//         if (!response.data.success) {
-//             return res
-//                 .status(statusCode.badRequest)
-//                 .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
-//         }
-
-//         const { data } = response.data;
-
-
-//         return res
-//             .status(statusCode.success)
-//             .send(
-//                 apiResponseSuccess(
-//                     data,
-//                     true,
-//                     statusCode.success,
-//                     'Success',
-//                 ),
-//             );
-//     } catch (error) {
-//         res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
-//     }
-// }
-
 export const getUserPurchases = async (req, res) => {
     try {
-        const userId = req.user.userId;
-
+        const userId = req.user.userId
+        const page = parseInt(req.query.page) || 1; 
+        const limit = parseInt(req.query.limit) || 10
         const response = await axios.get(
-            `http://localhost:8080/api/user-purchases/${userId}`,
+            `http://localhost:8080/api/user-purchases/${userId}?page=${page}&limit=${limit}`,
         );
 
         if (!response.data.success) {
             return res
-                .status(statusCode.success)
-                .send(apiResponseSuccess(null, false, statusCode.success, "No purchases found for this user"));
+                .status(statusCode.badRequest)
+                .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
         }
 
-        const { data } = response.data;
-
+       const { data, pagination } = response.data;
+    
         return res
             .status(statusCode.success)
-            .send(apiResponseSuccess(data, true, statusCode.success, 'User purchases fetched successfully'));
+            .send(
+                apiResponseSuccess(
+                    data,
+                    true,
+                    statusCode.success,
+                    'Success',
+                    pagination
+                ),
+            );
     } catch (error) {
-        return res
-            .status(statusCode.internalServerError)
-            .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+        res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
-};
+}
+
+
 
