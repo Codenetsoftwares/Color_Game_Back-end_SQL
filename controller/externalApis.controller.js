@@ -7,6 +7,9 @@ import Runner from '../models/runner.model.js';
 import { Op, Sequelize } from 'sequelize';
 import Game from '../models/game.model.js';
 import ProfitLoss from '../models/profitLoss.js';
+import CurrentOrder from '../models/currentOrder.model.js';
+import MarketBalance from '../models/marketBalance.js';
+import { PreviousState } from '../models/previousState.model.js';
 
 export const getExternalUserBetHistory = async (req, res) => {
   try {
@@ -387,3 +390,116 @@ export const runnerExternalProfitLoss = async (req, res) => {
       );
   }
 };
+
+export const liveMarketBet = async (req, res) => {
+  try {
+    const { marketId, userId } = req.params
+
+    const marketDataRows = await Market.findAll({
+      where: { marketId, hideMarketUser: false },
+      include: [
+        {
+          model: Runner,
+          required: false,
+        },
+      ],
+    });
+
+    if (marketDataRows.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, 'Market not found with MarketId'));
+    }
+
+    let marketDataObj = {
+      marketId: marketDataRows[0].marketId,
+      marketName: marketDataRows[0].marketName,
+      participants: marketDataRows[0].participants,
+      startTime: marketDataRows[0].startTime,
+      endTime: marketDataRows[0].endTime,
+      announcementResult: marketDataRows[0].announcementResult,
+      isActive: marketDataRows[0].isActive,
+      runners: [],
+    };
+
+    marketDataRows[0].Runners.forEach((runner) => {
+      marketDataObj.runners.push({
+        id: runner.id,
+        runnerName: {
+          runnerId: runner.runnerId,
+          name: runner.runnerName,
+          isWin: runner.isWin,
+          bal: Math.round(parseFloat(runner.bal)),
+        },
+        rate: [
+          {
+            back: runner.back,
+            lay: runner.lay,
+          },
+        ],
+      });
+    });
+
+    if (userId) {
+      const currentOrdersRows = await CurrentOrder.findAll({
+        where: {
+          userId,
+          marketId,
+        },
+      });
+
+      const userMarketBalance = {
+        userId,
+        marketId,
+        runnerBalance: [],
+      };
+
+      marketDataObj.runners.forEach((runner) => {
+        let runnerBalance = 0;
+        currentOrdersRows.forEach((order) => {
+          if (order.type === 'back') {
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance += Number(order.bidAmount);
+            } else {
+              runnerBalance -= Number(order.value);
+            }
+          } else if (order.type === 'lay') {
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance -= Number(order.bidAmount);
+            } else {
+              runnerBalance += Number(order.value);
+            }
+          }
+        });
+
+        userMarketBalance.runnerBalance.push({
+          runnerId: runner.runnerName.runnerId,
+          bal: runnerBalance,
+        });
+
+        runner.runnerName.bal = runnerBalance;
+      });
+
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching market data:', error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+export const getLiveBetGames = async (req, res) => {
+  try {
+    const currentOrders = await CurrentOrder.findAll({
+      attributes: ['gameId', 'gameName', 'marketId', 'marketName', 'id'],
+    });
+
+    if (!currentOrders || currentOrders.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, 'No data found.'));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(currentOrders, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching market data:', error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
