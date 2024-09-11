@@ -74,15 +74,20 @@ export const purchaseLotteryTicket = async (req, res) => {
                 .status(statusCode.badRequest)
                 .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
         }
-        const { data } = response.data;  
-       
+        const { data } = response.data;
+        if (users.balance <= data) {
+            return res
+                .status(statusCode.badRequest)
+                .send(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient balance'));
 
+        }
         users.balance = users.balance - data
         await users.save()
 
         const dataToSend = {
             userId: users.userId,
-            lotteryId
+            lotteryId,
+            userName: users.userName,
         }
         const purchaseRes = await axios.post(
             `http://localhost:8080/api/create-purchase-lottery`, dataToSend
@@ -97,7 +102,7 @@ export const purchaseLotteryTicket = async (req, res) => {
         const updateBalance = {
             userId: users.userId,
             amount: users.balance
-        }  
+        }
         const updateWhiteLabelBalance = await axios.post(
             `http://localhost:8000/api/admin/extrnal/balance-update`, updateBalance
         );
@@ -130,7 +135,7 @@ export const getUserPurchases = async (req, res) => {
         const userId = req.user.userId
 
         const response = await axios.get(
-            `http://localhost:8080/api/user-purchases/${userId}`, 
+            `http://localhost:8080/api/user-purchases/${userId}`,
         );
 
         if (!response.data.success) {
