@@ -920,14 +920,48 @@ export const currentOrderHistory = async (req, res) => {
       );
   }
 };
+
+
 export const calculateProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
-    const startDate = req.query.startDate + ' 00:00:00';
-    const endDate = req.query.endDate + ' 23:59:59';
+    const dataType = req.query.dataType; 
+
+    console.log('Received dataType:', dataType);
+
+    let startDate, endDate;
+
+    if (dataType === 'live') {
+      console.log('Live condition triggered');
+      const today = new Date();
+      startDate = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+      endDate = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+    } else if (dataType === 'olddata') {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startDate = new Date(oneYearAgo.setHours(0, 0, 0, 0)).toISOString();
+      endDate = new Date().toISOString(); 
+    } else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).toISOString();
+        endDate = new Date(req.query.endDate).toISOString();
+      } else {
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)).toISOString();
+        endDate = new Date().toISOString(); 
+      }
+    } else {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
+    }
+
+    console.log('startDate:', startDate);
+    console.log('endDate:', endDate);
 
     const totalGames = await ProfitLoss.count({
       where: {
@@ -965,7 +999,7 @@ export const calculateProfitLoss = async (req, res) => {
     if (profitLossData.length === 0) {
       return res
         .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
+        .send(apiResponseSuccess([], true, statusCode.success, 'profitLoss data not found.'));
     }
 
     const totalPages = Math.ceil(totalGames / limit);
@@ -1006,6 +1040,13 @@ export const calculateProfitLoss = async (req, res) => {
       );
   }
 };
+
+
+
+
+
+
+
 // doubt regarding response structure
 export const marketProfitLoss = async (req, res) => {
   try {

@@ -90,7 +90,7 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss',
-    calculateProfitLossValidate,
+    //calculateProfitLossValidate,
     customErrorHandler,
     authorize([string.User]),
     calculateProfitLoss,
