@@ -393,7 +393,7 @@ export const runnerExternalProfitLoss = async (req, res) => {
 
 export const liveMarketBet = async (req, res) => {
   try {
-    const { marketId } = req.params;
+    const { marketId, userName } = req.params;
 
     const marketDataRows = await Market.findAll({
       where: { marketId, hideMarketUser: false },
@@ -406,7 +406,7 @@ export const liveMarketBet = async (req, res) => {
     });
 
     if (marketDataRows.length === 0) {
-      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, 'Market not found with MarketId'));
+      return res.status(statusCode.success).send(apiResponseSuccess({ runners: [] }, true, statusCode.success, 'Market not found with MarketId'));
     }
 
     let marketDataObj = {
@@ -418,7 +418,6 @@ export const liveMarketBet = async (req, res) => {
       announcementResult: marketDataRows[0].announcementResult,
       isActive: marketDataRows[0].isActive,
       runners: [],
-      userNames: [], 
     };
 
     marketDataRows[0].Runners.forEach((runner) => {
@@ -438,50 +437,49 @@ export const liveMarketBet = async (req, res) => {
         ],
       });
     });
+    if (userName) {
+      // Fetch current orders
+      const currentOrdersRows = await CurrentOrder.findAll({
+        where: {
+          userName,
+          marketId,
+        },
+      });
 
-    const currentOrdersRows = await CurrentOrder.findAll({
-      where: {
+      // Calculate user market balance
+      const userMarketBalance = {
+        userName,
         marketId,
-      },
-      attributes: ['userName', 'runnerId', 'type', 'bidAmount', 'value'],
-    });
+        runnerBalance: [],
+      };
 
-    const userMarketBalance = {
-      marketId,
-      runnerBalance: [],
-    };
-
-    let userNameSet = new Set(); 
-
-    marketDataObj.runners.forEach((runner) => {
-      let runnerBalance = 0;
-
-      currentOrdersRows.forEach((order) => {
-        if (order.runnerId === runner.runnerName.runnerId) {
-          userNameSet.add(order.userName);
+      marketDataObj.runners.forEach((runner) => {
+        let runnerBalance = 0;
+        currentOrdersRows.forEach((order) => {
           if (order.type === 'back') {
-            runnerBalance += Number(order.bidAmount);
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance += Number(order.bidAmount);
+            } else {
+              runnerBalance -= Number(order.value);
+            }
           } else if (order.type === 'lay') {
-            runnerBalance -= Number(order.bidAmount);
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance -= Number(order.bidAmount);
+            } else {
+              runnerBalance += Number(order.value);
+            }
           }
-        } else {
-          if (order.type === 'back') {
-            runnerBalance -= Number(order.value);
-          } else if (order.type === 'lay') {
-            runnerBalance += Number(order.value);
-          }
-        }
+        });
+
+        userMarketBalance.runnerBalance.push({
+          runnerId: runner.runnerName.runnerId,
+          bal: runnerBalance,
+        });
+
+        // Update the runner balance in marketDataObj
+        runner.runnerName.bal = runnerBalance;
       });
-
-      userMarketBalance.runnerBalance.push({
-        runnerId: runner.runnerName.runnerId,
-        bal: runnerBalance,
-      });
-
-      runner.runnerName.bal = runnerBalance;
-    });
-
-    marketDataObj.userNames = Array.from(userNameSet); 
+    }
 
     return res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
   } catch (error) {
@@ -493,16 +491,43 @@ export const liveMarketBet = async (req, res) => {
 export const getLiveBetGames = async (req, res) => {
   try {
     const currentOrders = await CurrentOrder.findAll({
-      attributes: ['gameId', 'gameName', 'marketId', 'marketName', 'id'],
+      attributes: ['gameId', 'gameName', 'marketId', 'marketName', 'id', 'userName', 'userId'],
     });
 
     if (!currentOrders || currentOrders.length === 0) {
       return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, 'No data found.'));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(currentOrders, true, statusCode.success, 'Success'));
+    const uniqueMarkets = new Map();
+
+    currentOrders.forEach(order => {
+      const key = `${order.gameId}-${order.marketId}`;
+
+      if (!uniqueMarkets.has(key)) {
+        // Initialize the market entry with relevant details and an empty userNames array
+        uniqueMarkets.set(key, {
+          gameId: order.gameId,
+          gameName: order.gameName,
+          marketId: order.marketId,
+          marketName: order.marketName,
+          userNames: [order.userName]
+        });
+      } else {
+        // If the market is already present, add the user name to the array if it's not already included
+        const market = uniqueMarkets.get(key);
+        if (!market.userNames.includes(order.userName)) {
+          market.userNames.push(order.userName);
+        }
+      }
+    });
+
+    const uniqueOrders = Array.from(uniqueMarkets.values());
+
+    return res.status(statusCode.success).send(apiResponseSuccess(uniqueOrders, true, statusCode.success, 'Success'));
   } catch (error) {
     console.error('Error fetching market data:', error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
-}
+};
+
+
