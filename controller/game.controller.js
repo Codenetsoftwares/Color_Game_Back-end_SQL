@@ -277,8 +277,9 @@ export const createMarket = async (req, res) => {
       // startTime: new Date(startTime), 
       // endTime: new Date(endTime),   
       announcementResult: false,
-      isActive: true,
+      isActive: false,
       isDisplay: true,
+      hideMarketUser : true
     });
 
     // Fetch all markets for the game
@@ -459,16 +460,16 @@ export const updateMarket = async (req, res) => {
 export const createRunner = async (req, res) => {
   try {
     const marketId = req.params.marketId;
-    const { runnerNames } = req.body;
+    const { runners } = req.body; 
 
-    if (!runnerNames) {
-      throw apiResponseErr(
-        null,
-        false,
-        statusCode.badRequest,
-        `RunnerName Required`
-      );
-    }
+    // if (!Array.isArray(runners) || runners.length === 0) {
+    //   throw apiResponseErr(
+    //     null,
+    //     false,
+    //     statusCode.badRequest,
+    //     `Invalid runners data`
+    //   );
+    // }
 
     const market = await Market.findOne({
       where: {
@@ -492,40 +493,40 @@ export const createRunner = async (req, res) => {
       },
     });
 
-    const existingRunnerNames = existingRunners.map((runner) =>
-      runner.runnerName.toLowerCase()
+    const existingRunnerNames = new Set(
+      existingRunners.map((runner) => runner.runnerName.toLowerCase())
     );
 
-    for (const runnerName of runnerNames) {
-      const lowerCaseRunnerName = runnerName.toLowerCase();
-      if (existingRunnerNames.includes(lowerCaseRunnerName)) {
+    for (const runner of runners) {
+      const lowerCaseRunnerName = runner.runnerName.toLowerCase();
+      if (existingRunnerNames.has(lowerCaseRunnerName)) {
         throw apiResponseErr(
           null,
           false,
           statusCode.badRequest,
-          `Runner already exists for this market`
+          `Runner "${runner.runnerName}" already exists for this market`
         );
       }
     }
 
     const maxParticipants = market.participants;
-    if (runnerNames.length !== maxParticipants) {
+    if (runners.length !== maxParticipants) {
       throw apiResponseErr(
         null,
         false,
         statusCode.badRequest,
-        "Number of runners exceeds the maximum allowed participants"
+        "Number of runners does not match the maximum allowed participants"
       );
     }
 
-    const runnersToInsert = runnerNames.map((runnerName) => ({
+    const runnersToInsert = runners.map((runner) => ({
       marketId: marketId,
       runnerId: uuidv4(),
-      runnerName: runnerName,
+      runnerName: runner.runnerName,
       isWin: 0,
       bal: 0,
-      back: null,
-      lay: null,
+      back: runner.back ?? null,
+      lay: runner.lay ?? null,
     }));
 
     await Runner.bulkCreate(runnersToInsert);
@@ -546,7 +547,7 @@ export const createRunner = async (req, res) => {
           null,
           true,
           statusCode.create,
-          "Runner created successfully"
+          "Runners created successfully"
         )
       );
   } catch (error) {
@@ -566,12 +567,16 @@ export const createRunner = async (req, res) => {
 // done
 export const updateRunner = async (req, res) => {
   try {
-    const { runnerId, runnerName } = req.body;
+    const { runnerId, runnerName, back, lay } = req.body;
 
-    const [rowsAffected] = await Runner.update(
-      { runnerName: runnerName },
-      { where: { runnerId: runnerId } }
-    );
+    const updateData = {};
+    if (runnerName) updateData.runnerName = runnerName;
+    if (back !== undefined) updateData.back = back;
+    if (lay !== undefined) updateData.lay = lay;
+
+    const [rowsAffected] = await Runner.update(updateData, {
+      where: { runnerId: runnerId }
+    });
 
     if (rowsAffected === 0) {
       return res
@@ -604,6 +609,7 @@ export const updateRunner = async (req, res) => {
       );
   }
 };
+
 // done
 export const createRate = async (req, res) => {
   try {

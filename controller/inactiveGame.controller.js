@@ -13,16 +13,15 @@ export const getInactiveGames = async (req, res) => {
   try {
     const {
       page = 1,
-      pageSize = 10,
+      pageSize = 5,
       search = ''
     } = req.query;
 
     const searchQuery = String(search);
 
     const offset = (page - 1) * pageSize;
-    const limit = parseInt(pageSize, 10);
+    const limit = parseInt(pageSize);
 
-    // Fetch winning runners
     const winningRunners = await Runner.findAll({
       where: { isWin: true },
       attributes: ["runnerId", "marketId"],
@@ -36,7 +35,6 @@ export const getInactiveGames = async (req, res) => {
 
     const marketIds = [...new Set(winningRunners.map(runner => runner.marketId))];
 
-    // Fetch all markets with winning runners
     const { count: totalMarkets, rows: markets } = await Market.findAndCountAll({
       where: {
         marketId: marketIds,
@@ -69,8 +67,6 @@ export const getInactiveGames = async (req, res) => {
           },
         },
       ],
-      limit,
-      offset,
     });
 
     if (markets.length === 0) {
@@ -79,10 +75,8 @@ export const getInactiveGames = async (req, res) => {
         .json(apiResponseSuccess([], true, statusCode.success, "No markets found"));
     }
 
-    // Extract gameIds from markets
     const gameIds = [...new Set(markets.map(market => market.gameId))];
 
-    // Fetch games that have markets with winning runners
     const { count: totalGames, rows: games } = await Game.findAndCountAll({
       where: {
         gameId: gameIds,
@@ -120,15 +114,11 @@ export const getInactiveGames = async (req, res) => {
           ],
         },
       ],
-      limit,
-      offset,
     });
 
-    // Calculate pagination details
     const totalItems = totalGames;
-    const totalPages = Math.ceil(totalItems / pageSize);
+    const totalPages = Math.ceil(totalItems / limit);
 
-    // Format the game data
     const formattedGameData = games.flatMap((game) =>
       game.Markets.map((market) => ({
         game: {
@@ -151,17 +141,19 @@ export const getInactiveGames = async (req, res) => {
       }))
     );
 
+    const paginatedData = formattedGameData.slice(offset, offset + limit);
+
     res
       .status(statusCode.success)
       .json(
         apiResponseSuccess(
-          formattedGameData,
+          paginatedData,  
           true,
           statusCode.success,
           "Success", 
           {
-          page: parseInt(page, 10),
-          pageSize: parseInt(pageSize, 10),
+          page: parseInt(page),
+          pageSize: parseInt(pageSize),
           totalItems,
           totalPages,
         }
