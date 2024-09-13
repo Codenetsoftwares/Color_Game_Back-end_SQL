@@ -87,29 +87,50 @@ export const calculateExternalProfitLoss = async (req, res) => {
     const userName = req.params.userName;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
+    const dataType = req.query.dataType; 
 
-    const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
-    const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
+    console.log('Received dataType:', dataType);
+
+    let startDate, endDate;
+
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+      endDate = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+    } else if (dataType === 'olddata') {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startDate = new Date(oneYearAgo.setHours(0, 0, 0, 0)).toISOString();
+      endDate = new Date().toISOString(); 
+    } else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).toISOString();
+        endDate = new Date(req.query.endDate).toISOString();
+      } else {
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)).toISOString();
+        endDate = new Date().toISOString(); 
+      }
+    } else {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
+    }
 
     const searchGameName = req.query.search || '';
 
     const totalGames = await ProfitLoss.count({
       where: {
-        userId: userName,
+        userName: userName,
         date: {
           [Op.between]: [startDate, endDate],
         },
       },
       distinct: true,
-      col: 'gameId',
-      include: [
-        {
-          model: Game,
-          attributes: [],
-          where: searchGameName ? { gameName: { [Op.like]: `%${searchGameName}%` } } : {},
-        },
-      ],
+      col: 'gameId'
     });
+     console.log("totalGames............", totalGames)
 
     const profitLossData = await ProfitLoss.findAll({
       attributes: [
@@ -134,6 +155,7 @@ export const calculateExternalProfitLoss = async (req, res) => {
       limit: limit,
     });
 
+       console.log("profitLossData.............",profitLossData)
     if (profitLossData.length === 0) {
       return res
         .status(statusCode.success)
@@ -141,11 +163,14 @@ export const calculateExternalProfitLoss = async (req, res) => {
     }
 
     const totalPages = Math.ceil(totalGames / limit);
+    console.log("totalPages..................",totalPages)
 
     const paginationData = {
       page: page,
+      limit: limit,
       totalPages: totalPages,
       totalItems: totalGames,
+      
     };
 
     const formattedProfitLossData = profitLossData.map((item) => ({

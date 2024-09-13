@@ -960,9 +960,6 @@ export const calculateProfitLoss = async (req, res) => {
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid dataType parameter.'));
     }
 
-    console.log('startDate:', startDate);
-    console.log('endDate:', endDate);
-
     const totalGames = await ProfitLoss.count({
       where: {
         userId: userId,
