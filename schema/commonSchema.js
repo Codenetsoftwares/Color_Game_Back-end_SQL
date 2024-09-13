@@ -394,3 +394,9 @@ export const validateUpdateGameStatus = [
   param('gameId').isUUID().withMessage('Game ID must be a valid UUID'),
   body('status').notEmpty().withMessage("status is required.").isBoolean().withMessage('Status must be a boolean'),
 ];
+
+export const validatePurchaseLotteryTicket = [
+  body('lotteryId')
+    .isUUID()
+    .withMessage('Invalid lottery ID. It must be a valid UUID.'),
+];

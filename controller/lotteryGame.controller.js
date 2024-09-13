@@ -10,8 +10,6 @@ export const getLotteryGame = async (req, res) => {
     try {
         const { page = 1, pageSize = 10, sem } = req.query;
         const limit = parseInt(pageSize);
-        // const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-        // console.log("token---", token)
         const params = {
             sem,
             page,
@@ -19,10 +17,7 @@ export const getLotteryGame = async (req, res) => {
         };
         const response = await axios.get(
             "http://localhost:8080/api/get-external-lotteries", {
-            params,
-            // headers: {
-            //     Authorization: `Bearer ${token}`,
-            // },
+            params
         }
         );
 
@@ -53,8 +48,6 @@ export const getLotteryGame = async (req, res) => {
                 ),
             );
     } catch (error) {
-        console.error("Error from API:", error.response ? error.response.data : error.message);
-
         res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
 
@@ -146,7 +139,6 @@ export const purchaseLotteryTicket = async (req, res) => {
                 ),
             );
     } catch (error) {
-        console.error("Error from API:", error.response ? error.response.data : error.message);
         res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
     }
 };
