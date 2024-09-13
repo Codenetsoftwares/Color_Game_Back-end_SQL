@@ -10,8 +10,8 @@ export const getLotteryGame = async (req, res) => {
     try {
         const { page = 1, pageSize = 10, sem } = req.query;
         const limit = parseInt(pageSize);
-        const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-        console.log("token---", token)
+        // const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+        // console.log("token---", token)
         const params = {
             sem,
             page,
@@ -20,9 +20,9 @@ export const getLotteryGame = async (req, res) => {
         const response = await axios.get(
             "http://localhost:8080/api/get-external-lotteries", {
             params,
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+            // headers: {
+            //     Authorization: `Bearer ${token}`,
+            // },
         }
         );
 
@@ -78,7 +78,6 @@ export const purchaseLotteryTicket = async (req, res) => {
         const users = req.user
         const { lotteryId } = req.body;
         const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-        console.log("token,;;;;", token)
         const response = await axios.get(
             `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
             {
@@ -87,7 +86,6 @@ export const purchaseLotteryTicket = async (req, res) => {
                 }
             }
         );
-        console.log("response,;;;;", response)
 
         if (!response.data.success) {
             return res
@@ -109,7 +107,6 @@ export const purchaseLotteryTicket = async (req, res) => {
             lotteryId,
             userName: users.userName,
         }
-        console.log("objectdataToSend",)
         const purchaseRes = await axios.post(
             `http://localhost:8080/api/create-purchase-lottery`, dataToSend, {
             headers: {
@@ -117,8 +114,6 @@ export const purchaseLotteryTicket = async (req, res) => {
             }
         }
         );
-
-        console.log("purchaseRes,;;;;", purchaseRes)
 
         if (!purchaseRes.data.success) {
             return res
