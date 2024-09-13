@@ -93,7 +93,16 @@ export const purchaseLotteryTicket = async (req, res) => {
 
         }
         users.balance = users.balance - data
-        await users.save()
+
+        let currentMarketListExposure = users.marketListExposure || [];
+
+        const newExposure = { [lotteryId]: data };
+
+        currentMarketListExposure.push(newExposure);
+
+        users.setDataValue('marketListExposure', currentMarketListExposure);
+
+        await users.save({ fields: ['balance', 'marketListExposure'] });
 
         const dataToSend = {
             userId: users.userId,
@@ -113,6 +122,7 @@ export const purchaseLotteryTicket = async (req, res) => {
                 .status(statusCode.badRequest)
                 .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to create'));
         }
+
 
         const updateBalance = {
             userId: users.userId,
