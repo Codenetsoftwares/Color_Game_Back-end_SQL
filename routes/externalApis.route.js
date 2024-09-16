@@ -6,7 +6,7 @@ import { betHistorySchema, calculateProfitLossSchema, marketProfitLossSchema, ru
 export const externalApisRoute = (app) => {
     app.get('/api/external-user-betHistory/:userName/:gameId', betHistorySchema, customErrorHandler,authenticateSuperAdmin, getExternalUserBetHistory);
 
-    app.get('/api/external-profit_loss/:userName', calculateProfitLossSchema, customErrorHandler,authenticateSuperAdmin, calculateExternalProfitLoss);
+    app.get('/api/external-profit_loss/:userName', calculateProfitLossSchema, customErrorHandler,authenticateSuperAdmin,calculateExternalProfitLoss);
 
     app.get('/api/external-profit_loss_market/:userName/:gameId', marketProfitLossSchema, customErrorHandler,authenticateSuperAdmin, marketExternalProfitLoss);
 
