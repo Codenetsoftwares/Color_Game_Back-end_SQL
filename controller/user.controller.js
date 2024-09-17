@@ -588,7 +588,7 @@ export const filterMarketData = async (req, res) => {
     });
 
     if (marketDataRows.length === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found with MarketId'));
+      return res.status(statusCode.success).json(apiResponseSuccess({runners : []}, false, statusCode.success, 'Market not found with MarketId'));
     }
 
     let marketDataObj = {

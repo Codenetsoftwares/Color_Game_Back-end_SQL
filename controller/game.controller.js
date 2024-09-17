@@ -277,8 +277,9 @@ export const createMarket = async (req, res) => {
       // startTime: new Date(startTime), 
       // endTime: new Date(endTime),   
       announcementResult: false,
-      isActive: true,
+      isActive: false,
       isDisplay: true,
+      hideMarketUser : true
     });
 
     // Fetch all markets for the game
