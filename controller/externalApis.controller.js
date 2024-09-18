@@ -50,8 +50,8 @@ export const getExternalUserBetHistory = async (req, res) => {
         endDate = new Date(today.setHours(23, 59, 59, 999)); 
       }
     } else {
-      return res.status(statusCode.badRequest)
-        .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
     const { count, rows } = await BetHistory.findAndCountAll({
@@ -131,8 +131,8 @@ export const  calculateExternalProfitLoss = async (req, res) => {
         endDate = new Date(today.setHours(23, 59, 59, 999)); 
       }
     } else {
-      return res.status(statusCode.badRequest)
-        .send(apiResponseErr([], false, statusCode.badRequest, 'Invalid dataType parameter.'));
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
     const searchGameName = req.query.search || '';
 

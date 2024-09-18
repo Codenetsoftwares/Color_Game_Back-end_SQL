@@ -294,14 +294,6 @@ export const validateDeleteRunner = [
 
 export const calculateProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
-  query("startDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid end date format."),
 ];
 
 export const marketProfitLossSchema = [
