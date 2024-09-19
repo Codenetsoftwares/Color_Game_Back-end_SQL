@@ -13,6 +13,7 @@ import Game from '../models/game.model.js';
 import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
+import axios from 'axios';
 
 // done
 export const createUser = async (req, res) => {
@@ -813,7 +814,7 @@ export const getUserBetHistory = async (req, res) => {
       const today = new Date();
       startDate = new Date(today).setHours(0, 0, 0, 0);
       endDate = new Date(today).setHours(23, 59, 59, 999);
-    } 
+    }
     else if (dataType === 'olddata') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
@@ -824,7 +825,7 @@ export const getUserBetHistory = async (req, res) => {
         startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
         endDate = new Date().setHours(23, 59, 59, 999);
       }
-    } 
+    }
     else if (dataType === 'backup') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
@@ -835,7 +836,7 @@ export const getUserBetHistory = async (req, res) => {
           return res.status(statusCode.badRequest)
             .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
         }
-      } 
+      }
       else {
         const today = new Date();
         const threeMonthsAgo = new Date();
@@ -844,7 +845,7 @@ export const getUserBetHistory = async (req, res) => {
         endDate = new Date(today.setHours(23, 59, 59, 999));
       }
     }
-     else {
+    else {
       return res.status(statusCode.success)
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
@@ -949,7 +950,7 @@ export const calculateProfitLoss = async (req, res) => {
       const today = new Date();
       startDate = new Date(today).setHours(0, 0, 0, 0);
       endDate = new Date(today).setHours(23, 59, 59, 999);
-    } 
+    }
     else if (dataType === 'olddata') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
@@ -960,7 +961,7 @@ export const calculateProfitLoss = async (req, res) => {
         startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
         endDate = new Date().setHours(23, 59, 59, 999);
       }
-    } 
+    }
     else if (dataType === 'backup') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
@@ -971,7 +972,7 @@ export const calculateProfitLoss = async (req, res) => {
           return res.status(statusCode.badRequest)
             .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
         }
-      } 
+      }
       else {
         const today = new Date();
         const threeMonthsAgo = new Date();
@@ -980,7 +981,7 @@ export const calculateProfitLoss = async (req, res) => {
         endDate = new Date(today.setHours(23, 59, 59, 999));
       }
     }
-     else {
+    else {
       return res.status(statusCode.success)
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
@@ -1360,5 +1361,54 @@ export const userBetHistoryGames = async (req, res) => {
           error.errMessage ?? error.message,
         ),
       );
+  }
+};
+
+export const accountStatement = async (req, res) => {
+  try {
+    const adminId = req.user.userId;
+    const { page = 1, pageSize = 10, startDate, endDate } = req.query;
+    const dataType = req.query.dataType;
+
+    const params = {
+      adminId,
+      startDate,
+      endDate,
+      pageSize,
+      page,
+      dataType
+    };
+
+    const response = await axios.get(`http://localhost:8000/api/user-colorGame-account-statement/${adminId}`, { params });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+    }
+
+    const { data, pagination } = response.data;
+
+    const paginationData = {
+      page: pagination?.page || page,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+      limit: pagination?.limit 
+    };
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          'Success',
+          paginationData,
+        ),
+      );
+  } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };

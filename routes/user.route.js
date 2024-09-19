@@ -20,6 +20,7 @@ import {
   userUpdate,
   userMarketData,
   userBetHistoryGames,
+  accountStatement,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -38,7 +39,7 @@ import { authenticateSuperAdmin } from '../middleware/whiteLabelAuth.js';
 
 export const UserRoute = (app) => {
   // done
-  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser); 
+  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser);
   // done
   app.put('/api/users-update/:userId', authorize([string.Admin]), userUpdate);
 
@@ -115,5 +116,5 @@ export const UserRoute = (app) => {
 
   app.get('/api/user-betHistory-games', userBetHistoryGames);
 
-
+  app.get('/api/user-account-statement', authorize([string.User]), accountStatement)
 };
