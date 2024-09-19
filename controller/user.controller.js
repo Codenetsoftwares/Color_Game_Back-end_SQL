@@ -1379,7 +1379,7 @@ export const accountStatement = async (req, res) => {
       dataType
     };
 
-    const response = await axios.get(`http://localhost:8000/api/user-colorGame-account-statement/${adminId}`, { params });
+    const response = await axios.get(`https://wl.server.dummydoma.in/api/user-colorGame-account-statement/${adminId}`, { params });
 
     if (!response.data.success) {
       return res
