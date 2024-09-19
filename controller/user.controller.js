@@ -1063,26 +1063,14 @@ export const calculateProfitLoss = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-// doubt regarding response structure
 export const marketProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
     const gameId = req.params.gameId;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
+    const searchMarketName = req.query.search || '';
 
     const distinctMarketIds = await ProfitLoss.findAll({
       attributes: [
@@ -1090,6 +1078,12 @@ export const marketProfitLoss = async (req, res) => {
       ],
       where: { userId: userId, gameId: gameId }
     });
+
+    if (distinctMarketIds.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found.'));
+    }
 
     const marketsProfitLoss = await Promise.all(distinctMarketIds.map(async market => {
       const profitLossEntries = await ProfitLoss.findAll({
@@ -1100,7 +1094,6 @@ export const marketProfitLoss = async (req, res) => {
         where: {
           userId: userId,
           marketId: market.marketId,
-          date: { [Op.between]: [startDateObj, endDateObj] }
         }
       });
 
@@ -1110,17 +1103,27 @@ export const marketProfitLoss = async (req, res) => {
           .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
       }
 
+      const marketQuery = {
+        marketId: market.marketId,
+      };
+
+      if (searchMarketName) {
+        marketQuery.marketName = { [Op.like]: `%${searchMarketName}%` };
+      }
+
       const game = await Game.findOne({
-        include: [{ model: Market, where: { marketId: market.marketId }, attributes: ['marketName'] }],
+        include: [
+          {
+            model: Market,
+            where: marketQuery,
+            attributes: ['marketName']
+          }
+        ],
         attributes: ['gameName'],
         where: { gameId: gameId }
       });
 
-      if (!game) {
-        return res
-          .status(statusCode.badRequest)
-          .send(apiResponseSuccess([], true, statusCode.badRequest, 'Game not found'));
-      }
+      if (!game) return null
 
       const gameName = game.gameName;
       const marketName = game.Markets[0].marketName;
@@ -1130,9 +1133,13 @@ export const marketProfitLoss = async (req, res) => {
 
       return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss };
     }));
-
-    // Filter out null values (markets with no entries or missing game data)
     const filteredMarketsProfitLoss = marketsProfitLoss.filter(item => item !== null);
+
+    if (filteredMarketsProfitLoss.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No matching markets found.'));
+    }
 
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
@@ -1158,16 +1165,8 @@ export const marketProfitLoss = async (req, res) => {
         ),
       );
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          null,
-          false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
-        ),
-      );
+    console.error("Error from API:", error.message);
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -1176,20 +1175,14 @@ export const runnerProfitLoss = async (req, res) => {
     const user = req.user;
     const userId = user.userId;
     const marketId = req.params.marketId;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
+    const searchRunnerName = req.query.search || '';
 
     const profitLossEntries = await ProfitLoss.findAll({
       where: {
         userId: userId,
         marketId: marketId,
-        date: { [Op.between]: [startDateObj, endDateObj] }
       }
     });
 
@@ -1206,38 +1199,48 @@ export const runnerProfitLoss = async (req, res) => {
           {
             model: Market,
             where: { marketId: marketId },
-            include: [{ model: Runner }]
+            include: [
+              {
+                model: Runner,
+                where: searchRunnerName
+                  ? { runnerName: { [Op.like]: `%${searchRunnerName}%` } }
+                  : {},
+              }
+            ]
           }
         ]
       });
 
-      if (!game) {
-        return apiResponseErr(null, false, statusCode.badRequest, `Game data not found for gameId: ${entry.gameId}`);
-      }
+      if (!game) return null
 
-      const gameName = game.gameName;
-      const marketName = game.Markets[0].marketName;
-      const runner = game.Markets[0].Runners.find(runner => runner.runnerId === entry.runnerId);
+      const market = game.Markets[0];
+      const runner = market.Runners.find(runner => runner.runnerId === entry.runnerId);
 
       if (!runner) {
         return apiResponseErr(null, false, statusCode.badRequest, `Runner data not found for runnerId: ${entry.runnerId}`);
       }
 
-      const runnerName = runner.runnerName;
-
       return {
-        gameName: gameName,
-        marketName: marketName,
-        runnerName: runnerName,
+        gameName: game.gameName,
+        marketName: market.marketName,
+        runnerName: runner.runnerName,
         runnerId: entry.runnerId,
         profitLoss: parseFloat(entry.profitLoss).toFixed(2)
       };
     }));
 
+    const filteredRunnersProfitLoss = runnersProfitLoss.filter(item => item !== null);
+
+    if (filteredRunnersProfitLoss.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No matching runners found.'));
+    }
+
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const paginatedRunnersProfitLoss = runnersProfitLoss.slice(startIndex, endIndex);
-    const totalItems = runnersProfitLoss.length;
+    const paginatedRunnersProfitLoss = filteredRunnersProfitLoss.slice(startIndex, endIndex);
+    const totalItems = filteredRunnersProfitLoss.length;
     const totalPages = Math.ceil(totalItems / limit);
 
     const paginationData = {
@@ -1258,18 +1261,20 @@ export const runnerProfitLoss = async (req, res) => {
         ),
       );
   } catch (error) {
+    console.error("Error from API:", error.message);
     res
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           null,
           false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
+          statusCode.internalServerError,
+          error.message,
         ),
       );
   }
 };
+
 export const userMarketData = async (req, res) => {
   try {
     const user = req.user;
