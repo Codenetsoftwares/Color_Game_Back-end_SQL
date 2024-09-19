@@ -379,7 +379,8 @@ export const runnerExternalProfitLoss = async (req, res) => {
         marketName: market.marketName,
         runnerName: runner.runnerName,
         runnerId: entry.runnerId,
-        profitLoss: parseFloat(entry.profitLoss).toFixed(2)
+        profitLoss: parseFloat(entry.profitLoss).toFixed(2),
+        isWin: runner.isWin,
       };
     }));
 
