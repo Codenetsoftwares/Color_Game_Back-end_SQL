@@ -19,6 +19,7 @@ import {
   createUser,
   userUpdate,
   userMarketData,
+  userBetHistoryGames,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -113,5 +114,8 @@ export const UserRoute = (app) => {
   );
 
   app.get('/api/user-market-data', customErrorHandler, authorize([string.User]), userMarketData);
+
+  app.get('/api/user-betHistory-games', userBetHistoryGames);
+
 
 };

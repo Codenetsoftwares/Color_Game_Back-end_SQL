@@ -928,7 +928,7 @@ export const calculateProfitLoss = async (req, res) => {
     const userId = user.userId;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
-    const dataType = req.query.dataType; 
+    const dataType = req.query.dataType;
 
     console.log('Received dataType:', dataType);
 
@@ -943,7 +943,7 @@ export const calculateProfitLoss = async (req, res) => {
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       startDate = new Date(oneYearAgo.setHours(0, 0, 0, 0)).toISOString();
-      endDate = new Date().toISOString(); 
+      endDate = new Date().toISOString();
     } else if (dataType === 'backup') {
       if (req.query.startDate && req.query.endDate) {
         startDate = new Date(req.query.startDate).toISOString();
@@ -952,7 +952,7 @@ export const calculateProfitLoss = async (req, res) => {
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
         startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)).toISOString();
-        endDate = new Date().toISOString(); 
+        endDate = new Date().toISOString();
       }
     } else {
       return res
@@ -1049,7 +1049,7 @@ export const marketProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    const gameId = req.params.gameId; 
+    const gameId = req.params.gameId;
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
@@ -1063,7 +1063,7 @@ export const marketProfitLoss = async (req, res) => {
       attributes: [
         [Sequelize.fn('DISTINCT', Sequelize.col('marketId')), 'marketId']
       ],
-      where: { userId: userId, gameId: gameId } 
+      where: { userId: userId, gameId: gameId }
     });
 
     const marketsProfitLoss = await Promise.all(distinctMarketIds.map(async market => {
@@ -1292,6 +1292,32 @@ export const userMarketData = async (req, res) => {
     };
 
     res.status(statusCode.success).send(apiResponseSuccess(responseData, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching user market data:', error);
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
+  }
+};
+
+export const userBetHistoryGames = async (req, res) => {
+  try {
+    const distinctGames = await BetHistory.findAll({
+      attributes: [
+        'gameId',
+        'gameName'
+      ],
+      group: ['gameId', 'gameName'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(distinctGames, true, statusCode.success, 'Success'));
   } catch (error) {
     console.error('Error fetching user market data:', error);
     res
