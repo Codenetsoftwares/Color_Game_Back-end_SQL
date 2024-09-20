@@ -32,7 +32,7 @@ export const lotteryRoute = (app) => {
  
   
   // dummy- data Api
-  app.get('/api/users-dummyData',dummyData );
+  app.get('/api/lotteries-dummyData',dummyData );
   
 
 };

@@ -349,10 +349,15 @@ export const getUserPurchases = async (req, res) => {
 
 // Dummy data api function
 
-const users = Array.from({ length: 42 }).map((_, index) => ({
-  id: index + 1,
-  name: `User${index + 1}`,
-  email: `user${index + 1}@example.com`,
+const lotteryData = Array.from({ length: 100 }, (_, index) => ({
+  lotteryId: `2723afdc-f93a-495f-87db-c8c24ffc38c${index}`,
+  name: `Lottery ${index + 1}`,
+  date: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString(),
+  createdAt: new Date().toISOString(),
+  firstPrize: Math.floor(Math.random() * 1000000) + 100000,
+  isPurchased: Math.random() > 0.5,
+  price: Math.floor(Math.random() * 20) + 1,
+  sem: [5, 10, 25, 50, 100, 200][Math.floor(Math.random() * 6)],
 }));
 
 export const dummyData = async (req, res) => {
@@ -361,22 +366,22 @@ export const dummyData = async (req, res) => {
   const offset = (page - 1) * limit; 
 
   try {
-    const paginatedUsers = users.slice(offset, offset + limit);
-    const totalItems = users.length;
+    const paginatedLotteries = lotteryData.slice(offset, offset + limit);
+    const totalItems = lotteryData.length;
 
     const paginationInfo = {
       totalItems: totalItems,
       totalPages: Math.ceil(totalItems / limit),
       currentPage: page,
-      usersPerPage: limit,
+      itemsPerPage: limit,
     };
 
     res.json({
-      users: paginatedUsers,
+      lotteries: paginatedLotteries,
       pagination: paginationInfo,
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error fetching lotteries:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
