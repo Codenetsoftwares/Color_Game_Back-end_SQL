@@ -345,3 +345,38 @@ export const getUserPurchases = async (req, res) => {
       );
   }
 };
+
+
+// Dummy data api function
+
+const users = Array.from({ length: 42 }).map((_, index) => ({
+  id: index + 1,
+  name: `User${index + 1}`,
+  email: `user${index + 1}@example.com`,
+}));
+
+export const dummyData = async (req, res) => {
+  const page = parseInt(req.query.page) || 1; 
+  const limit = parseInt(req.query.limit) || 10; 
+  const offset = (page - 1) * limit; 
+
+  try {
+    const paginatedUsers = users.slice(offset, offset + limit);
+    const totalItems = users.length;
+
+    const paginationInfo = {
+      totalItems: totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+      usersPerPage: limit,
+    };
+
+    res.json({
+      users: paginatedUsers,
+      pagination: paginationInfo,
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
