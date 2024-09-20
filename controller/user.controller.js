@@ -942,6 +942,7 @@ export const calculateProfitLoss = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
     const dataType = req.query.dataType;
+    const searchQuery = req.query.search || '';
 
     console.log('Received dataType:', dataType);
 
@@ -1006,6 +1007,11 @@ export const calculateProfitLoss = async (req, res) => {
         {
           model: Game,
           attributes: ['gameName'],
+          where: {
+            gameName: {
+              [Op.iLike]: `%${searchQuery}%`
+            }
+          }
         },
       ],
       where: {
