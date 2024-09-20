@@ -942,7 +942,6 @@ export const calculateProfitLoss = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
     const dataType = req.query.dataType;
-    const searchQuery = req.query.search || '';
 
     console.log('Received dataType:', dataType);
 
@@ -987,6 +986,8 @@ export const calculateProfitLoss = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
+    const searchGameName = req.query.search || '';
+
     const totalGames = await ProfitLoss.count({
       where: {
         userId: userId,
@@ -1007,11 +1008,7 @@ export const calculateProfitLoss = async (req, res) => {
         {
           model: Game,
           attributes: ['gameName'],
-          where: {
-            gameName: {
-              [Op.iLike]: `%${searchQuery}%`
-            }
-          }
+          where: searchGameName ? { gameName: { [Op.like]: `%${searchGameName}%` } } : {},
         },
       ],
       where: {
@@ -1028,7 +1025,7 @@ export const calculateProfitLoss = async (req, res) => {
     if (profitLossData.length === 0) {
       return res
         .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'profitLoss data not found.'));
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
     const totalPages = Math.ceil(totalGames / limit);
