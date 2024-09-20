@@ -21,6 +21,7 @@ import {
   userMarketData,
   userBetHistoryGames,
   accountStatement,
+  getUserBetList,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -117,4 +118,8 @@ export const UserRoute = (app) => {
   app.get('/api/user-betHistory-games', userBetHistoryGames);
 
   app.get('/api/user-account-statement', authorize([string.User]), accountStatement)
+
+  app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList)
+
+
 };

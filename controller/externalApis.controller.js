@@ -192,6 +192,7 @@ export const  calculateExternalProfitLoss = async (req, res) => {
     const formattedProfitLossData = profitLossData.map((item) => ({
       gameId: item.gameId,
       gameName: item.Game.gameName,
+      profitLoss: item.dataValues.totalProfitLoss,
       totalProfitLoss: item.dataValues.totalProfitLoss,
     }));
 
@@ -286,7 +287,7 @@ export const marketExternalProfitLoss = async (req, res) => {
 
       const formattedTotalProfitLoss = totalProfitLoss.toFixed(2);
 
-      return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss };
+      return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss, profitLoss: formattedTotalProfitLoss };
     }));
     const filteredMarketsProfitLoss = marketsProfitLoss.filter(item => item !== null);
 
@@ -380,7 +381,10 @@ export const runnerExternalProfitLoss = async (req, res) => {
         runnerName: runner.runnerName,
         runnerId: entry.runnerId,
         profitLoss: parseFloat(entry.profitLoss).toFixed(2),
+        totalProfitLoss: parseFloat(entry.profitLoss).toFixed(2),
         isWin: runner.isWin,
+        settleTime: entry.date.toISOString(),
+        userName: entry.userName
       };
     }));
 
@@ -570,3 +574,34 @@ export const getLiveBetGames = async (req, res) => {
 };
 
 
+export const getExternalUserBetList = async (req, res) => {
+  try {
+    const { userName, runnerId } = req.params;
+
+    const rows = await BetHistory.findAll({
+      where: {
+        userName: userName,
+        runnerId: runnerId,
+      },
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'bidAmount'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(
+      rows,
+      true,
+      statusCode.success,
+      'Success',
+    ));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}

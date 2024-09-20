@@ -1231,6 +1231,7 @@ export const runnerProfitLoss = async (req, res) => {
         runnerId: entry.runnerId,
         profitLoss: parseFloat(entry.profitLoss).toFixed(2),
         isWin: runner.isWin,
+        settleTime: entry.date.toISOString(),
       };
     }));
 
@@ -1415,4 +1416,38 @@ export const accountStatement = async (req, res) => {
     console.error("Error from API:", error.response ? error.response.data : error.message);
     res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
-};
+}
+
+export const getUserBetList = async (req, res) => {
+  try {
+    const user = req.user;
+    const userId = user.userId;
+    const runnerId = req.params.runnerId;
+
+    const rows = await BetHistory.findAll({
+      where: {
+        userId: userId,
+        runnerId: runnerId,
+      },
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'bidAmount'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(
+      rows,
+      true,
+      statusCode.success,
+      'Success',
+    ));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}
