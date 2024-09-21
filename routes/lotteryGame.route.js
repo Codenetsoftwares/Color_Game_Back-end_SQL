@@ -28,11 +28,6 @@ export const lotteryRoute = (app) => {
 
   app.get("/api/user-purchases", authorize([string.User]), getUserPurchases);
 
-
- 
-  
   // dummy- data Api
-  app.get('/api/lotteries-dummyData',dummyData );
-  
-
+  app.get("/api/lotteries-dummyData", dummyData);
 };

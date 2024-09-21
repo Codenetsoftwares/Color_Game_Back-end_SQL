@@ -105,18 +105,27 @@ export const purchaseLotteryTicket = async (req, res) => {
   try {
     const users = req.user;
     const { lotteryId } = req.body;
+
+    // Generate JWT token
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
       expiresIn: "1h",
     });
-    const response = await axios.get(
-      `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
 
+    // Perform API calls in parallel
+    const [response, balanceUpdateResponse] = await Promise.all([
+      axios.get(
+        `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, {
+        userId: users.userId,
+        amount: users.balance,
+      }),
+    ]);
+
+    // Handle errors from the lottery fetch
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
@@ -129,8 +138,10 @@ export const purchaseLotteryTicket = async (req, res) => {
           )
         );
     }
-    const { data } = response.data;
-    if (users.balance <= data) {
+
+    // Check if the user has sufficient balance
+    const lotteryPrice = response.data.data;
+    if (users.balance < lotteryPrice) {
       return res
         .status(statusCode.badRequest)
         .send(
@@ -142,51 +153,31 @@ export const purchaseLotteryTicket = async (req, res) => {
           )
         );
     }
-    users.balance = users.balance - data;
 
-    let currentMarketListExposure = users.marketListExposure || [];
-
-    const newExposure = { [lotteryId]: data };
-
-    currentMarketListExposure.push(newExposure);
-
-    users.setDataValue("marketListExposure", currentMarketListExposure);
-
+    // Deduct balance and update exposure
+    users.balance -= lotteryPrice;
+    const newExposure = { [lotteryId]: lotteryPrice };
+    users.marketListExposure = [
+      ...(users.marketListExposure || []),
+      newExposure,
+    ];
     await users.save({ fields: ["balance", "marketListExposure"] });
 
-    const dataToSend = {
-      userId: users.userId,
-      lotteryId,
-      userName: users.userName,
-    };
+    // Send purchase request
     const purchaseRes = await axios.post(
       `http://localhost:8080/api/create-purchase-lottery`,
-      dataToSend,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        userId: users.userId,
+        lotteryId,
+        userName: users.userName,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
+    // Handle purchase errors
     if (!purchaseRes.data.success) {
-      return res
-        .status(statusCode.badRequest)
-        .send(
-          apiResponseErr(null, false, statusCode.badRequest, "Failed to create")
-        );
-    }
-
-    const updateBalance = {
-      userId: users.userId,
-      amount: users.balance,
-    };
-    const updateWhiteLabelBalance = await axios.post(
-      `http://localhost:8000/api/admin/extrnal/balance-update`,
-      updateBalance
-    );
-
-    if (!updateWhiteLabelBalance.data.success) {
       return res
         .status(statusCode.badRequest)
         .send(
@@ -194,7 +185,7 @@ export const purchaseLotteryTicket = async (req, res) => {
             null,
             false,
             statusCode.badRequest,
-            "Failed to update balance"
+            "Failed to create purchase"
           )
         );
     }
@@ -206,7 +197,7 @@ export const purchaseLotteryTicket = async (req, res) => {
           null,
           true,
           statusCode.success,
-          "Lottery purchase successfully"
+          "Lottery purchased successfully"
         )
       );
   } catch (error) {
@@ -214,8 +205,7 @@ export const purchaseLotteryTicket = async (req, res) => {
       "Error from API:",
       error.response ? error.response.data : error.message
     );
-
-    res
+    return res
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
@@ -257,20 +247,18 @@ export const lotteryAmount = async (req, res) => {
           )
         );
     }
-    const  {data } = response.data;
-  
-    
-    
+    const { data } = response.data;
+
     return res
-    .status(statusCode.success)
-    .send(
-      apiResponseSuccess(
-       data ,
-        true,
-        statusCode.success,
-        `Lottery amount is : ${data} Rs`
-      )
-    );
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          `Lottery amount is : ${data} Rs`
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -284,7 +272,6 @@ export const lotteryAmount = async (req, res) => {
       );
   }
 };
-
 
 export const getUserPurchases = async (req, res) => {
   try {
@@ -346,13 +333,14 @@ export const getUserPurchases = async (req, res) => {
   }
 };
 
-
 // Dummy data api function
 
 const lotteryData = Array.from({ length: 100 }, (_, index) => ({
   lotteryId: `2723afdc-f93a-495f-87db-c8c24ffc38c${index}`,
   name: `Lottery ${index + 1}`,
-  date: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString(),
+  date: new Date(
+    Date.now() - Math.floor(Math.random() * 10000000000)
+  ).toISOString(),
   createdAt: new Date().toISOString(),
   firstPrize: Math.floor(Math.random() * 1000000) + 100000,
   isPurchased: Math.random() > 0.5,
@@ -361,9 +349,9 @@ const lotteryData = Array.from({ length: 100 }, (_, index) => ({
 }));
 
 export const dummyData = async (req, res) => {
-  const page = parseInt(req.query.page) || 1; 
-  const limit = parseInt(req.query.limit) || 10; 
-  const offset = (page - 1) * limit; 
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
 
   try {
     const paginatedLotteries = lotteryData.slice(offset, offset + limit);
@@ -381,7 +369,7 @@ export const dummyData = async (req, res) => {
       pagination: paginationInfo,
     });
   } catch (error) {
-    console.error('Error fetching lotteries:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error fetching lotteries:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
