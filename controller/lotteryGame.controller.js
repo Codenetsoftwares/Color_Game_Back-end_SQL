@@ -190,11 +190,15 @@ export const purchaseLotteryTicket = async (req, res) => {
         );
     }
 
+    // you can update your response object as per requirements [purchaseRes.data.data, lotteryPrice]
+    purchaseRes.data.data["lotteryPrice"] = lotteryPrice
+    delete purchaseRes.data.data.ticketNumber
+
     return res
       .status(statusCode.success)
       .send(
         apiResponseSuccess(
-          null,
+          purchaseRes.data.data,
           true,
           statusCode.success,
           "Lottery purchased successfully"
