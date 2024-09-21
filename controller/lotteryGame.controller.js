@@ -191,8 +191,12 @@ export const purchaseLotteryTicket = async (req, res) => {
     }
 
     // you can update your response object as per requirements [purchaseRes.data.data, lotteryPrice]
-    purchaseRes.data.data["lotteryPrice"] = lotteryPrice
-    delete purchaseRes.data.data.ticketNumber
+    purchaseRes.data.data["lotteryPrice"] = lotteryPrice;
+    delete purchaseRes.data.data.ticketNumber;
+    delete purchaseRes.data.data.price;
+    delete purchaseRes.data.data.isPurchased;
+    delete purchaseRes.data.data.createdAt;
+    delete purchaseRes.data.data.updatedAt;
 
     return res
       .status(statusCode.success)
