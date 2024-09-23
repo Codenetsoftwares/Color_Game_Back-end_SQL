@@ -40,6 +40,13 @@ export const getLotteryGame = async (req, res) => {
 
     const { data, pagination } = response.data;
 
+    const parsedData = data.map((lottery) => {
+      return {
+        ...lottery,
+        ticketNumber: JSON.parse(lottery.ticketNumber), 
+      };
+    });
+
     const paginationData = {
       page: pagination?.page || page,
       totalPages: pagination?.totalPages || 1,
@@ -51,7 +58,7 @@ export const getLotteryGame = async (req, res) => {
       .status(statusCode.success)
       .send(
         apiResponseSuccess(
-          data,
+          parsedData, 
           true,
           statusCode.success,
           "Success",
@@ -71,6 +78,7 @@ export const getLotteryGame = async (req, res) => {
       );
   }
 };
+
 //Not Use
 export const getUser = async (req, res) => {
   try {
@@ -106,12 +114,10 @@ export const purchaseLotteryTicket = async (req, res) => {
     const users = req.user;
     const { lotteryId } = req.body;
 
-    // Generate JWT token
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
       expiresIn: "1h",
     });
 
-    // Perform API calls in parallel
     const [response, balanceUpdateResponse] = await Promise.all([
       axios.get(
         `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
@@ -125,7 +131,6 @@ export const purchaseLotteryTicket = async (req, res) => {
       }),
     ]);
 
-    // Handle errors from the lottery fetch
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
@@ -139,7 +144,6 @@ export const purchaseLotteryTicket = async (req, res) => {
         );
     }
 
-    // Check if the user has sufficient balance
     const lotteryPrice = response.data.data;
     if (users.balance < lotteryPrice) {
       return res
@@ -154,7 +158,6 @@ export const purchaseLotteryTicket = async (req, res) => {
         );
     }
 
-    // Deduct balance and update exposure
     users.balance -= lotteryPrice;
     const newExposure = { [lotteryId]: lotteryPrice };
     users.marketListExposure = [
@@ -163,7 +166,6 @@ export const purchaseLotteryTicket = async (req, res) => {
     ];
     await users.save({ fields: ["balance", "marketListExposure"] });
 
-    // Send purchase request
     const purchaseRes = await axios.post(
       `http://localhost:8080/api/create-purchase-lottery`,
       {
@@ -176,7 +178,6 @@ export const purchaseLotteryTicket = async (req, res) => {
       }
     );
 
-    // Handle purchase errors
     if (!purchaseRes.data.success) {
       return res
         .status(statusCode.badRequest)
@@ -190,7 +191,6 @@ export const purchaseLotteryTicket = async (req, res) => {
         );
     }
 
-    // you can update your response object as per requirements [purchaseRes.data.data, lotteryPrice]
     purchaseRes.data.data["lotteryPrice"] = lotteryPrice;
     delete purchaseRes.data.data.ticketNumber;
     delete purchaseRes.data.data.price;
@@ -205,7 +205,7 @@ export const purchaseLotteryTicket = async (req, res) => {
           purchaseRes.data.data,
           true,
           statusCode.success,
-          "Lottery purchased successfully"
+          `Lottery purchased successfully`
         )
       );
   } catch (error) {
@@ -264,7 +264,7 @@ export const lotteryAmount = async (req, res) => {
           data,
           true,
           statusCode.success,
-          `Lottery amount is : ${data} Rs`
+          `Lottery amount is: ${data}Rs`
         )
       );
   } catch (error) {
