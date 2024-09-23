@@ -28,6 +28,7 @@ const __dirname = path.dirname(__filename);
 import cron from 'node-cron'
 import { externalApisRoute } from './routes/externalApis.route.js';
 import { checkAndManageIndexes } from './helper/indexManager.js';
+import { lotteryRoute } from './routes/lotteryGame.route.js';
 import { voidGameRoute } from './routes/voidGame.route.js';
 
 dotenv.config();
@@ -72,6 +73,7 @@ AnnouncementRoute(app);
 SliderRoute(app);
 InactiveGameRoute(app);
 externalApisRoute(app);
+lotteryRoute(app)
 voidGameRoute(app);
 
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
@@ -128,38 +130,6 @@ app.get('/events', (req, res) => {
   });
 });
 
-// Cron job to send a message to all clients every 5 seconds
-cron.schedule('*/2 * * * * *', async () => {
-  try {
-    // const markets = await Market.findAll({
-    //   where: {
-    //     isActive: true,
-    //     endTime: { [Op.lte]: moment().utc().format() }
-    //   }
-    // });
-    let markets = []
-    let updateMarket = []
-    for (const market of markets) {
-
-      market.isActive = false;
-      const response = await market.save();
-
-      console.log("Markets Inactivated:", JSON.stringify(response, null, 2));
-
-      console.log(`Market ${response.marketName} has been deactivated.`);
-      updateMarket.push(JSON.parse(JSON.stringify(response)))
-
-    }
-
-    clients.forEach((client) => {
-      client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
-    });
-    console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
-
-  } catch (error) {
-    console.error('Error checking market statuses:', error);
-  }
-});
 
 sequelize
   .sync({ alter: true })
@@ -169,6 +139,39 @@ sequelize
     app.listen(process.env.PORT, () => {
       console.log(`App is running on  - http://localhost:${process.env.PORT || 7000}`);
     });
+
+    cron.schedule('*/2 * * * * *', async () => {
+      try {
+        // const markets = await Market.findAll({
+        //   where: {
+        //     isActive: true,
+        //     endTime: { [Op.lte]: moment().utc().format() }
+        //   }
+        // });
+        let markets = []
+        let updateMarket = []
+        for (const market of markets) {
+
+          market.isActive = false;
+          const response = await market.save();
+
+          console.log("Markets Inactivated:", JSON.stringify(response, null, 2));
+
+          console.log(`Market ${response.marketName} has been deactivated.`);
+          updateMarket.push(JSON.parse(JSON.stringify(response)))
+
+        }
+
+        clients.forEach((client) => {
+          client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
+        });
+        console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
+
+      } catch (error) {
+        console.error('Error checking market statuses:', error);
+      }
+    });
+
   })
   .catch((err) => {
     console.error('Unable to create tables:', err);

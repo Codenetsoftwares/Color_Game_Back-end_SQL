@@ -369,6 +369,12 @@ export const validateUpdateGameStatus = [
   body('status').notEmpty().withMessage("status is required.").isBoolean().withMessage('Status must be a boolean'),
 ];
 
+export const validatePurchaseLotteryTicket = [
+  body('lotteryId')
+    .isUUID()
+    .withMessage('Invalid lottery ID. It must be a valid UUID.'),
+];
+
 export const validateVoidGame = [
   body('marketId').notEmpty().withMessage("Market Id is required.").isUUID().withMessage('Market ID must be a valid UUID'),
 ];
