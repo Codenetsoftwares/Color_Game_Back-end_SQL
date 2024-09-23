@@ -18,12 +18,8 @@ export const getLotteryGame = async (req, res) => {
       page,
       limit,
     };
-    const response = await axios.get(
-      "http://localhost:8080/api/get-external-lotteries",
-      {
-        params,
-      }
-    );
+    const response = await axios.get("http://localhost:8080/api/get-external-lotteries", { params });
+
 
     if (!response.data.success) {
       return res
@@ -41,11 +37,20 @@ export const getLotteryGame = async (req, res) => {
     const { data, pagination } = response.data;
 
     const parsedData = data.map((lottery) => {
-      return {
-        ...lottery,
-        ticketNumber: JSON.parse(lottery.ticketNumber), 
-      };
+      try {
+        return {
+          ...lottery,
+          ticketNumber: JSON.parse(lottery.ticketNumber),
+        };
+      } catch (jsonError) {
+        console.error('JSON Parsing Error:', jsonError);
+        return {
+          ...lottery,
+          ticketNumber: [], 
+        };
+      }
     });
+    
 
     const paginationData = {
       page: pagination?.page || page,
