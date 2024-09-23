@@ -24,7 +24,7 @@ export const lotteryRoute = (app) => {
     purchaseLotteryTicket
   );
 
-  app.get("/api/user-lotteryAmount", authorize([string.User]), lotteryAmount);
+  app.get("/api/user-lotteryAmount/:lotteryId", authorize([string.User]), lotteryAmount);
 
   app.get("/api/user-purchases", authorize([string.User]), getUserPurchases);
 

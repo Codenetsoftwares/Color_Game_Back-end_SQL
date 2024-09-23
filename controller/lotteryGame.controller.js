@@ -207,13 +207,13 @@ export const purchaseLotteryTicket = async (req, res) => {
 export const lotteryAmount = async (req, res) => {
   try {
     const users = req.user;
-    const { lotteryId } = req.body;
+    const { lotteryId } = req.params; // Now getting lotteryId from params
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
       expiresIn: "1h",
     });
 
     const response = await axios.get(
-      `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
+      `http://localhost:8080/api/getParticularLotteries/${lotteryId}`, // lotteryId is included in the URL
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -242,7 +242,7 @@ export const lotteryAmount = async (req, res) => {
           data,
           true,
           statusCode.success,
-          `Lottery amount is:${data}Rs`
+          `Lottery amount is: ${data} Rs`
         )
       );
   } catch (error) {
@@ -258,6 +258,7 @@ export const lotteryAmount = async (req, res) => {
       );
   }
 };
+
 
 export const getUserPurchases = async (req, res) => {
   try {
