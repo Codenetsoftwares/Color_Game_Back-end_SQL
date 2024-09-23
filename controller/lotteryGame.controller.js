@@ -13,44 +13,35 @@ export const getLotteryGame = async (req, res) => {
   try {
     const { page = 1, pageSize = 10, sem } = req.query;
     const limit = parseInt(pageSize);
-    const params = {
-      sem,
-      page,
-      limit,
-    };
+    const params = { sem, page, limit };
+    
     const response = await axios.get("http://localhost:8080/api/get-external-lotteries", { params });
 
 
     if (!response.data.success) {
-      return res
-        .status(statusCode.badRequest)
-        .send(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.badRequest,
-            "Failed to fetch data"
-          )
-        );
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to fetch data"));
     }
 
     const { data, pagination } = response.data;
 
     const parsedData = data.map((lottery) => {
-      try {
-        return {
-          ...lottery,
-          ticketNumber: JSON.parse(lottery.ticketNumber),
-        };
-      } catch (jsonError) {
-        console.error('JSON Parsing Error:', jsonError);
-        return {
-          ...lottery,
-          ticketNumber: [], 
-        };
+      let ticketNumber = [];
+
+      if (Array.isArray(lottery.ticketNumber)) {
+        ticketNumber = lottery.ticketNumber;
+      } else {
+        try {
+          ticketNumber = JSON.parse(lottery.ticketNumber); 
+        } catch (error) {
+          console.error('Error parsing ticketNumber:', error);
+        }
       }
+
+      return {
+        ...lottery,
+        ticketNumber, 
+      };
     });
-    
 
     const paginationData = {
       page: pagination?.page || page,
@@ -59,30 +50,12 @@ export const getLotteryGame = async (req, res) => {
       limit: pagination?.limit || limit,
     };
 
-    return res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          parsedData, 
-          true,
-          statusCode.success,
-          "Success",
-          paginationData
-        )
-      );
+    return res.status(statusCode.success).send(apiResponseSuccess(parsedData, true, statusCode.success, "Success", paginationData));
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          null,
-          false,
-          statusCode.internalServerError,
-          error.message
-        )
-      );
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+
 
 //Not Use
 export const getUser = async (req, res) => {
@@ -269,7 +242,7 @@ export const lotteryAmount = async (req, res) => {
           data,
           true,
           statusCode.success,
-          `Lottery amount is: ${data}Rs`
+          `Lottery amount is:${data}Rs`
         )
       );
   } catch (error) {
