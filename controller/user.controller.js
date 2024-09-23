@@ -13,10 +13,11 @@ import Game from '../models/game.model.js';
 import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
+import axios from 'axios';
 
 // done
 export const createUser = async (req, res) => {
-  const { userId, userName, password} = req.body;
+  const { userId, userName, password } = req.body;
   try {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
@@ -336,6 +337,7 @@ export const getAllGameData = async (req, res) => {
             "announcementResult",
             "isActive",
             "hideMarketUser",
+            "isVoid",
           ],
           include: [
             {
@@ -361,7 +363,7 @@ export const getAllGameData = async (req, res) => {
       description: game.description,
       isBlink: game.isBlink,
       markets: game.Markets
-        .filter((market) => !market.hideMarketUser)
+        .filter((market) => !market.hideMarketUser && !market.isVoid)
         .map((market) => ({
           marketId: market.marketId,
           marketName: market.marketName,
@@ -370,6 +372,7 @@ export const getAllGameData = async (req, res) => {
           endTime: market.endTime,
           announcementResult: market.announcementResult,
           isActive: market.isActive,
+          isVoid: market.isVoid,
           runners: market.Runners
             .filter((runner) => !runner.hideRunnerUser)
             .map((runner) => ({
@@ -411,6 +414,7 @@ export const getAllGameData = async (req, res) => {
       );
   }
 };
+
 
 // done
 export const filteredGameData = async (req, res) => {
@@ -575,7 +579,7 @@ export const filterMarketData = async (req, res) => {
 
     // Fetch market data
     const marketDataRows = await Market.findAll({
-      where: { marketId, hideMarketUser: false },
+      where: { marketId, hideMarketUser: false, isVoid: false },
       include: [
         {
           model: Runner,
@@ -585,7 +589,7 @@ export const filterMarketData = async (req, res) => {
     });
 
     if (marketDataRows.length === 0) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Market not found with MarketId'));
+      return res.status(statusCode.success).json(apiResponseSuccess({ runners: [] }, false, statusCode.success, 'Market not found with MarketId'));
     }
 
     let marketDataObj = {
@@ -801,48 +805,60 @@ export const getUserBetHistory = async (req, res) => {
     const user = req.user
     const userId = user.userId
     const { gameId } = req.params;
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
-    const { startDate, endDate } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const dataType = req.query.dataType;
 
-    let start = null;
-    let end = null;
-
-    if (startDate) {
-      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!start.isValid()) {
-        throw new Error('startDate is not a valid date');
+    let startDate, endDate;
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    }
+    else if (dataType === 'olddata') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+      } else {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().setHours(23, 59, 59, 999);
       }
     }
-
-    if (endDate) {
-      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!end.isValid()) {
-        throw new Error('endDate is not a valid date');
+    else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+        const maxAllowedDate = new Date(startDate);
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+        if (endDate > maxAllowedDate) {
+          return res.status(statusCode.badRequest)
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+        }
       }
-
-      if (end.isAfter(moment())) {
-        throw new Error('Invalid End Date');
+      else {
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0));
+        endDate = new Date(today.setHours(23, 59, 59, 999));
       }
     }
-
-    if (start && end && end.isBefore(start)) {
-      throw new Error('endDate should be after startDate');
+    else {
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
-    const whereClause = {
-      userId,
-      gameId,
-    };
-
-    if (start && end) {
-      whereClause.date = {
-        [Op.between]: [start.format('YYYY-MM-DD HH:mm:ss'), end.endOf('day').format('YYYY-MM-DD HH:mm:ss')],
-      };
-    }
     const { count, rows } = await BetHistory.findAndCountAll({
-      where: whereClause,
-      attributes: ['gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
+      where: {
+        userId: userId,
+        gameId: gameId,
+        date: {
+          [Op.between]: [startDate, endDate],
+        }
+      },
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
       limit,
       offset: (page - 1) * limit,
     });
@@ -850,8 +866,9 @@ export const getUserBetHistory = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     const pageSize = limit;
     const totalItems = count;
+
     res.status(statusCode.success).send(apiResponseSuccess(
-      { rows },
+      rows,
       true,
       statusCode.success,
       'Success',
@@ -862,10 +879,10 @@ export const getUserBetHistory = async (req, res) => {
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
-          error.data ?? null,
+          null,
           false,
-          error.successCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message,
+          statusCode.internalServerError,
+          error.message,
         ),
       );
   }
@@ -917,14 +934,59 @@ export const currentOrderHistory = async (req, res) => {
       );
   }
 };
+
 export const calculateProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
-    const startDate = req.query.startDate + ' 00:00:00';
-    const endDate = req.query.endDate + ' 23:59:59';
+    const dataType = req.query.dataType;
+
+    console.log('Received dataType:', dataType);
+
+    let startDate, endDate;
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    }
+    else if (dataType === 'olddata') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+      } else {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().setHours(23, 59, 59, 999);
+      }
+    }
+    else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+        const maxAllowedDate = new Date(startDate);
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+        if (endDate > maxAllowedDate) {
+          return res.status(statusCode.badRequest)
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+        }
+      }
+      else {
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0));
+        endDate = new Date(today.setHours(23, 59, 59, 999));
+      }
+    }
+    else {
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
+    }
+
+    const searchGameName = req.query.search || '';
 
     const totalGames = await ProfitLoss.count({
       where: {
@@ -946,6 +1008,7 @@ export const calculateProfitLoss = async (req, res) => {
         {
           model: Game,
           attributes: ['gameName'],
+          where: searchGameName ? { gameName: { [Op.like]: `%${searchGameName}%` } } : {},
         },
       ],
       where: {
@@ -1003,27 +1066,28 @@ export const calculateProfitLoss = async (req, res) => {
       );
   }
 };
-// doubt regarding response structure
+
 export const marketProfitLoss = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    const gameId = req.params.gameId; 
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+    const gameId = req.params.gameId;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
+    const searchMarketName = req.query.search || '';
 
     const distinctMarketIds = await ProfitLoss.findAll({
       attributes: [
         [Sequelize.fn('DISTINCT', Sequelize.col('marketId')), 'marketId']
       ],
-      where: { userId: userId, gameId: gameId } 
+      where: { userId: userId, gameId: gameId }
     });
+
+    if (distinctMarketIds.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found.'));
+    }
 
     const marketsProfitLoss = await Promise.all(distinctMarketIds.map(async market => {
       const profitLossEntries = await ProfitLoss.findAll({
@@ -1034,7 +1098,6 @@ export const marketProfitLoss = async (req, res) => {
         where: {
           userId: userId,
           marketId: market.marketId,
-          date: { [Op.between]: [startDateObj, endDateObj] }
         }
       });
 
@@ -1044,17 +1107,27 @@ export const marketProfitLoss = async (req, res) => {
           .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
       }
 
+      const marketQuery = {
+        marketId: market.marketId,
+      };
+
+      if (searchMarketName) {
+        marketQuery.marketName = { [Op.like]: `%${searchMarketName}%` };
+      }
+
       const game = await Game.findOne({
-        include: [{ model: Market, where: { marketId: market.marketId }, attributes: ['marketName'] }],
+        include: [
+          {
+            model: Market,
+            where: marketQuery,
+            attributes: ['marketName']
+          }
+        ],
         attributes: ['gameName'],
         where: { gameId: gameId }
       });
 
-      if (!game) {
-        return res
-          .status(statusCode.badRequest)
-          .send(apiResponseSuccess([], true, statusCode.badRequest, 'Game not found'));
-      }
+      if (!game) return null
 
       const gameName = game.gameName;
       const marketName = game.Markets[0].marketName;
@@ -1064,9 +1137,13 @@ export const marketProfitLoss = async (req, res) => {
 
       return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss };
     }));
-
-    // Filter out null values (markets with no entries or missing game data)
     const filteredMarketsProfitLoss = marketsProfitLoss.filter(item => item !== null);
+
+    if (filteredMarketsProfitLoss.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No matching markets found.'));
+    }
 
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
@@ -1092,16 +1169,8 @@ export const marketProfitLoss = async (req, res) => {
         ),
       );
   } catch (error) {
-    res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          null,
-          false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
-        ),
-      );
+    console.error("Error from API:", error.message);
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
@@ -1110,20 +1179,14 @@ export const runnerProfitLoss = async (req, res) => {
     const user = req.user;
     const userId = user.userId;
     const marketId = req.params.marketId;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
+    const searchRunnerName = req.query.search || '';
 
     const profitLossEntries = await ProfitLoss.findAll({
       where: {
         userId: userId,
         marketId: marketId,
-        date: { [Op.between]: [startDateObj, endDateObj] }
       }
     });
 
@@ -1140,38 +1203,50 @@ export const runnerProfitLoss = async (req, res) => {
           {
             model: Market,
             where: { marketId: marketId },
-            include: [{ model: Runner }]
+            include: [
+              {
+                model: Runner,
+                where: searchRunnerName
+                  ? { runnerName: { [Op.like]: `%${searchRunnerName}%` } }
+                  : {},
+              }
+            ]
           }
         ]
       });
 
-      if (!game) {
-        return apiResponseErr(null, false, statusCode.badRequest, `Game data not found for gameId: ${entry.gameId}`);
-      }
+      if (!game) return null
 
-      const gameName = game.gameName;
-      const marketName = game.Markets[0].marketName;
-      const runner = game.Markets[0].Runners.find(runner => runner.runnerId === entry.runnerId);
+      const market = game.Markets[0];
+      const runner = market.Runners.find(runner => runner.runnerId === entry.runnerId);
 
       if (!runner) {
         return apiResponseErr(null, false, statusCode.badRequest, `Runner data not found for runnerId: ${entry.runnerId}`);
       }
 
-      const runnerName = runner.runnerName;
-
       return {
-        gameName: gameName,
-        marketName: marketName,
-        runnerName: runnerName,
+        gameName: game.gameName,
+        marketName: market.marketName,
+        runnerName: runner.runnerName,
         runnerId: entry.runnerId,
-        profitLoss: parseFloat(entry.profitLoss).toFixed(2)
+        profitLoss: parseFloat(entry.profitLoss).toFixed(2),
+        isWin: runner.isWin,
+        settleTime: entry.date.toISOString(),
       };
     }));
 
+    const filteredRunnersProfitLoss = runnersProfitLoss.filter(item => item !== null);
+
+    if (filteredRunnersProfitLoss.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'No matching runners found.'));
+    }
+
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const paginatedRunnersProfitLoss = runnersProfitLoss.slice(startIndex, endIndex);
-    const totalItems = runnersProfitLoss.length;
+    const paginatedRunnersProfitLoss = filteredRunnersProfitLoss.slice(startIndex, endIndex);
+    const totalItems = filteredRunnersProfitLoss.length;
     const totalPages = Math.ceil(totalItems / limit);
 
     const paginationData = {
@@ -1192,18 +1267,20 @@ export const runnerProfitLoss = async (req, res) => {
         ),
       );
   } catch (error) {
+    console.error("Error from API:", error.message);
     res
       .status(statusCode.internalServerError)
       .send(
         apiResponseErr(
           null,
           false,
-          error.responseCode || statusCode.internalServerError,
-          error.errMessage || error.message,
+          statusCode.internalServerError,
+          error.message,
         ),
       );
   }
 };
+
 export const userMarketData = async (req, res) => {
   try {
     const user = req.user;
@@ -1265,3 +1342,112 @@ export const userMarketData = async (req, res) => {
       );
   }
 };
+
+export const userBetHistoryGames = async (req, res) => {
+  try {
+    const distinctGames = await BetHistory.findAll({
+      attributes: [
+        'gameId',
+        'gameName'
+      ],
+      group: ['gameId', 'gameName'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(distinctGames, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching user market data:', error);
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
+  }
+};
+
+export const accountStatement = async (req, res) => {
+  try {
+    const userName = req.user.userName;
+    const { page = 1, pageSize = 10, startDate, endDate } = req.query;
+    const dataType = req.query.dataType;
+
+    const params = {
+      userName,
+      startDate,
+      endDate,
+      pageSize,
+      page,
+      dataType
+    };
+
+    const response = await axios.get(`http://localhost:8000/api/user-colorGame-account-statement/${userName}`, { params });
+    
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+    }
+
+    const { data, pagination } = response.data;
+
+    const paginationData = {
+      page: pagination?.page || page,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+      limit: pagination?.limit
+    };
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          'Success',
+          paginationData,
+        ),
+      );
+  } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
+
+export const getUserBetList = async (req, res) => {
+  try {
+    const user = req.user;
+    const userId = user.userId;
+    const runnerId = req.params.runnerId;
+
+    const rows = await BetHistory.findAll({
+      where: {
+        userId: userId,
+        runnerId: runnerId,
+      },
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'matchDate', 'placeDate', 'bidAmount'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(
+      rows,
+      true,
+      statusCode.success,
+      'Success',
+    ));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}

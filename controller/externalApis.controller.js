@@ -7,51 +7,61 @@ import Runner from '../models/runner.model.js';
 import { Op, Sequelize } from 'sequelize';
 import Game from '../models/game.model.js';
 import ProfitLoss from '../models/profitLoss.js';
+import CurrentOrder from '../models/currentOrder.model.js';
+import MarketBalance from '../models/marketBalance.js';
+import { PreviousState } from '../models/previousState.model.js';
 
 export const getExternalUserBetHistory = async (req, res) => {
   try {
     const { gameId, userName } = req.params;
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 5;
-    const { startDate, endDate } = req.query;
-
-    let start = null;
-    let end = null;
-
-    if (startDate) {
-      start = moment(startDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!start.isValid()) {
-        throw new Error('startDate is not a valid date');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const dataType = req.query.dataType; 
+    let startDate, endDate;
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    }else if (dataType === 'olddata') {
+      if(req.query.startDate && req.query.endDate){
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate   ).setHours(23, 59, 59, 999); 
+      }else{
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+      endDate = new Date().setHours(23, 59, 59, 999);
+      }   
+    }else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+          startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+          endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+          const maxAllowedDate = new Date(startDate);
+          maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+          if (endDate > maxAllowedDate) {
+            return res.status(statusCode.badRequest)
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+        }
+      }else {
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 3); 
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
+        endDate = new Date(today.setHours(23, 59, 59, 999)); 
       }
+    } else {
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
-    if (endDate) {
-      end = moment(endDate, ['YYYY-MM-DD', 'DD/MM/YYYY', 'YYYY/MM/DD'], true);
-      if (!end.isValid()) {
-        throw new Error('endDate is not a valid date');
-      }
-
-      if (end.isAfter(moment())) {
-        throw new Error('Invalid End Date');
-      }
-    }
-
-    if (start && end && end.isBefore(start)) {
-      throw new Error('endDate should be after startDate');
-    }
-
-    const whereClause = {
-      userName,
-      gameId,
-    };
-
-    if (start && end) {
-      whereClause.date = {
-        [Op.between]: [start.format('YYYY-MM-DD HH:mm:ss'), end.endOf('day').format('YYYY-MM-DD HH:mm:ss')],
-      };
-    }
     const { count, rows } = await BetHistory.findAndCountAll({
-      where: whereClause,
+      where: {
+        userName: userName,
+        gameId: gameId,
+        date: {
+          [Op.between]: [startDate, endDate],
+        }
+      },
       attributes: ['userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
       limit,
       offset: (page - 1) * limit,
@@ -82,34 +92,61 @@ export const getExternalUserBetHistory = async (req, res) => {
   }
 };
 
-export const calculateExternalProfitLoss = async (req, res) => {
+export const  calculateExternalProfitLoss = async (req, res) => {
   try {
     const userName = req.params.userName;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-
-    const startDate = moment(req.query.startDate).startOf('day').format('YYYY-MM-DD HH:mm:ss');
-    const endDate = moment(req.query.endDate).endOf('day').format('YYYY-MM-DD HH:mm:ss');
-
+    const limit = parseInt(req.query.limit) || 10;
+    const dataType = req.query.dataType; 
+    let startDate, endDate;
+    if (dataType === 'live') {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    }else if (dataType === 'olddata') {
+      if(req.query.startDate && req.query.endDate){
+        startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(req.query.endDate   ).setHours(23, 59, 59, 999); 
+      }else{
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+      endDate = new Date().setHours(23, 59, 59, 999);
+      }   
+    }else if (dataType === 'backup') {
+      if (req.query.startDate && req.query.endDate) {
+          startDate = new Date(req.query.startDate).setHours(0, 0, 0, 0);
+          endDate = new Date(req.query.endDate).setHours(23, 59, 59, 999);
+          const maxAllowedDate = new Date(startDate);
+          maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+          if (endDate > maxAllowedDate) {
+            return res.status(statusCode.badRequest)
+            .send(apiResponseErr([], false, statusCode.badRequest, 'The date range for backup data should not exceed 3 months.'));
+        }
+      }else {
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 2); 
+        startDate = new Date(threeMonthsAgo.setHours(0, 0, 0, 0)); 
+        endDate = new Date(today.setHours(23, 59, 59, 999)); 
+      }
+    } else {
+      return res.status(statusCode.success)
+        .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
+    }
     const searchGameName = req.query.search || '';
 
     const totalGames = await ProfitLoss.count({
       where: {
-        userId: userName,
+        userName: userName,
         date: {
           [Op.between]: [startDate, endDate],
         },
       },
       distinct: true,
-      col: 'gameId',
-      include: [
-        {
-          model: Game,
-          attributes: [],
-          where: searchGameName ? { gameName: { [Op.like]: `%${searchGameName}%` } } : {},
-        },
-      ],
+      col: 'gameId'
     });
+     console.log("totalGames............", totalGames)
 
     const profitLossData = await ProfitLoss.findAll({
       attributes: [
@@ -134,6 +171,7 @@ export const calculateExternalProfitLoss = async (req, res) => {
       limit: limit,
     });
 
+       console.log("profitLossData.............",profitLossData)
     if (profitLossData.length === 0) {
       return res
         .status(statusCode.success)
@@ -141,16 +179,20 @@ export const calculateExternalProfitLoss = async (req, res) => {
     }
 
     const totalPages = Math.ceil(totalGames / limit);
+    console.log("totalPages..................",totalPages)
 
     const paginationData = {
       page: page,
+      limit: limit,
       totalPages: totalPages,
       totalItems: totalGames,
+      
     };
 
     const formattedProfitLossData = profitLossData.map((item) => ({
       gameId: item.gameId,
       gameName: item.Game.gameName,
+      profitLoss: item.dataValues.totalProfitLoss,
       totalProfitLoss: item.dataValues.totalProfitLoss,
     }));
 
@@ -245,7 +287,7 @@ export const marketExternalProfitLoss = async (req, res) => {
 
       const formattedTotalProfitLoss = totalProfitLoss.toFixed(2);
 
-      return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss };
+      return { marketId: market.marketId, marketName, gameName, totalProfitLoss: formattedTotalProfitLoss, profitLoss: formattedTotalProfitLoss };
     }));
     const filteredMarketsProfitLoss = marketsProfitLoss.filter(item => item !== null);
 
@@ -338,7 +380,11 @@ export const runnerExternalProfitLoss = async (req, res) => {
         marketName: market.marketName,
         runnerName: runner.runnerName,
         runnerId: entry.runnerId,
-        profitLoss: parseFloat(entry.profitLoss).toFixed(2)
+        profitLoss: parseFloat(entry.profitLoss).toFixed(2),
+        totalProfitLoss: parseFloat(entry.profitLoss).toFixed(2),
+        isWin: runner.isWin,
+        settleTime: entry.date.toISOString(),
+        userName: entry.userName
       };
     }));
 
@@ -387,3 +433,175 @@ export const runnerExternalProfitLoss = async (req, res) => {
       );
   }
 };
+
+export const liveMarketBet = async (req, res) => {
+  try {
+    const { marketId, userName } = req.params;
+
+    const marketDataRows = await Market.findAll({
+      where: { marketId, hideMarketUser: false },
+      include: [
+        {
+          model: Runner,
+          required: false,
+        },
+      ],
+    });
+
+    if (marketDataRows.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess({ runners: [] }, true, statusCode.success, 'Market not found with MarketId'));
+    }
+
+    let marketDataObj = {
+      marketId: marketDataRows[0].marketId,
+      marketName: marketDataRows[0].marketName,
+      participants: marketDataRows[0].participants,
+      startTime: marketDataRows[0].startTime,
+      endTime: marketDataRows[0].endTime,
+      announcementResult: marketDataRows[0].announcementResult,
+      isActive: marketDataRows[0].isActive,
+      runners: [],
+    };
+
+    marketDataRows[0].Runners.forEach((runner) => {
+      marketDataObj.runners.push({
+        id: runner.id,
+        runnerName: {
+          runnerId: runner.runnerId,
+          name: runner.runnerName,
+          isWin: runner.isWin,
+          bal: Math.round(parseFloat(runner.bal)),
+        },
+        rate: [
+          {
+            back: runner.back,
+            lay: runner.lay,
+          },
+        ],
+      });
+    });
+    if (userName) {
+      // Fetch current orders
+      const currentOrdersRows = await CurrentOrder.findAll({
+        where: {
+          userName,
+          marketId,
+        },
+      });
+
+      // Calculate user market balance
+      const userMarketBalance = {
+        userName,
+        marketId,
+        runnerBalance: [],
+      };
+
+      marketDataObj.runners.forEach((runner) => {
+        let runnerBalance = 0;
+        currentOrdersRows.forEach((order) => {
+          if (order.type === 'back') {
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance += Number(order.bidAmount);
+            } else {
+              runnerBalance -= Number(order.value);
+            }
+          } else if (order.type === 'lay') {
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance -= Number(order.bidAmount);
+            } else {
+              runnerBalance += Number(order.value);
+            }
+          }
+        });
+
+        userMarketBalance.runnerBalance.push({
+          runnerId: runner.runnerName.runnerId,
+          bal: runnerBalance,
+        });
+
+        // Update the runner balance in marketDataObj
+        runner.runnerName.bal = runnerBalance;
+      });
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching market data:', error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+export const getLiveBetGames = async (req, res) => {
+  try {
+    const currentOrders = await CurrentOrder.findAll({
+      attributes: ['gameId', 'gameName', 'marketId', 'marketName', 'id', 'userName', 'userId'],
+    });
+
+    if (!currentOrders || currentOrders.length === 0) {
+      return res.status(statusCode.success).send(apiResponseSuccess([], true, statusCode.success, 'No data found.'));
+    }
+
+    const uniqueMarkets = new Map();
+
+    currentOrders.forEach(order => {
+      const key = `${order.gameId}-${order.marketId}`;
+
+      if (!uniqueMarkets.has(key)) {
+        // Initialize the market entry with relevant details and an empty userNames array
+        uniqueMarkets.set(key, {
+          gameId: order.gameId,
+          gameName: order.gameName,
+          marketId: order.marketId,
+          marketName: order.marketName,
+          userNames: [order.userName]
+        });
+      } else {
+        // If the market is already present, add the user name to the array if it's not already included
+        const market = uniqueMarkets.get(key);
+        if (!market.userNames.includes(order.userName)) {
+          market.userNames.push(order.userName);
+        }
+      }
+    });
+
+    const uniqueOrders = Array.from(uniqueMarkets.values());
+
+    return res.status(statusCode.success).send(apiResponseSuccess(uniqueOrders, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching market data:', error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+
+export const getExternalUserBetList = async (req, res) => {
+  try {
+    const { userName, runnerId } = req.params;
+
+    const rows = await BetHistory.findAll({
+      where: {
+        userName: userName,
+        runnerId: runnerId,
+      },
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'matchDate','placeDate', 'bidAmount'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(
+      rows,
+      true,
+      statusCode.success,
+      'Success',
+    ));
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message,
+        ),
+      );
+  }
+}

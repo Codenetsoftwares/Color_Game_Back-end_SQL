@@ -103,7 +103,9 @@ export const createdMarketSchema = [
 
 export const createdRunnerSchema = [
   param("marketId").notEmpty().withMessage("Market ID is required"),
-  body("runnerNames").notEmpty().withMessage("Runner names are required"),
+  body("runners")
+    .isArray().withMessage("Runners must be an array")
+    .notEmpty().withMessage("Runners array cannot be empty")
 ];
 
 export const createdRateSchema = [
@@ -292,14 +294,6 @@ export const validateDeleteRunner = [
 
 export const calculateProfitLossSchema = [
   param("userName").notEmpty().withMessage("Username is required"),
-  query("startDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid end date format."),
 ];
 
 export const marketProfitLossSchema = [
@@ -364,30 +358,10 @@ export const calculateProfitLossValidate = [
 
 export const marketProfitLossValidate = [
   param("gameId").notEmpty().withMessage("Game ID is required"),
-  query("startDate")
-    .notEmpty()
-    .withMessage("Start date is required.")
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .notEmpty()
-    .withMessage("End date is required.")
-    .isISO8601()
-    .withMessage("Invalid end date format."),
 ];
 
 export const runnerProfitLossValidate= [
   param("marketId").notEmpty().withMessage("Market ID is required"),
-  query("startDate")
-    .notEmpty()
-    .withMessage("Start date is required.")
-    .isISO8601()
-    .withMessage("Invalid start date format."),
-  query("endDate")
-    .notEmpty()
-    .withMessage("End date is required.")
-    .isISO8601()
-    .withMessage("Invalid end date format."),
 ];
 
 export const validateUpdateGameStatus = [
@@ -399,4 +373,8 @@ export const validatePurchaseLotteryTicket = [
   body('lotteryId')
     .isUUID()
     .withMessage('Invalid lottery ID. It must be a valid UUID.'),
+];
+
+export const validateVoidGame = [
+  body('marketId').notEmpty().withMessage("Market Id is required.").isUUID().withMessage('Market ID must be a valid UUID'),
 ];

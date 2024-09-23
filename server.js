@@ -29,6 +29,7 @@ import cron from 'node-cron'
 import { externalApisRoute } from './routes/externalApis.route.js';
 import { checkAndManageIndexes } from './helper/indexManager.js';
 import { lotteryRoute } from './routes/lotteryGame.route.js';
+import { voidGameRoute } from './routes/voidGame.route.js';
 
 dotenv.config();
 const app = express();
@@ -73,6 +74,8 @@ SliderRoute(app);
 InactiveGameRoute(app);
 externalApisRoute(app);
 lotteryRoute(app)
+voidGameRoute(app);
+
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
 Market.belongsTo(Game, { foreignKey: 'gameId', targetKey: 'gameId' });
 

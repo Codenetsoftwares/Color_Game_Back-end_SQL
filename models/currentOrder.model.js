@@ -79,7 +79,7 @@ CurrentOrder.init(
     sequelize,
     modelName: 'CurrentOrder',
     tableName: 'currentOrder',
-    timestamps: false,
+    timestamps: true,
   },
 );
 export default CurrentOrder;

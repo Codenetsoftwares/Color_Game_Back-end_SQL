@@ -19,6 +19,9 @@ import {
   createUser,
   userUpdate,
   userMarketData,
+  userBetHistoryGames,
+  accountStatement,
+  getUserBetList,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -37,7 +40,7 @@ import { authenticateSuperAdmin } from '../middleware/whiteLabelAuth.js';
 
 export const UserRoute = (app) => {
   // done
-  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser); 
+  app.post('/api/user-create', createUserValidate, customErrorHandler, authenticateSuperAdmin, createUser);
   // done
   app.put('/api/users-update/:userId', authorize([string.Admin]), userUpdate);
 
@@ -90,8 +93,6 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss',
-    calculateProfitLossValidate,
-    customErrorHandler,
     authorize([string.User]),
     calculateProfitLoss,
   );
@@ -114,4 +115,9 @@ export const UserRoute = (app) => {
 
   app.get('/api/user-market-data', customErrorHandler, authorize([string.User]), userMarketData);
 
+  app.get('/api/user-betHistory-games', userBetHistoryGames);
+
+  app.get('/api/user-account-statement', authorize([string.User]), accountStatement)
+
+  app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList)
 };
