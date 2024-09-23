@@ -242,7 +242,7 @@ export const lotteryAmount = async (req, res) => {
           data,
           true,
           statusCode.success,
-          `Lottery amount is: ${data} Rs`
+          `Lottery amount of ₹${data} `
         )
       );
   } catch (error) {
