@@ -54,7 +54,7 @@ BetHistory.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    date: {
+    matchDate: {
       type: DataTypes.DATE,
       allowNull: false,
     },
@@ -75,6 +75,10 @@ BetHistory.init(
     exposure: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
+    },
+    placeDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
     },
   },
   {

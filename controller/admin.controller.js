@@ -719,10 +719,11 @@ export const afterWining = async (req, res) => {
           rate: order.rate,
           value: order.value,
           type: order.type,
-          date: new Date(),
+          matchDate: order.date,
           bidAmount: order.bidAmount,
           isWin: order.isWin,
           profitLoss: order.profitLoss,
+          placeDate : order.createdAt
         });
       }
 

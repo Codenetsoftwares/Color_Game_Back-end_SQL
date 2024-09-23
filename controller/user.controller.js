@@ -1429,7 +1429,7 @@ export const getUserBetList = async (req, res) => {
         userId: userId,
         runnerId: runnerId,
       },
-      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'bidAmount'],
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'matchDate', 'placeDate', 'bidAmount'],
     });
 
     res.status(statusCode.success).send(apiResponseSuccess(

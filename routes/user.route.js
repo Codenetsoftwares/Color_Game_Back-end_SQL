@@ -120,6 +120,4 @@ export const UserRoute = (app) => {
   app.get('/api/user-account-statement', authorize([string.User]), accountStatement)
 
   app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList)
-
-
 };

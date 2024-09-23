@@ -583,7 +583,7 @@ export const getExternalUserBetList = async (req, res) => {
         userName: userName,
         runnerId: runnerId,
       },
-      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'bidAmount'],
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'matchDate','placeDate', 'bidAmount'],
     });
 
     res.status(statusCode.success).send(apiResponseSuccess(
