@@ -1371,12 +1371,12 @@ export const userBetHistoryGames = async (req, res) => {
 
 export const accountStatement = async (req, res) => {
   try {
-    const adminId = req.user.userId;
+    const userName = req.user.userName;
     const { page = 1, pageSize = 10, startDate, endDate } = req.query;
     const dataType = req.query.dataType;
 
     const params = {
-      adminId,
+      userName,
       startDate,
       endDate,
       pageSize,
@@ -1384,8 +1384,8 @@ export const accountStatement = async (req, res) => {
       dataType
     };
 
-    const response = await axios.get(`https://wl.server.dummydoma.in/api/user-colorGame-account-statement/${adminId}`, { params });
-
+    const response = await axios.get(`http://localhost:8000/api/user-colorGame-account-statement/${userName}`, { params });
+    
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
