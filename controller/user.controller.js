@@ -892,20 +892,20 @@ export const currentOrderHistory = async (req, res) => {
   try {
     const user = req.user;
     const userId = user.userId;
-    const marketId = req.params.marketId;
+    const gameId = req.params.gameId;
     // const page = parseInt(req.query.page, 10) || 1;
     // const limit = parseInt(req.query.limit, 10) || 5;
 
-    if (!marketId) {
+    if (!gameId) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, statusCode.badRequest, false, 'Market ID is required'));
+        .send(apiResponseErr(null, statusCode.badRequest, false, 'Game ID is required'));
     }
 
     const { rows } = await CurrentOrder.findAndCountAll({
       where: {
         userId,
-        marketId,
+        gameId,
       },
       attributes: ['runnerName', 'rate', 'value', 'type', 'bidAmount'],
       // limit,
@@ -1451,3 +1451,34 @@ export const getUserBetList = async (req, res) => {
       );
   }
 }
+
+export const getUserCurrentOrderGames = async (req, res) => {
+  try {
+    const user = req.user;
+    const userId = user.userId;
+
+    const distinctGames = await CurrentOrder.findAll({
+      where: { userId },
+      attributes: [
+        'gameId',
+        'gameName'
+      ],
+      group: ['gameId', 'gameName'],
+    });
+
+    res.status(statusCode.success).send(apiResponseSuccess(distinctGames, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error fetching user market data:', error);
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
+  }
+};
+

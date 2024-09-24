@@ -22,6 +22,7 @@ import {
   userBetHistoryGames,
   accountStatement,
   getUserBetList,
+  getUserCurrentOrderGames,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -84,7 +85,7 @@ export const UserRoute = (app) => {
   );
   // done
   app.get(
-    '/api/user-currentOrderHistory/:marketId',
+    '/api/user-currentOrderHistory/:gameId',
     currentOrderSchema,
     customErrorHandler,
     authorize([string.User]),
@@ -120,4 +121,7 @@ export const UserRoute = (app) => {
   app.get('/api/user-account-statement', authorize([string.User]), accountStatement)
 
   app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList)
+
+  app.get('/api/user-currentOrder-games', authorize([string.User]), getUserCurrentOrderGames)
+
 };
