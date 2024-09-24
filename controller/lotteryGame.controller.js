@@ -103,7 +103,7 @@ export const purchaseLotteryTicket = async (req, res) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       ),
-      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, {
+      axios.post(`https://wl.server.dummydoma.in/api/admin/extrnal/balance-update`, {
         userId: users.userId,
         amount: users.balance,
       }),

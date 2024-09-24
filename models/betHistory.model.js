@@ -54,6 +54,10 @@ BetHistory.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    date: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     matchDate: {
       type: DataTypes.DATE,
       allowNull: false,
