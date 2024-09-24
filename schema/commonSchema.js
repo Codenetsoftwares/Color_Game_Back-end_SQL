@@ -37,7 +37,7 @@ export const bidHistorySchema = [
 ];
 
 export const currentOrderSchema = [
-  param("marketId").exists().withMessage("Market ID is required."),
+  param("gameId").exists().withMessage("Game ID is required."),
 ];
 
 export const winningSchema = [
