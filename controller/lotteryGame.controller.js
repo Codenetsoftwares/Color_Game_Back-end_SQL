@@ -15,7 +15,7 @@ export const getLotteryGame = async (req, res) => {
     const limit = parseInt(pageSize);
     const params = { sem, page, limit };
     
-    const response = await axios.get("http://localhost:8080/api/get-external-lotteries", { params });
+    const response = await axios.get("https://lottery.server.dummydoma.in/api/get-external-lotteries", { params });
 
 
     if (!response.data.success) {
@@ -98,7 +98,7 @@ export const purchaseLotteryTicket = async (req, res) => {
 
     const [response, balanceUpdateResponse] = await Promise.all([
       axios.get(
-        `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
+        `https://lottery.server.dummydoma.in/api/getParticularLotteries/${lotteryId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -145,7 +145,7 @@ export const purchaseLotteryTicket = async (req, res) => {
     await users.save({ fields: ["balance", "marketListExposure"] });
 
     const purchaseRes = await axios.post(
-      `http://localhost:8080/api/create-purchase-lottery`,
+      `https://lottery.server.dummydoma.in/api/create-purchase-lottery`,
       {
         userId: users.userId,
         lotteryId,
@@ -213,7 +213,7 @@ export const lotteryAmount = async (req, res) => {
     });
 
     const response = await axios.get(
-      `http://localhost:8080/api/getParticularLotteries/${lotteryId}`, // lotteryId is included in the URL
+      `https://lottery.server.dummydoma.in/api/getParticularLotteries/${lotteryId}`, // lotteryId is included in the URL
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -272,7 +272,7 @@ export const getUserPurchases = async (req, res) => {
     );
 
     const response = await axios.get(
-      `http://localhost:8080/api/user-purchases/${userId}?page=${page}&limit=${limit}`,
+      `https://lottery.server.dummydoma.in/api/user-purchases/${userId}?page=${page}&limit=${limit}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
