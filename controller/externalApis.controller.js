@@ -62,7 +62,7 @@ export const getExternalUserBetHistory = async (req, res) => {
           [Op.between]: [startDate, endDate],
         }
       },
-      attributes: ['userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
+      attributes: ['userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate','placeDate'],
       limit,
       offset: (page - 1) * limit,
     });
