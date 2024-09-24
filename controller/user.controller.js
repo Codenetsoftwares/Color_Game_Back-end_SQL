@@ -916,7 +916,7 @@ export const currentOrderHistory = async (req, res) => {
     // const pageSize = limit;
     // const totalItems = count;
     res.status(statusCode.success).send(apiResponseSuccess(
-      { rows },
+      rows,
       true,
       statusCode.success,
       'Success',
@@ -1385,7 +1385,7 @@ export const accountStatement = async (req, res) => {
     };
 
     const response = await axios.get(`https://wl.server.dummydoma.in/api/user-colorGame-account-statement/${userName}`, { params });
-    
+
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
