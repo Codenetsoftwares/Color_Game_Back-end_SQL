@@ -9,5 +9,15 @@ class stringConst {
     this.masterAgent = 'masterAgent';
   }
 }
+class statusPanelCode {
+  constructor() {
+    this.void = 400322;
+    this.announcement = 40030;
+    this.suspend = 400319;
+   
+  }
+}
 
 export const string = new stringConst();
+export const statusPanelCodes = new statusPanelCode();
+
