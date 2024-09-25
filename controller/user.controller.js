@@ -593,6 +593,10 @@ export const filterMarketData = async (req, res) => {
       where: { marketId }
     })
 
+    if (!markets) {
+      return res.status(statusCode.success).json(apiResponseSuccess({ runners: [] }, false, statusCode.success, 'No active markets'));
+    }
+
     if (markets.isVoid) {
       throw new CustomError(`Market is void`, null, 0, statusPanelCodes.void);
     }
