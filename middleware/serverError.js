@@ -1,16 +1,19 @@
-export const apiResponseErr = (data, success, responseCode, errMessage) => {
+
+export const apiResponseErr = (data, success, responseCode, errMessage ,panelStatusCode = 0) => {
   return {
     data: data,
     success: success,
     responseCode: responseCode,
+    panelStatusCode: panelStatusCode,
     errMessage: errMessage ?? 'Something went wrong',
   };
 };
-export const apiResponseSuccess = (data, success, successCode, message, pagination = null) => {
+export const apiResponseSuccess = (data, success, successCode, message, pagination = null, panelStatusCode = 0) => {
   return {
     data: data,
     success: success,
     successCode: successCode,
+    panelStatusCode: panelStatusCode,
     message: message,
     pagination: pagination,
   };

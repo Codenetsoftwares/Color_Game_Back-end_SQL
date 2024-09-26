@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { apiResponseErr, apiResponsePagination, apiResponseSuccess } from '../middleware/serverError.js';
 import moment from 'moment';
-import { string } from '../constructor/string.js';
+import { statusPanelCodes, string } from '../constructor/string.js';
 import userSchema from '../models/user.model.js';
 import { statusCode } from '../helper/statusCodes.js';
 import Market from '../models/market.model.js';
@@ -14,6 +14,7 @@ import BetHistory from '../models/betHistory.model.js';
 import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
 import axios from 'axios';
+import CustomError from '../helper/extendError.js';
 
 // done
 export const createUser = async (req, res) => {
@@ -414,8 +415,6 @@ export const getAllGameData = async (req, res) => {
       );
   }
 };
-
-
 // done
 export const filteredGameData = async (req, res) => {
   try {
@@ -588,8 +587,22 @@ export const filterMarketData = async (req, res) => {
       ],
     });
 
-    if (marketDataRows.length === 0) {
-      return res.status(statusCode.success).json(apiResponseSuccess({ runners: [] }, false, statusCode.success, 'Market not found with MarketId'));
+    console.log('Market Data Rows:', marketDataRows);
+
+    const markets = await Market.findOne({
+      where: { marketId }
+    })
+
+    if (!markets) {
+      return res.status(statusCode.success).json(apiResponseSuccess({ runners: [] }, false, statusCode.success, 'No active markets'));
+    }
+
+    if (markets.isVoid) {
+      throw new CustomError(`Market is void`, null, 0, statusPanelCodes.void);
+    }
+
+    if (markets.hideMarketUser) {
+      throw new CustomError(`Market is announcement`, null, 0, statusPanelCodes.announcement);
     }
 
     let marketDataObj = {
@@ -705,8 +718,17 @@ export const filterMarketData = async (req, res) => {
 
     return res.status(statusCode.success).json(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
   } catch (error) {
-    console.error('Error fetching market data:', error);
-    return res.status(statusCode.internalServerError).json(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+          error.panelStatusCode ?? statusCode.internalServerError
+        ),
+      );
   }
 };
 
