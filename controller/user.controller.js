@@ -135,14 +135,14 @@ export const resetPassword = async (req, res) => {
     if (!userData) {
       return res
         .status(statusCode.notFound)
-        .send(apiResponseErr(null, false, statusCode.unauthorize, 'User Not Found'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'User Not Found'));
     }
 
     const oldPasswordIsCorrect = await bcrypt.compare(oldPassword, userData.password);
     if (!oldPasswordIsCorrect) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.unauthorize, 'Invalid old password'));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password'));
     }
 
     const salt = await bcrypt.genSalt(10);
