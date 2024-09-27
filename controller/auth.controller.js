@@ -75,8 +75,16 @@ export const loginUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (!existingUser) {
+      const loginTime = new Date();
       const loginStatus = 'login failed';
-      await existingUser.update({ loginStatus });
+      await existingUser.update({ lastLoginTime: loginTime, loginStatus });
+
+      await axios.post('http://localhost:8000/api/colorGame-user-lastLoginTime', {
+        userName,
+        loginTime: loginTime,
+        loginStatus
+      });
+
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'User does not exist'));
@@ -85,8 +93,15 @@ export const loginUser = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, existingUser.password);
 
     if (!isPasswordValid) {
+      const loginTime = new Date();
       const loginStatus = 'login failed';
-      await existingUser.update({ loginStatus });
+      await existingUser.update({ lastLoginTime: loginTime, loginStatus });
+
+      await axios.post('http://localhost:8000/api/colorGame-user-lastLoginTime', {
+        userName,
+        loginTime: loginTime,
+        loginStatus
+      });
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password'));
@@ -114,7 +129,7 @@ export const loginUser = async (req, res) => {
             'Password reset required.',
           ),
         );
-    }
+    } 
     else {
       const accessTokenResponse = {
         id: existingUser.id,
