@@ -279,7 +279,7 @@ export const createMarket = async (req, res) => {
       announcementResult: false,
       isActive: false,
       isDisplay: true,
-      hideMarketUser : true
+      hideMarketUser: true
     });
 
     // Fetch all markets for the game
@@ -405,8 +405,9 @@ export const updateMarket = async (req, res) => {
 
     if (participants !== undefined) {
       market.participants = participants;
+      market.isDisplay = true;
+      Runner.destroy({ where: { marketId } })
     }
-
     if (startTime !== undefined) {
       market.startTime = moment(startTime).utc().format();
     }
@@ -417,14 +418,18 @@ export const updateMarket = async (req, res) => {
 
     await market.save();
 
-    await Market.update(
-      { isDisplay: true },
-      {
-        where: {
-          marketId: marketId,
-        },
-      }
-    );
+    const runners = await Runner.findAll({ where: { marketId } })
+
+    if (runners.isRunnerCreate === true) {
+      await Market.update(
+        { isDisplay: false },
+        {
+          where: {
+            marketId: marketId,
+          },
+        }
+      );
+    }
 
     const updatedMarket = await Market.findOne({
       where: {
@@ -456,11 +461,12 @@ export const updateMarket = async (req, res) => {
       );
   }
 };
+
 // done
 export const createRunner = async (req, res) => {
   try {
     const marketId = req.params.marketId;
-    const { runners } = req.body; 
+    const { runners } = req.body;
 
     // if (!Array.isArray(runners) || runners.length === 0) {
     //   throw apiResponseErr(
@@ -530,6 +536,15 @@ export const createRunner = async (req, res) => {
     }));
 
     await Runner.bulkCreate(runnersToInsert);
+
+    await Runner.update(
+      { isRunnerCreate: true },
+      {
+        where: {
+          marketId: marketId,
+        },
+      }
+    );
 
     await Market.update(
       { isDisplay: false },
