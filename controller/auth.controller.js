@@ -75,6 +75,8 @@ export const loginUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (!existingUser) {
+      const loginStatus = 'login failed';
+      await existingUser.update({ loginStatus });
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'User does not exist'));
@@ -83,6 +85,8 @@ export const loginUser = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, existingUser.password);
 
     if (!isPasswordValid) {
+      const loginStatus = 'login failed';
+      await existingUser.update({ loginStatus });
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid password'));
@@ -126,8 +130,18 @@ export const loginUser = async (req, res) => {
       });
 
       existingUser.token = accessToken
-      await existingUser.save()
 
+      const loginTime = new Date();
+      const loginStatus = 'login success';
+
+      await existingUser.update({ lastLoginTime: loginTime, loginStatus });
+      await existingUser.save()
+      // Send the lastLoginTime to adminLogin API
+      await axios.post('http://localhost:8000/api/colorGame-user-lastLoginTime', {
+        userName: existingUser.userName,
+        loginTime,
+        loginStatus
+      });
 
       res
         .status(statusCode.success)
@@ -149,6 +163,8 @@ export const loginUser = async (req, res) => {
         );
     }
   } catch (error) {
+    console.error("Error from API:", error.response ? error.response.data : error.message);
+
     res
       .status(statusCode.internalServerError)
       .send(
@@ -201,7 +217,7 @@ export const trashUser = async (req, res) => {
 
     const trashEntry = await userTrashData.create({
       trashId: uuid4(),
-      userId : existingUser.userId,
+      userId: existingUser.userId,
       data: serializedUserData,
     });
 
@@ -211,7 +227,8 @@ export const trashUser = async (req, res) => {
 
     const deleteUser = await existingUser.destroy();
 
-    if (!deleteUser) {return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete User with userId: ${userId}`));
+    if (!deleteUser) {
+      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete User with userId: ${userId}`));
     }
 
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User trashed successfully'));
@@ -234,18 +251,18 @@ export const restoreTrashUser = async (req, res) => {
     const serializedUserData = JSON.parse(existingUser.data);
 
     const trashEntry = await userSchema.create({
-      firstName : serializedUserData.firstName,
-      lastName : serializedUserData.lastName,
-      userName : serializedUserData.userName,
-      userId : serializedUserData.userId,
-      phoneNumber : serializedUserData.phoneNumber,
-      password : serializedUserData.password,
-      roles : serializedUserData.roles,
-      eligibilityCheck : serializedUserData.eligibilityCheck,
-      walletId : serializedUserData.walletId,
-      balance : serializedUserData.balance,
-      exposure : serializedUserData.exposure,
-      marketListExposure : serializedUserData.marketListExposure
+      firstName: serializedUserData.firstName,
+      lastName: serializedUserData.lastName,
+      userName: serializedUserData.userName,
+      userId: serializedUserData.userId,
+      phoneNumber: serializedUserData.phoneNumber,
+      password: serializedUserData.password,
+      roles: serializedUserData.roles,
+      eligibilityCheck: serializedUserData.eligibilityCheck,
+      walletId: serializedUserData.walletId,
+      balance: serializedUserData.balance,
+      exposure: serializedUserData.exposure,
+      marketListExposure: serializedUserData.marketListExposure
     });
 
     if (!trashEntry) {

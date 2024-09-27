@@ -741,6 +741,9 @@ export const createBid = async (req, res) => {
     if (value < 0) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Bid value cannot be negative');
     }
+    if (value < 100) {
+      throw apiResponseErr(null, false, statusCode.badRequest, 'Bid value cannot be less than 100');
+    }
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'User Not Found');
@@ -798,6 +801,22 @@ export const createBid = async (req, res) => {
         exposure: exposure,
       });
       await user.save();
+    }
+
+    const dataToSend = {
+      amount: user.balance,
+      userId: userId,
+    };
+
+    const response = await axios.post(
+      "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+      dataToSend
+    );
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
     }
 
     await Runner.update(
