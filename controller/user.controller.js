@@ -1520,6 +1520,48 @@ export const getUserCurrentOrderGames = async (req, res) => {
           error.errMessage ?? error.message,
         ),
       );
-  }
+  }  
 };
+
+
+export const activityLog = async (req, res) => {
+  try {
+    const user = req.user;
+    const loginDateTime = user.lastLoginTime;
+    const loginStatus = user.loginStatus;
+    let clientIP = req.ip;
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      const forwardedIps = forwardedFor.split(',');
+      clientIP = forwardedIps[0].trim();
+    }
+    const data = await fetch(`http://ip-api.com/json/${clientIP}`);
+    const collect = await data.json();
+
+      const logData = {
+        loginDateTime,
+        loginStatus,
+        ip: {
+          iP: clientIP,
+          country: collect.country,
+          region: collect.regionName,
+          timezone: collect.timezone,
+          isp: collect.isp
+        }
+      };
+
+      console.log("Testing.........",logData)
+      res.status(statusCode.success).send(apiResponseSuccess(logData, true, statusCode.success, 'Login activity logged successfully.'))
+   }   catch (error) {
+       res.status(statusCode.internalServerError).send(
+        apiResponseErr(
+         error.data ?? null,
+         false,
+         error.responseCode ?? statusCode.internalServerError,
+         error.errMessage ?? error.message
+       )
+     );
+   }
+};
+
 
