@@ -17,7 +17,7 @@ export const getInactiveGames = async (req, res) => {
       search = ''
     } = req.query;
 
-    const searchQuery = String(search);
+    const searchQuery = String(search).trim();
 
     const offset = (page - 1) * pageSize;
     const limit = parseInt(pageSize);
@@ -38,9 +38,6 @@ export const getInactiveGames = async (req, res) => {
     const { count: totalMarkets, rows: markets } = await Market.findAndCountAll({
       where: {
         marketId: marketIds,
-        marketName: {
-          [Sequelize.Op.like]: `%${searchQuery}%`
-        }
       },
       attributes: [
         "marketId",
@@ -61,9 +58,6 @@ export const getInactiveGames = async (req, res) => {
           ],
           where: {
             isWin: true,
-            runnerName: {
-              [Sequelize.Op.like]: `%${searchQuery}%`
-            }
           },
         },
       ],
@@ -106,9 +100,6 @@ export const getInactiveGames = async (req, res) => {
               ],
               where: {
                 isWin: true,
-                runnerName: {
-                  [Sequelize.Op.like]: `%${searchQuery}%`
-                }
               },
             },
           ],
@@ -147,16 +138,16 @@ export const getInactiveGames = async (req, res) => {
       .status(statusCode.success)
       .json(
         apiResponseSuccess(
-          paginatedData,  
+          paginatedData,
           true,
           statusCode.success,
-          "Success", 
+          "Success",
           {
-          page: parseInt(page),
-          pageSize: parseInt(pageSize),
-          totalItems,
-          totalPages,
-        }
+            page: parseInt(page),
+            pageSize: parseInt(pageSize),
+            totalItems,
+            totalPages,
+          }
         )
       );
   } catch (error) {
