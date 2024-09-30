@@ -905,7 +905,7 @@ export const getUserBetHistory = async (req, res) => {
 
     const { count, rows } = await BetHistory.findAndCountAll({
       where: whereCondition,
-      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
+      attributes: ['userId','userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate','placeDate'],
       limit,
       offset: (page - 1) * limit,
     });
