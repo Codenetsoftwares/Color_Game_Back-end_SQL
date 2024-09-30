@@ -848,7 +848,7 @@ export const getUserBetHistory = async (req, res) => {
     const { gameId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const dataType = req.query.dataType;
+    const { dataType, type } = req.query;
 
     let startDate, endDate;
     if (dataType === 'live') {
@@ -891,14 +891,20 @@ export const getUserBetHistory = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
+    const whereCondition = {
+      userId: userId,
+      gameId: gameId,
+      date: {
+        [Op.between]: [startDate, endDate],
+      }
+    };
+
+    if (type === 'void') {
+      whereCondition.isVoid = true;
+    }
+
     const { count, rows } = await BetHistory.findAndCountAll({
-      where: {
-        userId: userId,
-        gameId: gameId,
-        date: {
-          [Op.between]: [startDate, endDate],
-        }
-      },
+      where: whereCondition,
       attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
       limit,
       offset: (page - 1) * limit,
