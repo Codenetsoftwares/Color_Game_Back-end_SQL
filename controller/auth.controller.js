@@ -152,7 +152,7 @@ export const loginUser = async (req, res) => {
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
       await existingUser.save()
       // Send the lastLoginTime to adminLogin API
-      await axios.post('http://localhost:8000/api/colorGame-user-lastLoginTime', {
+      await axios.post('https://wl.server.dummydoma.in/api/colorGame-user-lastLoginTime', {
         userName: existingUser.userName,
         loginTime,
         loginStatus
