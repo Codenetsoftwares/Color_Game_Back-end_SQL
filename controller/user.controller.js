@@ -741,6 +741,9 @@ export const createBid = async (req, res) => {
     if (value < 0) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'Bid value cannot be negative');
     }
+    if (value < 100) {
+      throw apiResponseErr(null, false, statusCode.badRequest, 'Bid value cannot be less than 100');
+    }
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
       throw apiResponseErr(null, false, statusCode.badRequest, 'User Not Found');
@@ -800,6 +803,22 @@ export const createBid = async (req, res) => {
       await user.save();
     }
 
+    const dataToSend = {
+      amount: user.balance,
+      userId: userId,
+    };
+
+    const response = await axios.post(
+      "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+      dataToSend
+    );
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+    }
+
     await Runner.update(
       { isBidding: true },
       { where: { marketId } }
@@ -829,7 +848,7 @@ export const getUserBetHistory = async (req, res) => {
     const { gameId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const dataType = req.query.dataType;
+    const { dataType, type } = req.query;
 
     let startDate, endDate;
     if (dataType === 'live') {
@@ -872,15 +891,21 @@ export const getUserBetHistory = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
+    const whereCondition = {
+      userId: userId,
+      gameId: gameId,
+      date: {
+        [Op.between]: [startDate, endDate],
+      }
+    };
+
+    if (type === 'void') {
+      whereCondition.isVoid = true;
+    }
+
     const { count, rows } = await BetHistory.findAndCountAll({
-      where: {
-        userId: userId,
-        gameId: gameId,
-        date: {
-          [Op.between]: [startDate, endDate],
-        }
-      },
-      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date'],
+      where: whereCondition,
+      attributes: ['userId','userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate','placeDate'],
       limit,
       offset: (page - 1) * limit,
     });

@@ -58,6 +58,10 @@ Runner.init(
     isBidding : {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+    },
+    isRunnerCreate : {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     }
   },
   {
