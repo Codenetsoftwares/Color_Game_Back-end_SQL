@@ -16,7 +16,8 @@ export const getExternalUserBetHistory = async (req, res) => {
     const { gameId, userName } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const dataType = req.query.dataType; 
+    const { dataType, type } = req.query;
+
     let startDate, endDate;
     if (dataType === 'live') {
       const today = new Date();
@@ -54,15 +55,21 @@ export const getExternalUserBetHistory = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'Data not found.'));
     }
 
+    const whereCondition = {
+      userName: userName,
+      gameId: gameId,
+      date: {
+        [Op.between]: [startDate, endDate],
+      }
+    };
+
+    if (type === 'void') {
+      whereCondition.isVoid = true;
+    }
+
     const { count, rows } = await BetHistory.findAndCountAll({
-      where: {
-        userName: userName,
-        gameId: gameId,
-        date: {
-          [Op.between]: [startDate, endDate],
-        }
-      },
-      attributes: ['userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate','placeDate'],
+      where: whereCondition,
+      attributes: ['userId','userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate','placeDate'],
       limit,
       offset: (page - 1) * limit,
     });

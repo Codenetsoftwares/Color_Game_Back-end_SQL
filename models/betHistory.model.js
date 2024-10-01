@@ -84,6 +84,11 @@ BetHistory.init(
       type: DataTypes.DATE,
       allowNull: false,
     },
+    isVoid : {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     sequelize,
