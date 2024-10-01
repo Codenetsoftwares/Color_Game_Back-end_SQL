@@ -79,7 +79,7 @@ export const loginUser = async (req, res) => {
       const loginStatus = 'login failed';
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
 
-      await axios.post('http://localhost:8000/api/colorGame-user-lastLoginTime', {
+      await axios.post('https://wl.server.dummydoma.in/api/colorGame-user-lastLoginTime', {
         userName,
         loginTime: loginTime,
         loginStatus
@@ -97,7 +97,7 @@ export const loginUser = async (req, res) => {
       const loginStatus = 'login failed';
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
 
-      await axios.post('http://localhost:8000/api/colorGame-user-lastLoginTime', {
+      await axios.post('https://wl.server.dummydoma.in/api/colorGame-user-lastLoginTime', {
         userName,
         loginTime: loginTime,
         loginStatus
