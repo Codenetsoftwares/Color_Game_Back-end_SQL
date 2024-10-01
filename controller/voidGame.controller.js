@@ -11,6 +11,7 @@ import CurrentOrder from "../models/currentOrder.model.js";
 import Game from "../models/game.model.js";
 import Runner from "../models/runner.model.js";
 import { Op } from "sequelize";
+import BetHistory from "../models/betHistory.model.js";
 
 export const voidMarket = async (req, res) => {
   try {
@@ -46,11 +47,36 @@ export const voidMarket = async (req, res) => {
 
           await userDetails.save();
 
+          const orders = await CurrentOrder.findAll({ where: { marketId } });
+
+          for (const order of orders) {
+            await BetHistory.create({
+              userId: order.userId,
+              userName: order.userName,
+              gameId: order.gameId,
+              gameName: order.gameName,
+              marketId: order.marketId,
+              marketName: order.marketName,
+              runnerId: order.runnerId,
+              runnerName: order.runnerName,
+              rate: order.rate,
+              value: order.value,
+              type: order.type,
+              date: new Date(),
+              matchDate: order.date,
+              bidAmount: order.bidAmount,
+              isWin: order.isWin,
+              profitLoss: order.profitLoss,
+              placeDate: order.createdAt,
+              isVoid : true
+            });
+          }
+
           const dataToSend = {
             amount: userDetails.balance,
             userId: userDetails.userId,
           };
-          const response  = await axios.post(
+          const response = await axios.post(
             "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
             dataToSend
           );
