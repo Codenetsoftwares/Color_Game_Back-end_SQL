@@ -23,6 +23,7 @@ import {
   accountStatement,
   getUserBetList,
   getUserCurrentOrderGames,
+  activityLog,
 } from '../controller/user.controller.js';
 import { authorize } from '../middleware/auth.js';
 import {
@@ -123,5 +124,7 @@ export const UserRoute = (app) => {
   app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList)
 
   app.get('/api/user-currentOrder-games', authorize([string.User]), getUserCurrentOrderGames)
+
+  app.get('/api/user-activitylog', authorize([string.User]), activityLog)
 
 };
