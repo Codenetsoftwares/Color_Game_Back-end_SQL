@@ -10,6 +10,7 @@ import axios from "axios";
 import CurrentOrder from "../models/currentOrder.model.js";
 import Game from "../models/game.model.js";
 import Runner from "../models/runner.model.js";
+import { Op } from "sequelize";
 import BetHistory from "../models/betHistory.model.js";
 
 export const voidMarket = async (req, res) => {
@@ -109,14 +110,22 @@ export const voidMarket = async (req, res) => {
 
 export const getAllVoidMarkets = async (req, res) => {
   try {
-    let { page = 1, pageSize = 10 } = req.query;
+    let { page = 1, pageSize = 10, gameName } = req.query;
     page = parseInt(page);
     pageSize = parseInt(pageSize);
 
     const offset = (page - 1) * pageSize;
 
+    const gameFilter = gameName ? { gameName: { [Op.like]: `%${gameName}%` } } : {};
+
     const totalItems = await Market.count({
-      where: { isVoid: true }
+      where: { isVoid: true },
+      include: [
+        {
+          model: Game,
+          where: gameFilter
+        }
+      ]
     });
 
     const markets = await Market.findAll({
@@ -124,7 +133,8 @@ export const getAllVoidMarkets = async (req, res) => {
       include: [
         {
           model: Game,
-          attributes: ['gameId', 'gameName']
+          attributes: ['gameId', 'gameName'],
+          where: gameFilter
         },
         {
           model: Runner,
