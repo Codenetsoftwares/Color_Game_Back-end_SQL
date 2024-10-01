@@ -1550,7 +1550,6 @@ export const activityLog = async (req, res) => {
         }
       };
 
-      console.log("Testing.........",logData)
       res.status(statusCode.success).send(apiResponseSuccess(logData, true, statusCode.success, 'Login activity logged successfully.'))
    }   catch (error) {
        res.status(statusCode.internalServerError).send(
