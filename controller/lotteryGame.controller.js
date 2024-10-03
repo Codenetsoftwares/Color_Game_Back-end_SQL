@@ -320,6 +320,60 @@ export const getUserPurchases = async (req, res) => {
   }
 };
 
+export const getResult = async (req, res) => {
+  try {
+    const users = req.user;
+    const { resultId } = req.params; // Now getting lotteryId from params
+    const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    const response = await axios.get(
+      `http://localhost:8080/api/lotteries/get-result/${resultId}`, // lotteryId is included in the URL
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data from external API"
+          )
+        );
+    }
+    const { data } = response.data;
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          `Result fetch Successfully `
+        )
+      );
+  } catch (error) {
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
 // Dummy data api function
 
 const lotteryData = Array.from({ length: 100 }, (_, index) => ({

@@ -2,6 +2,7 @@ import { string } from "../constructor/string.js";
 import {
   dummyData,
   getLotteryGame,
+  getResult,
   getUser,
   getUserPurchases,
   lotteryAmount,
@@ -27,6 +28,8 @@ export const lotteryRoute = (app) => {
   app.get("/api/user-lotteryAmount/:lotteryId", authorize([string.User]), lotteryAmount);
 
   app.get("/api/user-purchases", authorize([string.User]), getUserPurchases);
+
+  app.get("/api/user/getResult/:resultId", authorize([string.User]), getResult);
 
   // dummy- data Api
   app.get("/api/lotteries-dummyData", dummyData);
