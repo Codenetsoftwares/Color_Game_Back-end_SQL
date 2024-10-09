@@ -378,3 +378,5 @@ export const validatePurchaseLotteryTicket = [
 export const validateVoidGame = [
   body('marketId').notEmpty().withMessage("Market Id is required.").isUUID().withMessage('Market ID must be a valid UUID'),
 ];
+
+export const validateTicketNumber = [param('ticketNumber').isString().withMessage('Ticket number must be a string')];
