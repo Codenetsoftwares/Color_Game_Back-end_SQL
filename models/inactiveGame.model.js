@@ -1,5 +1,5 @@
-import { DataTypes, json, Model } from "sequelize";
-import sequelize from "../db.js";
+import { DataTypes, json, Model } from 'sequelize';
+import sequelize from '../db.js';
 
 class InactiveGame extends Model {}
 
@@ -21,15 +21,15 @@ InactiveGame.init(
     runner: {
       type: DataTypes.JSON,
       allowNull: true,
-    } 
+    },
   },
   {
     sequelize,
-    modelName: "InactiveGame",
-    tableName: "InactiveGame",
+    modelName: 'InactiveGame',
+    tableName: 'InactiveGame',
     timestamps: true,
     updatedAt: false,
-  }
+  },
 );
 
 export default InactiveGame;

@@ -21,7 +21,7 @@ Runner.init(
     runnerId: {
       type: DataTypes.CHAR(36),
       allowNull: false,
-      unique: true, 
+      unique: true,
     },
     runnerName: {
       type: DataTypes.STRING(255),
@@ -47,24 +47,24 @@ Runner.init(
       allowNull: true,
       defaultValue: null,
     },
-    hideRunner : {
+    hideRunner: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    hideRunnerUser :{
+    hideRunnerUser: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    isBidding : {
+    isBidding: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-    }
+    },
   },
   {
     sequelize,
     modelName: 'Runner',
     tableName: 'runner',
-    timestamps: true, 
+    timestamps: true,
     updatedAt: false,
     paranoid: true, // Enable soft delete
     deletedAt: 'deletedAt',

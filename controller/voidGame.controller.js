@@ -1,15 +1,12 @@
-import { statusCode } from "../helper/statusCodes.js";
-import {
-  apiResponseErr,
-  apiResponseSuccess,
-} from "../middleware/serverError.js";
-import Market from "../models/market.model.js";
-import MarketBalance from "../models/marketBalance.js";
-import userSchema from "../models/user.model.js";
-import axios from "axios";
-import CurrentOrder from "../models/currentOrder.model.js";
-import Game from "../models/game.model.js";
-import Runner from "../models/runner.model.js";
+import { statusCode } from '../helper/statusCodes.js';
+import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js';
+import Market from '../models/market.model.js';
+import MarketBalance from '../models/marketBalance.js';
+import userSchema from '../models/user.model.js';
+import axios from 'axios';
+import CurrentOrder from '../models/currentOrder.model.js';
+import Game from '../models/game.model.js';
+import Runner from '../models/runner.model.js';
 
 export const voidMarket = async (req, res) => {
   try {
@@ -19,7 +16,7 @@ export const voidMarket = async (req, res) => {
     if (!market) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, "Market not found"));
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Market not found'));
     }
 
     market.isVoid = true;
@@ -31,16 +28,14 @@ export const voidMarket = async (req, res) => {
       const userDetails = await userSchema.findOne({ where: { userId: user.userId } });
 
       if (userDetails) {
-        const marketExposureEntry = userDetails.marketListExposure.find(
-          (item) => Object.keys(item)[0] === marketId
-        );
+        const marketExposureEntry = userDetails.marketListExposure.find((item) => Object.keys(item)[0] === marketId);
 
         if (marketExposureEntry) {
           const marketExposureValue = Number(marketExposureEntry[marketId]);
 
           userDetails.balance += marketExposureValue;
           userDetails.marketListExposure = userDetails.marketListExposure.filter(
-            (item) => Object.keys(item)[0] !== marketId
+            (item) => Object.keys(item)[0] !== marketId,
           );
 
           await userDetails.save();
@@ -49,15 +44,15 @@ export const voidMarket = async (req, res) => {
             amount: userDetails.balance,
             userId: userDetails.userId,
           };
-          const response  = await axios.post(
-            "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
-            dataToSend
+          const response = await axios.post(
+            'https://wl.server.dummydoma.in/api/admin/extrnal/balance-update',
+            dataToSend,
           );
 
           if (!response.data.success) {
             return res
               .status(statusCode.badRequest)
-              .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to update balance"));
+              .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to update balance'));
           }
 
           await MarketBalance.destroy({
@@ -72,9 +67,9 @@ export const voidMarket = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(null, true, statusCode.success, "Market voided successfully"));
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Market voided successfully'));
   } catch (error) {
-    console.error("Error voiding market:", error);
+    console.error('Error voiding market:', error);
     return res
       .status(statusCode.internalServerError)
       .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
@@ -90,7 +85,7 @@ export const getAllVoidMarkets = async (req, res) => {
     const offset = (page - 1) * pageSize;
 
     const totalItems = await Market.count({
-      where: { isVoid: true }
+      where: { isVoid: true },
     });
 
     const markets = await Market.findAll({
@@ -98,46 +93,41 @@ export const getAllVoidMarkets = async (req, res) => {
       include: [
         {
           model: Game,
-          attributes: ['gameId', 'gameName']
+          attributes: ['gameId', 'gameName'],
         },
         {
           model: Runner,
-          attributes: ['runnerId', 'runnerName', 'back', 'lay']
-        }
+          attributes: ['runnerId', 'runnerName', 'back', 'lay'],
+        },
       ],
       attributes: ['marketId', 'marketName', 'gameId'],
       limit: pageSize,
-      offset: offset
+      offset: offset,
     });
 
-    const formattedMarkets = markets.map(market => ({
+    const formattedMarkets = markets.map((market) => ({
       gameId: market.Game.gameId,
       gameName: market.Game.gameName,
       marketId: market.marketId,
       marketName: market.marketName,
-      Runners: market.Runners.map(runner => ({
+      Runners: market.Runners.map((runner) => ({
         runnerId: runner.runnerId,
         runnerName: runner.runnerName,
         back: runner.back,
-        lay: runner.lay
-      }))
+        lay: runner.lay,
+      })),
     }));
 
     const totalPages = Math.ceil(totalItems / pageSize);
 
-    return res
-      .status(statusCode.success)
-      .send(apiResponseSuccess(
-        formattedMarkets,
-        true,
-        statusCode.success,
-        'Voided markets retrieved successfully',
-        {
-          page,
-          pageSize,
-          totalItems,
-          totalPages
-        }));
+    return res.status(statusCode.success).send(
+      apiResponseSuccess(formattedMarkets, true, statusCode.success, 'Voided markets retrieved successfully', {
+        page,
+        pageSize,
+        totalItems,
+        totalPages,
+      }),
+    );
   } catch (error) {
     console.error('Error retrieving voided markets:', error);
     return res
@@ -145,6 +135,3 @@ export const getAllVoidMarkets = async (req, res) => {
       .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
-
-
-

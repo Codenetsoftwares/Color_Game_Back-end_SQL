@@ -2,7 +2,7 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../db.js';
 import { v4 as uuid4 } from 'uuid';
 
-class userSchema extends Model { }
+class userSchema extends Model {}
 userSchema.init(
   {
     id: {
@@ -73,7 +73,7 @@ userSchema.init(
     loginStatus: {
       type: DataTypes.STRING,
       allowNull: true,
-    }
+    },
   },
   {
     sequelize,

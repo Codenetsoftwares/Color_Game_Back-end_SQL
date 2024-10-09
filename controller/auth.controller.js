@@ -98,20 +98,17 @@ export const loginUser = async (req, res) => {
         isReset: existingUser.isReset,
       };
 
-      return res
-        .status(statusCode.success)
-        .send(
-          apiResponseSuccess(
-            {
-              ...resetTokenResponse,
-            },
-            true,
-            statusCode.success,
-            'Password reset required.',
-          ),
-        );
-    }
-    else {
+      return res.status(statusCode.success).send(
+        apiResponseSuccess(
+          {
+            ...resetTokenResponse,
+          },
+          true,
+          statusCode.success,
+          'Password reset required.',
+        ),
+      );
+    } else {
       const accessTokenResponse = {
         id: existingUser.id,
         userName: existingUser.userName,
@@ -125,28 +122,25 @@ export const loginUser = async (req, res) => {
         expiresIn: '1d',
       });
 
-      existingUser.token = accessToken
-      await existingUser.save()
+      existingUser.token = accessToken;
+      await existingUser.save();
 
-
-      res
-        .status(statusCode.success)
-        .send(
-          apiResponseSuccess(
-            {
-              accessToken,
-              userId: existingUser.userId,
-              userName: existingUser.userName,
-              isEighteen: existingUser.eligibilityCheck,
-              userType: existingUser.userType || 'user',
-              wallet: existingUser.wallet,
-              isReset: existingUser.isReset,
-            },
-            true,
-            statusCode.success,
-            'Login successful',
-          ),
-        );
+      res.status(statusCode.success).send(
+        apiResponseSuccess(
+          {
+            accessToken,
+            userId: existingUser.userId,
+            userName: existingUser.userName,
+            isEighteen: existingUser.eligibilityCheck,
+            userType: existingUser.userType || 'user',
+            wallet: existingUser.wallet,
+            isReset: existingUser.isReset,
+          },
+          true,
+          statusCode.success,
+          'Login successful',
+        ),
+      );
     }
   } catch (error) {
     res
@@ -167,23 +161,36 @@ export const resetPassword = async (req, res) => {
     const { userName, oldPassword, newPassword } = req.body;
 
     const existingUser = await userSchema.findOne({ where: { userName } });
-    console.log('existingUser', existingUser)
+    console.log('existingUser', existingUser);
 
     const isPasswordMatch = await bcrypt.compare(oldPassword, existingUser.password);
     if (!isPasswordMatch) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Invalid old password.'));
     }
-    console.log('existingUser', existingUser)
+    console.log('existingUser', existingUser);
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     await existingUser.update({ password: hashedPassword, isReset: false });
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
   } catch (error) {
     console.error('Error resetting password:', error);
-    res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -201,23 +208,41 @@ export const trashUser = async (req, res) => {
 
     const trashEntry = await userTrashData.create({
       trashId: uuid4(),
-      userId : existingUser.userId,
+      userId: existingUser.userId,
       data: serializedUserData,
     });
 
     if (!trashEntry) {
-      return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup User`));
+      return res
+        .status(statusCode.internalServerError)
+        .json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to backup User`));
     }
 
     const deleteUser = await existingUser.destroy();
 
-    if (!deleteUser) {return res.status(statusCode.internalServerError).json(apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete User with userId: ${userId}`));
+    if (!deleteUser) {
+      return res
+        .status(statusCode.internalServerError)
+        .json(
+          apiResponseErr(null, statusCode.internalServerError, false, `Failed to delete User with userId: ${userId}`),
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User trashed successfully'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'User trashed successfully'));
   } catch (error) {
     console.error('Error trashing user:', error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
 
@@ -228,43 +253,61 @@ export const restoreTrashUser = async (req, res) => {
     const existingUser = await userTrashData.findOne({ where: { userId } });
 
     if (!existingUser) {
-      return res.status(statusCode.success).json(apiResponseErr(null, false, statusCode.success, 'User not found in trash'));
+      return res
+        .status(statusCode.success)
+        .json(apiResponseErr(null, false, statusCode.success, 'User not found in trash'));
     }
 
     const serializedUserData = JSON.parse(existingUser.data);
 
     const trashEntry = await userSchema.create({
-      firstName : serializedUserData.firstName,
-      lastName : serializedUserData.lastName,
-      userName : serializedUserData.userName,
-      userId : serializedUserData.userId,
-      phoneNumber : serializedUserData.phoneNumber,
-      password : serializedUserData.password,
-      roles : serializedUserData.roles,
-      eligibilityCheck : serializedUserData.eligibilityCheck,
-      walletId : serializedUserData.walletId,
-      balance : serializedUserData.balance,
-      exposure : serializedUserData.exposure,
-      marketListExposure : serializedUserData.marketListExposure
+      firstName: serializedUserData.firstName,
+      lastName: serializedUserData.lastName,
+      userName: serializedUserData.userName,
+      userId: serializedUserData.userId,
+      phoneNumber: serializedUserData.phoneNumber,
+      password: serializedUserData.password,
+      roles: serializedUserData.roles,
+      eligibilityCheck: serializedUserData.eligibilityCheck,
+      walletId: serializedUserData.walletId,
+      balance: serializedUserData.balance,
+      exposure: serializedUserData.exposure,
+      marketListExposure: serializedUserData.marketListExposure,
     });
 
     if (!trashEntry) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to restore User'));
+      return res
+        .status(statusCode.badRequest)
+        .json(apiResponseErr(null, false, statusCode.badRequest, 'Failed to restore User'));
     }
 
     const deleteUser = await existingUser.destroy();
 
     if (!deleteUser) {
-      return res.status(statusCode.badRequest).json(apiResponseErr(null, false, statusCode.badRequest, `Failed to delete User with userId: ${userId} from trash`));
+      return res
+        .status(statusCode.badRequest)
+        .json(
+          apiResponseErr(null, false, statusCode.badRequest, `Failed to delete User with userId: ${userId} from trash`),
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'User restored successfully'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'User restored successfully'));
   } catch (error) {
     console.error('Error restoring user:', error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(error.data ?? null, false, error.responseCode ?? statusCode.internalServerError, error.errMessage ?? error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          error.data ?? null,
+          false,
+          error.responseCode ?? statusCode.internalServerError,
+          error.errMessage ?? error.message,
+        ),
+      );
   }
 };
-
 
 export const logout = async (req, res) => {
   try {
@@ -292,10 +335,8 @@ export const logout = async (req, res) => {
           error.data ?? null,
           false,
           error.responseCode ?? statusCode.internalServerError,
-          error.errMessage ?? error.message
-        )
+          error.errMessage ?? error.message,
+        ),
       );
   }
 };
-
-

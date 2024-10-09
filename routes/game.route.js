@@ -97,9 +97,11 @@ export const GameRoute = (app) => {
     gameActiveInactive,
   );
 
-  app.post('/api/game-active-suspended/:gameId',validateUpdateGameStatus,customErrorHandler,authorize([string.Admin]),updateGameStatus );
-
-
+  app.post(
+    '/api/game-active-suspended/:gameId',
+    validateUpdateGameStatus,
+    customErrorHandler,
+    authorize([string.Admin]),
+    updateGameStatus,
+  );
 };
-
-

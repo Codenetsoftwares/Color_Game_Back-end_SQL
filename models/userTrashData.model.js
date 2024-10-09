@@ -21,7 +21,7 @@ userTrashData.init(
     data: {
       type: DataTypes.JSON,
       allowNull: true,
-      },
+    },
   },
   {
     sequelize,

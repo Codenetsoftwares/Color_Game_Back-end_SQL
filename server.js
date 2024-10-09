@@ -22,10 +22,10 @@ import InactiveGame from './models/inactiveGame.model.js';
 import { startMarketCountdown } from './cron/startMarketCountdown.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Op } from "sequelize";
+import { Op } from 'sequelize';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import cron from 'node-cron'
+import cron from 'node-cron';
 import { externalApisRoute } from './routes/externalApis.route.js';
 import { checkAndManageIndexes } from './helper/indexManager.js';
 import { lotteryRoute } from './routes/lotteryGame.route.js';
@@ -73,7 +73,7 @@ AnnouncementRoute(app);
 SliderRoute(app);
 InactiveGameRoute(app);
 externalApisRoute(app);
-lotteryRoute(app)
+lotteryRoute(app);
 voidGameRoute(app);
 
 Game.hasMany(Market, { foreignKey: 'gameId', sourceKey: 'gameId' });
@@ -97,14 +97,14 @@ Market.hasMany(InactiveGame, { foreignKey: 'marketId' });
 InactiveGame.belongsTo(Runner, { foreignKey: 'runnerId' });
 Runner.hasMany(InactiveGame, { foreignKey: 'runnerId' });
 
-checkAndManageIndexes('game'); 
-checkAndManageIndexes('runner'); 
+checkAndManageIndexes('game');
+checkAndManageIndexes('runner');
 checkAndManageIndexes('market');
 
 // SSE endpoint
 const clients = [];
 app.get('/events', (req, res) => {
-  console.log("Client connected to events");
+  console.log('Client connected to events');
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -116,7 +116,7 @@ app.get('/events', (req, res) => {
   clients.push(res);
 
   // Send an initial message
-  const initialMessage = { message: "SSE service is connected successfully!" };
+  const initialMessage = { message: 'SSE service is connected successfully!' };
   res.write(`data: ${JSON.stringify(initialMessage)}\n\n`);
 
   // Handle client disconnection
@@ -129,7 +129,6 @@ app.get('/events', (req, res) => {
     res.end(); // End the response
   });
 });
-
 
 sequelize
   .sync({ alter: true })
@@ -148,30 +147,26 @@ sequelize
         //     endTime: { [Op.lte]: moment().utc().format() }
         //   }
         // });
-        let markets = []
-        let updateMarket = []
+        let markets = [];
+        let updateMarket = [];
         for (const market of markets) {
-
           market.isActive = false;
           const response = await market.save();
 
-          console.log("Markets Inactivated:", JSON.stringify(response, null, 2));
+          console.log('Markets Inactivated:', JSON.stringify(response, null, 2));
 
           console.log(`Market ${response.marketName} has been deactivated.`);
-          updateMarket.push(JSON.parse(JSON.stringify(response)))
-
+          updateMarket.push(JSON.parse(JSON.stringify(response)));
         }
 
         clients.forEach((client) => {
           client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
         });
         console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
-
       } catch (error) {
         console.error('Error checking market statuses:', error);
       }
     });
-
   })
   .catch((err) => {
     console.error('Unable to create tables:', err);

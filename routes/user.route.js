@@ -91,11 +91,7 @@ export const UserRoute = (app) => {
     currentOrderHistory,
   );
   // done
-  app.get(
-    '/api/profit_loss',
-    authorize([string.User]),
-    calculateProfitLoss,
-  );
+  app.get('/api/profit_loss', authorize([string.User]), calculateProfitLoss);
   // done
   app.get(
     '/api/profit_loss_market/:gameId',
@@ -117,7 +113,7 @@ export const UserRoute = (app) => {
 
   app.get('/api/user-betHistory-games', userBetHistoryGames);
 
-  app.get('/api/user-account-statement', authorize([string.User]), accountStatement)
+  app.get('/api/user-account-statement', authorize([string.User]), accountStatement);
 
-  app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList)
+  app.get('/api/get-user-betList/:runnerId', authorize([string.User]), getUserBetList);
 };

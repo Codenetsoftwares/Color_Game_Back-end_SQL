@@ -17,7 +17,7 @@ Market.init(
     marketId: {
       type: DataTypes.CHAR(150),
       allowNull: false,
-      unique: true, 
+      unique: true,
     },
     marketName: {
       type: DataTypes.STRING(255),
@@ -54,18 +54,18 @@ Market.init(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    hideMarketUser :{
+    hideMarketUser: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    isRevoke :{
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    },
-    isVoid : {
+    isRevoke: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-    }
+    },
+    isVoid: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     sequelize,

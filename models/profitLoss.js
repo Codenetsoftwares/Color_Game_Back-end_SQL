@@ -4,7 +4,7 @@ import Market from './market.model.js';
 import Runner from './runner.model.js';
 import Game from './game.model.js';
 
-class ProfitLoss extends Model { }
+class ProfitLoss extends Model {}
 
 ProfitLoss.init(
   {
@@ -17,7 +17,7 @@ ProfitLoss.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    userName :{
+    userName: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },

@@ -19,7 +19,7 @@ MarketBalance.init(
       type: DataTypes.CHAR(36),
       allowNull: false,
       references: {
-        model: Market, 
+        model: Market,
         key: 'marketId',
       },
     },
