@@ -298,3 +298,25 @@ export const validateVoidGame = [
 ];
 
 export const validateTicketNumber = [param('ticketNumber').isString().withMessage('Ticket number must be a string')];
+
+export const validateGenerateTicket = [
+  param('sem')
+    .isInt({ min: 5, max: 200 })
+    .withMessage('Sem must be one of the valid values: 5, 10, 25, 50, 100, 200')
+    .custom((value) => [5, 10, 25, 50, 100, 200].includes(parseInt(value)))
+    .withMessage('Invalid sem value'),
+  
+  body('group')
+    .isInt({ min: 38, max: 99 })
+    .withMessage('Group must be a number between 38 and 99'),
+  
+    body('series')
+    .isIn(['A', 'B', 'C', 'D', 'E', 'G', 'H', 'J', 'K', 'L'])
+    .withMessage('Series must be one of the valid values: A, B, C, D, E, G, H, J, K, L'),
+  
+    body('number')
+    .isLength({ min: 5, max: 5 })
+    .withMessage('Number must be exactly 5 digits')
+    .isNumeric()
+    .withMessage('Number must be numeric'),
+]

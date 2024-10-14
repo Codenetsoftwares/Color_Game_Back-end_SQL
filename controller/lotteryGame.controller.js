@@ -1,10 +1,86 @@
-import axios from 'axios';
-import { statusCode } from '../helper/statusCodes.js';
-import { apiResponseErr, apiResponseSuccess } from '../middleware/serverError.js';
-import userSchema from '../models/user.model.js';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import axios from "axios";
+import { statusCode } from "../helper/statusCodes.js";
+import {
+  apiResponseErr,
+  apiResponseSuccess,
+} from "../middleware/serverError.js";
+import userSchema from "../models/user.model.js";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 dotenv.config();
+
+export const generateTicket = async (req, res) => {
+  try {
+    const users = req.user;
+    const { group, series, number } = req.body;
+    const { sem } = req.params;
+
+    const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    // Make the POST request to the /api/generate-tickets/:sem API
+    const ticketResponse = await axios.post(
+      `http://localhost:8080/api/generate-tickets/${sem}`,
+      { group, series, number },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Log the full response to inspect its structure
+    console.log('Full API Response:', JSON.stringify(ticketResponse.data, null, 2));
+
+    // Check if the API call was successful
+    if (!ticketResponse.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to generate tickets"
+          )
+        );
+    }
+
+    // Check if ticketNumber exists in the response
+    const tickets = ticketResponse.data.tickets; // Adjust this based on the actual response structure
+    let ticketNumber;
+
+    if (Array.isArray(tickets) && tickets.length > 0) {
+      ticketNumber = tickets[0].ticketNumber; // Adjust based on the response structure
+    } else if (tickets && tickets.ticketNumber) {
+      ticketNumber = tickets.ticketNumber; // If ticketNumber is directly on the tickets object
+    } else {
+      ticketNumber = "Ticket number not available"; // Fallback message
+    }
+
+    // Return the generated tickets along with the ticketNumber in the response
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          { tickets, ticketNumber },
+          true,
+          statusCode.create,
+          `${sem} sem ticket number generated successfully`
+        )
+      );
+  } catch (error) {
+    console.error('Error:', error.message);
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
+
 
 export const getLotteryGame = async (req, res) => {
   try {
@@ -12,12 +88,22 @@ export const getLotteryGame = async (req, res) => {
     const limit = parseInt(pageSize);
     const params = { sem, page, limit };
 
-    const response = await axios.get('http://localhost:8080/api/get-external-lotteries', { params });
+    const response = await axios.get(
+      "http://localhost:8080/api/get-external-lotteries",
+      { params }
+    );
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
     }
 
     const { data, pagination } = response.data;
@@ -31,7 +117,7 @@ export const getLotteryGame = async (req, res) => {
         try {
           ticketNumber = JSON.parse(lottery.ticketNumber);
         } catch (error) {
-          console.error('Error parsing ticketNumber:', error);
+          console.error("Error parsing ticketNumber:", error);
         }
       }
 
@@ -50,11 +136,26 @@ export const getLotteryGame = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(parsedData, true, statusCode.success, 'Success', paginationData));
+      .send(
+        apiResponseSuccess(
+          parsedData,
+          true,
+          statusCode.success,
+          "Success",
+          paginationData
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -62,15 +163,29 @@ export const getLotteryGame = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const users = await userSchema.findAll({
-      attributes: ['userName', 'userId', 'balance'],
+      attributes: ["userName", "userId", "balance"],
     });
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(users, true, statusCode.success, 'User retrieve successfully'));
+      .send(
+        apiResponseSuccess(
+          users,
+          true,
+          statusCode.success,
+          "User retrieve successfully"
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -80,13 +195,16 @@ export const purchaseLotteryTicket = async (req, res) => {
     const { lotteryId } = req.body;
 
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1h',
+      expiresIn: "1h",
     });
 
     const [response, balanceUpdateResponse] = await Promise.all([
-      axios.get(`http://localhost:8080/api/getParticularLotteries/${lotteryId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
+      axios.get(
+        `http://localhost:8080/api/getParticularLotteries/${lotteryId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
       axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, {
         userId: users.userId,
         amount: users.balance,
@@ -96,20 +214,37 @@ export const purchaseLotteryTicket = async (req, res) => {
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
     }
 
     const lotteryPrice = response.data.data;
     if (users.balance < lotteryPrice) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Insufficient balance'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Insufficient balance"
+          )
+        );
     }
 
     users.balance -= lotteryPrice;
     const newExposure = { [lotteryId]: lotteryPrice };
-    users.marketListExposure = [...(users.marketListExposure || []), newExposure];
-    await users.save({ fields: ['balance', 'marketListExposure'] });
+    users.marketListExposure = [
+      ...(users.marketListExposure || []),
+      newExposure,
+    ];
+    await users.save({ fields: ["balance", "marketListExposure"] });
 
     const purchaseRes = await axios.post(
       `http://localhost:8080/api/create-purchase-lottery`,
@@ -120,16 +255,23 @@ export const purchaseLotteryTicket = async (req, res) => {
       },
       {
         headers: { Authorization: `Bearer ${token}` },
-      },
+      }
     );
 
     if (!purchaseRes.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to create purchase'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to create purchase"
+          )
+        );
     }
 
-    purchaseRes.data.data['lotteryPrice'] = lotteryPrice;
+    purchaseRes.data.data["lotteryPrice"] = lotteryPrice;
     delete purchaseRes.data.data.ticketNumber;
     delete purchaseRes.data.data.price;
     delete purchaseRes.data.data.isPurchased;
@@ -138,12 +280,29 @@ export const purchaseLotteryTicket = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(purchaseRes.data.data, true, statusCode.success, `Lottery purchased successfully`));
+      .send(
+        apiResponseSuccess(
+          purchaseRes.data.data,
+          true,
+          statusCode.success,
+          `Lottery purchased successfully`
+        )
+      );
   } catch (error) {
-    console.error('Error from API:', error.response ? error.response.data : error.message);
+    console.error(
+      "Error from API:",
+      error.response ? error.response.data : error.message
+    );
     return res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -152,7 +311,7 @@ export const lotteryAmount = async (req, res) => {
     const users = req.user;
     const { lotteryId } = req.params; // Now getting lotteryId from params
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1h',
+      expiresIn: "1h",
     });
 
     const response = await axios.get(
@@ -161,23 +320,44 @@ export const lotteryAmount = async (req, res) => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
+      }
     );
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data from external API'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data from external API"
+          )
+        );
     }
     const { data } = response.data;
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(data, true, statusCode.success, `Lottery amount of ₹${data} `));
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          `Lottery amount of ₹${data} `
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -186,29 +366,58 @@ export const getUserPurchases = async (req, res) => {
     const userId = req.user.userId;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
 
-    const response = await axios.get(`http://localhost:8080/api/user-purchases/${userId}?page=${page}&limit=${limit}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await axios.get(
+      `http://localhost:8080/api/user-purchases/${userId}?page=${page}&limit=${limit}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
     }
 
     const { data, pagination } = response.data;
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(data, true, statusCode.success, 'Success', pagination));
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          "Success",
+          pagination
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -217,7 +426,7 @@ export const getResult = async (req, res) => {
     const users = req.user;
     const { resultId } = req.params; // Now getting lotteryId from params
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1h',
+      expiresIn: "1h",
     });
 
     const response = await axios.get(
@@ -226,23 +435,44 @@ export const getResult = async (req, res) => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
+      }
     );
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data from external API'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data from external API"
+          )
+        );
     }
     const { data } = response.data;
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(data, true, statusCode.success, `Result fetch Successfully `));
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          `Result fetch Successfully `
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -251,28 +481,52 @@ export const searchTicketNumber = async (req, res) => {
     const users = req.user;
     const { ticketNumber } = req.params;
     const token = jwt.sign({ roles: users.roles }, process.env.JWT_SECRET_KEY, {
-      expiresIn: '1h',
+      expiresIn: "1h",
     });
 
-    const response = await axios.get(`http://localhost:8080/api/search-lottery/${ticketNumber}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await axios.get(
+      `http://localhost:8080/api/search-lottery/${ticketNumber}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data from external API'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data from external API"
+          )
+        );
     }
     const { data } = response.data;
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(data, true, statusCode.success, `Result fetch Successfully `));
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          `Result fetch Successfully `
+        )
+      );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
