@@ -65,3 +65,22 @@ export const purchaseHistory = async (req, res) => {
   }
 
 }
+
+
+export const getTicketRange = async (req, res) => {
+  try {
+
+    const response = await axios.get(`http://localhost:8080/api/get-range`);
+
+    if (!response.data.success) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
+
+  } catch (error) {
+    console.error('Error:', error.message);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+
+}
