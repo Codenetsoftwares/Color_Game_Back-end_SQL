@@ -4,12 +4,15 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
+import { API_URL } from '../helper/manageUrl.js';
 
 export const searchTicket = async (req, res) => {
   try {
     const { group, series, number, sem } = req.body
+    const baseURL = API_URL().lotteryUrl
+    console.log("baseURl...............",baseURL)
 
-    const response = await axios.post(`http://localhost:8080/api/search-ticket`, { group, series, number, sem });
+    const response = await axios.post(`${baseURL}/api/search-ticket`, { group, series, number, sem });
 
     console.log('Full API Response:', JSON.stringify(response.data, null, 2));
 
