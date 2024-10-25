@@ -34,8 +34,8 @@ export const purchaseLottery = async (req, res) => {
     const { generateId, drawDate } = req.body
     const userId = req.user.userId
     const userName = req.user.userName
-
-    const response = await axios.post(`http://localhost:8080/api/purchase-lottery`, { generateId, drawDate, userId, userName });
+    const baseURL = API_URL().lotteryUrl;
+    const response = await axios.post(`${baseURL}/api/purchase-lottery`, { generateId, drawDate, userId, userName });
 
     if (!response.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
@@ -53,8 +53,8 @@ export const purchaseLottery = async (req, res) => {
 export const purchaseHistory = async (req, res) => {
   try {
     const userId = req.user.userId
-
-    const response = await axios.post(`http://localhost:8080/api/purchase-history`, { userId });
+    const baseURL = API_URL().lotteryUrl;
+    const response = await axios.post(`${baseURL}/api/purchase-history`, { userId });
 
     if (!response.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
@@ -72,8 +72,8 @@ export const purchaseHistory = async (req, res) => {
 
 export const getTicketRange = async (req, res) => {
   try {
-
-    const response = await axios.get(`http://localhost:8080/api/get-range`);
+    const baseURL = API_URL().lotteryUrl;
+    const response = await axios.get(`${baseURL}/api/get-range`);
 
     if (!response.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
