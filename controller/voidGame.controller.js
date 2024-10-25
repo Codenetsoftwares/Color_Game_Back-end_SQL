@@ -12,6 +12,7 @@ import Game from "../models/game.model.js";
 import Runner from "../models/runner.model.js";
 import { Op } from "sequelize";
 import BetHistory from "../models/betHistory.model.js";
+import { API_URL } from '../helper/manageUrl.js';
 
 export const voidMarket = async (req, res) => {
   try {
@@ -76,8 +77,10 @@ export const voidMarket = async (req, res) => {
             amount: userDetails.balance,
             userId: userDetails.userId,
           };
+          const baseURL = API_URL().whiteLabelUrl
+          
           const response = await axios.post(
-            "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+            `${baseURL}/api/admin/extrnal/balance-update`,
             dataToSend
           );
 
