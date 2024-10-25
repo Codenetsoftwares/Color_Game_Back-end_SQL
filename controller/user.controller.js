@@ -808,9 +808,9 @@ export const createBid = async (req, res) => {
       amount: user.balance,
       userId: userId,
     };
-
+      const baseURL = API_URL().whiteLabelUrl
     const response = await axios.post(
-      "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+      `${baseURL}/api/admin/extrnal/balance-update`,
       dataToSend
     );
 
@@ -1432,7 +1432,7 @@ export const accountStatement = async (req, res) => {
       page,
       dataType
     };
-    const baseURL = API_URL();
+    const baseURL = API_URL().whiteLabelUrl;
     console.log("baseURl...............",baseURL)
     const response = await axios.get(`${baseURL}/api/user-colorGame-account-statement/${userName}`, { params });
     console.log("response response",response)
