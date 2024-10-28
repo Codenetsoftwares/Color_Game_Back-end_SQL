@@ -1,10 +1,12 @@
 import { string } from "../constructor/string.js";
 import { getTicketRange, purchaseHistory, purchaseLottery, searchTicket } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
+import customErrorHandler from "../middleware/customErrorHandler.js";
+import { searchTicketValidation } from "../schema/commonSchema.js";
 
 export const lotteryRoute = (app) => {
 
-  app.post("/api/search-ticket", authorize([string.User]), searchTicket);
+  app.post("/api/search-ticket", searchTicketValidation, customErrorHandler, authorize([string.User]), searchTicket);
 
   app.post("/api/purchase-lottery", authorize([string.User]), purchaseLottery);
 

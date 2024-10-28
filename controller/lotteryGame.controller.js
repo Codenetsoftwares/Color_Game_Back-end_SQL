@@ -20,7 +20,7 @@ export const searchTicket = async (req, res) => {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to search ticket"));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Lottery Generated"));
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
 
   } catch (error) {
     console.error('Error:', error.message);
@@ -41,7 +41,7 @@ export const purchaseLottery = async (req, res) => {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, "Lottery purchase successfully"));
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchase successfully"));
 
   } catch (error) {
     console.error('Error:', error.message);
@@ -52,19 +52,62 @@ export const purchaseLottery = async (req, res) => {
 
 export const purchaseHistory = async (req, res) => {
   try {
-    const userId = req.user.userId
+    const userId = req.user.userId;
+    const { page, limit ,sem} = req.query; 
+    const params = {
+      page,
+      limit,
+      sem
+    };
     const baseURL = API_URL().lotteryUrl;
-    const response = await axios.post(`${baseURL}/api/purchase-history`, { userId });
+    const response = await axios.post(
+      `${baseURL}/api/purchase-history`,
+      { userId },
+      { params }
+    ); 
 
     if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get purchase history"
+          )
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
+    const { data, pagination } = response.data;
+    const paginationData = {
+      page: pagination?.page || page,
+      limit: pagination?.limit || limit,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+    };
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          "Success",
+          paginationData
+        )
+      );
   } catch (error) {
-    console.error('Error:', error.message);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 
 }
