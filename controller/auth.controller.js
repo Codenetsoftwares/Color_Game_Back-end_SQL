@@ -79,7 +79,7 @@ export const loginUser = async (req, res) => {
       const loginTime = new Date();
       const loginStatus = 'login failed';
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
-      const baseURL = API_URL().whiteLabelUrl;
+      const baseURL = process.env.WHITE_LABEL_URL;
       await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
         userName,
         loginTime: loginTime,
@@ -97,7 +97,7 @@ export const loginUser = async (req, res) => {
       const loginTime = new Date();
       const loginStatus = 'login failed';
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
-      const baseURL = API_URL().whiteLabelUrl
+      const baseURL = process.env.WHITE_LABEL_URL
       await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
         userName,
         loginTime: loginTime,
@@ -153,7 +153,7 @@ export const loginUser = async (req, res) => {
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
       await existingUser.save()
       // Send the lastLoginTime to adminLogin API
-      const baseURL = API_URL().whiteLabelUrl;
+      const baseURL = process.env.WHITE_LABEL_URL;
       await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
         userName: existingUser.userName,
         loginTime,

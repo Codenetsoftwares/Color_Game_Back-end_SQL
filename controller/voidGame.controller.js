@@ -77,7 +77,7 @@ export const voidMarket = async (req, res) => {
             amount: userDetails.balance,
             userId: userDetails.userId,
           };
-          const baseURL = API_URL().whiteLabelUrl
+          const baseURL = process.env.WHITE_LABEL_URL
           
           const response = await axios.post(
             `${baseURL}/api/admin/extrnal/balance-update`,
