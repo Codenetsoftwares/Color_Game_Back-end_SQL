@@ -378,3 +378,19 @@ export const validatePurchaseLotteryTicket = [
 export const validateVoidGame = [
   body('marketId').notEmpty().withMessage("Market Id is required.").isUUID().withMessage('Market ID must be a valid UUID'),
 ];
+
+export const searchTicketValidation = [
+  body('group')
+    .notEmpty().withMessage('Group is required'),
+  body('series')
+    .notEmpty().withMessage('Series is required')
+    .isString()
+    .withMessage('Series must be a string'),
+  body('number')
+    .notEmpty().withMessage('Number is required')
+    .isString()
+    .withMessage('Series must be a string'),
+  body('sem')
+    .notEmpty().withMessage('Sem is required')
+
+];

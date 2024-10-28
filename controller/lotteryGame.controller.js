@@ -17,7 +17,7 @@ export const searchTicket = async (req, res) => {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to search ticket"));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Lottery Generated"));
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
 
   } catch (error) {
     console.error('Error:', error.message);
@@ -38,7 +38,7 @@ export const purchaseLottery = async (req, res) => {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, "Lottery purchase successfully"));
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchase successfully"));
 
   } catch (error) {
     console.error('Error:', error.message);
