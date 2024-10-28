@@ -8,7 +8,6 @@ import axios from 'axios';
 import userTrashData from '../models/userTrashData.model.js';
 import { v4 as uuid4 } from 'uuid';
 import transactionRecord from '../models/transactionRecord.model.js';
-import { API_URL } from '../helper/manageUrl.js';
 
 // done
 export const adminLogin = async (req, res) => {
@@ -79,7 +78,7 @@ export const loginUser = async (req, res) => {
       const loginTime = new Date();
       const loginStatus = 'login failed';
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
-      const baseURL = API_URL().whiteLabelUrl;
+      const baseURL = process.env.WHITE_LABEL_URL;
       await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
         userName,
         loginTime: loginTime,
@@ -97,7 +96,7 @@ export const loginUser = async (req, res) => {
       const loginTime = new Date();
       const loginStatus = 'login failed';
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
-      const baseURL = API_URL().whiteLabelUrl
+      const baseURL = process.env.WHITE_LABEL_URL
       await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
         userName,
         loginTime: loginTime,
@@ -153,7 +152,7 @@ export const loginUser = async (req, res) => {
       await existingUser.update({ lastLoginTime: loginTime, loginStatus });
       await existingUser.save()
       // Send the lastLoginTime to adminLogin API
-      const baseURL = API_URL().whiteLabelUrl;
+      const baseURL = process.env.WHITE_LABEL_URL;
       await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
         userName: existingUser.userName,
         loginTime,

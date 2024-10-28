@@ -15,7 +15,6 @@ import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
 import axios from 'axios';
 import CustomError from '../helper/extendError.js';
-import { API_URL } from '../helper/manageUrl.js';
 
 // done
 export const createUser = async (req, res) => {
@@ -808,7 +807,7 @@ export const createBid = async (req, res) => {
       amount: user.balance,
       userId: userId,
     };
-      const baseURL = API_URL().whiteLabelUrl
+      const baseURL = process.env.WHITE_LABEL_URL
     const response = await axios.post(
       `${baseURL}/api/admin/extrnal/balance-update`,
       dataToSend
@@ -1432,7 +1431,7 @@ export const accountStatement = async (req, res) => {
       page,
       dataType
     };
-    const baseURL = API_URL().whiteLabelUrl;
+    const baseURL = process.env.WHITE_LABEL_URL;
     console.log("baseURl...............",baseURL)
     const response = await axios.get(`${baseURL}/api/user-colorGame-account-statement/${userName}`, { params });
     console.log("response response",response)

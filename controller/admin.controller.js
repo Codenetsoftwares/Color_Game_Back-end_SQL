@@ -25,7 +25,6 @@ import InactiveGame from "../models/inactiveGame.model.js";
 import CustomError from "../helper/extendError.js";
 import { PreviousState } from "../models/previousState.model.js";
 import sequelize from "../db.js";
-import { API_URL } from '../helper/manageUrl.js';
 
 dotenv.config();
 const globalName = [];
@@ -598,7 +597,7 @@ export const afterWining = async (req, res) => {
                   amount: userDetails.balance,
                   userId: user.userId,
                 };
-                const baseURL = API_URL().whiteLabelUrl;
+                const baseURL = process.env.WHITE_LABEL_URL;
                 const { data: response } = await axios.post(
                   `${baseURL}/api/admin/extrnal/balance-update`,
                   dataToSend
@@ -680,7 +679,7 @@ export const afterWining = async (req, res) => {
                   amount: userDetails.balance,
                   userId: userDetails.userId,
                 };
-                const baseURL = API_URL().whiteLabelUrl;
+                const baseURL = process.env.WHITE_LABEL_URL;
                 const { data: response } = await axios.post(
                   `${baseURL}/api/admin/extrnal/balance-update`,
                   dataToSend
