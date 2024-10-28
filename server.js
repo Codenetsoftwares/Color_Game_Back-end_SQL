@@ -30,6 +30,7 @@ import { externalApisRoute } from './routes/externalApis.route.js';
 import { checkAndManageIndexes } from './helper/indexManager.js';
 import { lotteryRoute } from './routes/lotteryGame.route.js';
 import { voidGameRoute } from './routes/voidGame.route.js';
+import { API_URL } from './helper/manageUrl.js';
 
 dotenv.config();
 const app = express();
@@ -139,7 +140,6 @@ sequelize
     app.listen(process.env.PORT, () => {
       console.log(`App is running on  - http://localhost:${process.env.PORT || 7000}`);
     });
-
     cron.schedule('*/2 * * * * *', async () => {
       try {
         // const markets = await Market.findAll({
@@ -164,7 +164,7 @@ sequelize
 
         clients.forEach((client) => {
           client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
-        });
+        })
        console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
 
       } catch (error) {

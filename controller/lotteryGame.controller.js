@@ -4,12 +4,15 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
+import { API_URL } from '../helper/manageUrl.js';
 
 export const searchTicket = async (req, res) => {
   try {
     const { group, series, number, sem } = req.body
+    const baseURL = API_URL().lotteryUrl
+    console.log("baseURl...............",baseURL)
 
-    const response = await axios.post(`http://localhost:8080/api/search-ticket`, { group, series, number, sem });
+    const response = await axios.post(`${baseURL}/api/search-ticket`, { group, series, number, sem });
 
     console.log('Full API Response:', JSON.stringify(response.data, null, 2));
 
@@ -31,8 +34,8 @@ export const purchaseLottery = async (req, res) => {
     const { generateId, drawDate } = req.body
     const userId = req.user.userId
     const userName = req.user.userName
-
-    const response = await axios.post(`http://localhost:8080/api/purchase-lottery`, { generateId, drawDate, userId, userName });
+    const baseURL = API_URL().lotteryUrl;
+    const response = await axios.post(`${baseURL}/api/purchase-lottery`, { generateId, drawDate, userId, userName });
 
     if (!response.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
@@ -56,9 +59,9 @@ export const purchaseHistory = async (req, res) => {
       limit,
       sem
     };
-
+    const baseURL = API_URL().lotteryUrl;
     const response = await axios.post(
-      `http://localhost:8080/api/purchase-history`,
+      `${baseURL}/api/purchase-history`,
       { userId },
       { params }
     ); 
@@ -112,8 +115,8 @@ export const purchaseHistory = async (req, res) => {
 
 export const getTicketRange = async (req, res) => {
   try {
-
-    const response = await axios.get(`http://localhost:8080/api/get-range`);
+    const baseURL = API_URL().lotteryUrl;
+    const response = await axios.get(`${baseURL}/api/get-range`);
 
     if (!response.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));

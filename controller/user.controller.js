@@ -15,6 +15,7 @@ import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
 import axios from 'axios';
 import CustomError from '../helper/extendError.js';
+import { API_URL } from '../helper/manageUrl.js';
 
 // done
 export const createUser = async (req, res) => {
@@ -807,9 +808,9 @@ export const createBid = async (req, res) => {
       amount: user.balance,
       userId: userId,
     };
-
+      const baseURL = API_URL().whiteLabelUrl
     const response = await axios.post(
-      "https://wl.server.dummydoma.in/api/admin/extrnal/balance-update",
+      `${baseURL}/api/admin/extrnal/balance-update`,
       dataToSend
     );
 
@@ -1418,6 +1419,7 @@ export const userBetHistoryGames = async (req, res) => {
 
 export const accountStatement = async (req, res) => {
   try {
+    console.log("................................")
     const userName = req.user.userName;
     const { page = 1, pageSize = 10, startDate, endDate } = req.query;
     const dataType = req.query.dataType;
@@ -1430,9 +1432,10 @@ export const accountStatement = async (req, res) => {
       page,
       dataType
     };
-
-    const response = await axios.get(`https://wl.server.dummydoma.in/api/user-colorGame-account-statement/${userName}`, { params });
-
+    const baseURL = API_URL().whiteLabelUrl;
+    console.log("baseURl...............",baseURL)
+    const response = await axios.get(`${baseURL}/api/user-colorGame-account-statement/${userName}`, { params });
+    console.log("response response",response)
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)

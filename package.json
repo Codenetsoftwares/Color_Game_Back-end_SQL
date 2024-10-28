@@ -7,7 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon --experimental-modules server.js",
-    "format": "npx prettier --write . --config .prettier"
+    "format": "npx prettier --write . --config .prettier",
+    "prod": "dotenv -e .env.production -- node server.js"
   },
   "author": "",
   "license": "ISC",
@@ -34,5 +35,9 @@
     "prettier": "^3.2.5",
     "sequelize": "^6.37.3",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "dotenv-cli": "^7.4.2"
   }
 }
