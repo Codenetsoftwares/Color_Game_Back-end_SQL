@@ -49,19 +49,62 @@ export const purchaseLottery = async (req, res) => {
 
 export const purchaseHistory = async (req, res) => {
   try {
-    const userId = req.user.userId
+    const userId = req.user.userId;
+    const { page, limit ,sem} = req.query; 
+    const params = {
+      page,
+      limit,
+      sem
+    };
 
-    const response = await axios.post(`http://localhost:8080/api/purchase-history`, { userId });
+    const response = await axios.post(
+      `http://localhost:8080/api/purchase-history`,
+      { userId },
+      { params }
+    ); 
 
     if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get purchase history"
+          )
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
+    const { data, pagination } = response.data;
+    const paginationData = {
+      page: pagination?.page || page,
+      limit: pagination?.limit || limit,
+      totalPages: pagination?.totalPages || 1,
+      totalItems: pagination?.totalItems || data.length,
+    };
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          "Success",
+          paginationData
+        )
+      );
   } catch (error) {
-    console.error('Error:', error.message);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 
 }
