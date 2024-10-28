@@ -39,7 +39,7 @@ import { externalApisRoute } from './routes/externalApis.route.js';
 import { checkAndManageIndexes } from './helper/indexManager.js';
 import { lotteryRoute } from './routes/lotteryGame.route.js';
 import { voidGameRoute } from './routes/voidGame.route.js';
-import { API_URL } from './helper/manageUrl.js';
+
 
 dotenv.config();
 const app = express();

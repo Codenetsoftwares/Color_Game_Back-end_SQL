@@ -4,7 +4,6 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
-import { API_URL } from '../helper/manageUrl.js';
 
 export const searchTicket = async (req, res) => {
   try {
@@ -59,7 +58,7 @@ export const purchaseHistory = async (req, res) => {
       limit,
       sem
     };
-    const baseURL = API_URL().lotteryUrl;
+    const baseURL = process.env.LOTTERY_URL;
     const response = await axios.post(
       `${baseURL}/api/purchase-history`,
       { userId },

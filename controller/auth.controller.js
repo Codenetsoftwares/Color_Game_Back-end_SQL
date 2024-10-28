@@ -8,7 +8,6 @@ import axios from 'axios';
 import userTrashData from '../models/userTrashData.model.js';
 import { v4 as uuid4 } from 'uuid';
 import transactionRecord from '../models/transactionRecord.model.js';
-import { API_URL } from '../helper/manageUrl.js';
 
 // done
 export const adminLogin = async (req, res) => {

@@ -15,7 +15,6 @@ import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
 import axios from 'axios';
 import CustomError from '../helper/extendError.js';
-import { API_URL } from '../helper/manageUrl.js';
 
 // done
 export const createUser = async (req, res) => {

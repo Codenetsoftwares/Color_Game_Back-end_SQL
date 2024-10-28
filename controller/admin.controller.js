@@ -25,7 +25,6 @@ import InactiveGame from "../models/inactiveGame.model.js";
 import CustomError from "../helper/extendError.js";
 import { PreviousState } from "../models/previousState.model.js";
 import sequelize from "../db.js";
-import { API_URL } from '../helper/manageUrl.js';
 
 dotenv.config();
 const globalName = [];
