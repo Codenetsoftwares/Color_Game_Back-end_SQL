@@ -1,7 +1,16 @@
+import dotenv from 'dotenv';
+
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production' });
+} else {
+  dotenv.config({ path: '.env' });
+}
+
+console.log('Running in environment:', process.env.NODE_ENV);
+
 import mysql from 'mysql2';
 import express from 'express';
 import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
 import { AdminRoute } from './routes/admin.route.js';
 import { UserRoute } from './routes/user.route.js';
 import { GameRoute } from './routes/game.route.js';
