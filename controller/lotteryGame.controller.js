@@ -1,4 +1,6 @@
 import axios from "axios";
+import jwt from "jsonwebtoken";
+
 import { statusCode } from "../helper/statusCodes.js";
 import {
   apiResponseErr,
@@ -129,4 +131,27 @@ export const getTicketRange = async (req, res) => {
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 
+}
+
+export const getResult = async (req, res) => {
+  try {
+    const token =  jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const baseURL = process.env.LOTTERY_URL;
+    
+    const response = await axios.get(`${baseURL}/api/prize-results`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.data.success) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get result"));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
+
+  } catch (error) {
+    
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
 }

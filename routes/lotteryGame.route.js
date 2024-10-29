@@ -1,5 +1,11 @@
 import { string } from "../constructor/string.js";
-import { getTicketRange, purchaseHistory, purchaseLottery, searchTicket } from "../controller/lotteryGame.controller.js";
+import {
+  getResult,
+  getTicketRange,
+  purchaseHistory,
+  purchaseLottery,
+  searchTicket,
+} from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
 import { searchTicketValidation } from "../schema/commonSchema.js";
@@ -14,4 +20,5 @@ export const lotteryRoute = (app) => {
 
   app.get('/api/get-range', getTicketRange);
 
+  app.get("/api/prize-results", authorize([string.User]), getResult);
 };
