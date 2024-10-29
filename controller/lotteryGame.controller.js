@@ -4,6 +4,7 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
+import jwt from 'jsonwebtoken';
 
 export const searchTicket = async (req, res) => {
   try {
@@ -120,6 +121,30 @@ export const getTicketRange = async (req, res) => {
 
     if (!response.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
+
+  } catch (error) {
+    console.error('Error:', error.message);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+
+}
+
+export const getDrawDateByDate = async(req, res) => {
+  try {
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    console.log("Testinggg.......",token)
+    const baseURL = process.env.LOTTERY_URL;
+    const response = await axios.get(`${baseURL}/api/draw-dates`,{
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.data.success) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get Draw Date"));
     }
 
     return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));

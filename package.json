@@ -4,12 +4,12 @@
   "description": "",
   "type": "module",
   "main": "server.js",
-  "scripts": {
+ "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "cross-env NODE_ENV=development node server.js",
     "start:prod": "cross-env NODE_ENV=production node server.js",
-    "format": "npx prettier --write \"**/*.{js,ts,json,md,css,html}\" --config .prettier",
-    "prod": "cross-env NODE_ENV=production dotenv -e .env.production -- node server.js"
+    "format": "npx prettier --write . --config .prettier",
+    "prod": "dotenv -e .env.production -- node server.js"
   },
   "author": "",
   "license": "ISC",
