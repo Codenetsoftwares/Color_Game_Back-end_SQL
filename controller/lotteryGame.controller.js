@@ -6,7 +6,6 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
-import jwt from 'jsonwebtoken';
 
 export const searchTicket = async (req, res) => {
   try {
