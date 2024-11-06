@@ -72,7 +72,11 @@ pool.getConnection((err, connection) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  if (process.env.NODE_ENV === 'production') {
+    res.send('Production environment is running.');
+  } else {
+    res.send('Development environment is running.');
+  }
 });
 
 AdminRoute(app);
