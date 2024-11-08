@@ -6,6 +6,7 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
+import userSchema from "../models/user.model.js";
 
 export const searchTicket = async (req, res) => {
   try {
@@ -32,29 +33,45 @@ export const searchTicket = async (req, res) => {
 
 export const purchaseLottery = async (req, res) => {
   try {
-    const { generateId, drawDate } = req.body
-    const userId = req.user.userId
-    const userName = req.user.userName
-    const baseURL = process.env.LOTTERY_URL
-    const response = await axios.post(`${baseURL}/api/purchase-lottery`, { generateId, drawDate, userId, userName });
+    const { generateId, drawDate, lotteryPrice } = req.body;
+    const { userId, userName, roles, balance, marketListExposure } = req.user;
+    const baseURL = process.env.LOTTERY_URL;
 
-    if (!response.data.success) {
+    const token = jwt.sign({ roles }, process.env.JWT_SECRET_KEY, { expiresIn: "1h" });
+
+    if (balance < lotteryPrice) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Insufficient balance"));
+    }
+
+    const user = await userSchema.findOne({ where: { userId } });
+    user.balance -= lotteryPrice;
+    const newExposure = { [generateId]: lotteryPrice };
+    user.marketListExposure = [...(marketListExposure || []), newExposure];
+    await user.save({ fields: ["balance", "marketListExposure"] });
+
+    const [lotteryResponse] = await Promise.all([
+      axios.post(`${baseURL}/api/purchase-lottery`, { generateId, drawDate, userId, userName, lotteryPrice }, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, { userId, amount: balance - lotteryPrice }),
+    ]);
+
+    if (!lotteryResponse.data.success) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchase successfully"));
-
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchased successfully"));
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error("Error:", error.message);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
+};
 
-}
 
 export const purchaseHistory = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { page, limit ,sem} = req.query; 
+    const { page, limit, sem } = req.query;
     const params = {
       page,
       limit,
@@ -66,7 +83,7 @@ export const purchaseHistory = async (req, res) => {
       `${baseURL}/api/purchase-history`,
       { userId },
       { params }
-    ); 
+    );
 
     if (!response.data.success) {
       return res
@@ -133,12 +150,12 @@ export const getTicketRange = async (req, res) => {
 
 }
 
-export const getDrawDateByDate = async(req, res) => {
+export const getDrawDateByDate = async (req, res) => {
   try {
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-    console.log("Testinggg.......",token)
+    console.log("Testinggg.......", token)
     const baseURL = process.env.LOTTERY_URL;
-    const response = await axios.get(`${baseURL}/api/draw-dates`,{
+    const response = await axios.get(`${baseURL}/api/draw-dates`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -160,9 +177,9 @@ export const getDrawDateByDate = async(req, res) => {
 
 export const getResult = async (req, res) => {
   try {
-    const token =  jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
     const baseURL = process.env.LOTTERY_URL;
-    
+
     const response = await axios.get(`${baseURL}/api/prize-results`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -176,7 +193,8 @@ export const getResult = async (req, res) => {
     return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
 
   } catch (error) {
-    
+
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
+
