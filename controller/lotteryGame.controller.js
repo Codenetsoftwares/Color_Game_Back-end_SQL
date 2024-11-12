@@ -106,7 +106,7 @@ export const purchaseLottery = async (req, res) => {
     const [lotteryResponse] = await Promise.all([
       axios.post(
         `${baseURL}/api/purchase-lottery/${marketId}`,
-        { generateId, drawDate, userId, userName, lotteryPrice },
+        { generateId, userId, userName, lotteryPrice },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
