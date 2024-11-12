@@ -33,11 +33,14 @@ export const searchTicket = async (req, res) => {
 
 export const purchaseLottery = async (req, res) => {
   try {
-    const { generateId, drawDate, lotteryPrice } = req.body;
+    const { generateId, lotteryPrice } = req.body;
     const { userId, userName, roles, balance, marketListExposure } = req.user;
+    const { marketId } = req.params;
     const baseURL = process.env.LOTTERY_URL;
 
-    const token = jwt.sign({ roles }, process.env.JWT_SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign({ roles }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "1h",
+    });
 
     if (balance < lotteryPrice) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Insufficient balance"));
@@ -50,10 +53,17 @@ export const purchaseLottery = async (req, res) => {
     await user.save({ fields: ["balance", "marketListExposure"] });
 
     const [lotteryResponse] = await Promise.all([
-      axios.post(`${baseURL}/api/purchase-lottery`, { generateId, drawDate, userId, userName, lotteryPrice }, {
-        headers: { Authorization: `Bearer ${token}` },
+      axios.post(
+        `${baseURL}/api/purchase-lottery/${marketId}`,
+        { generateId, userId, userName, lotteryPrice },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, {
+        userId,
+        amount: balance - lotteryPrice,
       }),
-      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, { userId, amount: balance - lotteryPrice }),
     ]);
 
     if (!lotteryResponse.data.success) {
@@ -131,7 +141,6 @@ export const purchaseHistory = async (req, res) => {
 
 }
 
-
 export const getTicketRange = async (req, res) => {
   try {
     const baseURL = process.env.LOTTERY_URL;
@@ -153,7 +162,6 @@ export const getTicketRange = async (req, res) => {
 export const getDrawDateByDate = async (req, res) => {
   try {
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-    console.log("Testinggg.......", token)
     const baseURL = process.env.LOTTERY_URL;
     const response = await axios.get(`${baseURL}/api/draw-dates`, {
       headers: {
@@ -197,4 +205,104 @@ export const getResult = async (req, res) => {
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
+
+export const getMarkets = async (req, res) => {
+  try {
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    const baseURL = process.env.LOTTERY_URL;
+    const response = await axios.get(`${baseURL}/api/getAll-markets`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get Draw Date"
+          )
+        );
+    }
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
+  } catch (error) {
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
+
+export const updateBalance = async (req, res) => {
+  try {
+    const { userId, prizeAmount, marketId } = req.body;
+    console.log("Received userId:", userId, "Received prizeAmount:", prizeAmount, "Received marketId:", marketId);
+
+    // Find the user based on userId
+    const user = await userSchema.findOne({ where: { userId } });
+    if (!user) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.notFound, 'User not found.'));
+    }
+
+    // Check if the user's balance is a valid number
+    if (isNaN(user.balance)) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User balance is not a valid number.'));
+    }
+
+    // Initialize the total balance update
+    let totalBalanceUpdate = prizeAmount;
+
+    // If the marketId exists in the user's marketListExposure, add the exposure value to the balance
+    if (user.marketListExposure) {
+      const marketExposure = user.marketListExposure.find(exposure => exposure[marketId]);
+
+      if (marketExposure) {
+        const exposureValue = marketExposure[marketId];
+        totalBalanceUpdate += exposureValue; // Add exposure value to prizeAmount
+        console.log(`Market exposure found for ${marketId}:`, exposureValue);
+        
+        // Remove the market exposure entry from the marketListExposure
+        user.marketListExposure = user.marketListExposure.filter(exposure => !exposure[marketId]);
+      }
+    }
+
+    // Update the user's balance
+    user.balance += totalBalanceUpdate;
+    
+    // Save the updated user data
+    await user.save();
+
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
+  } catch (error) {
+    console.log("Error:", error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+
+
 
