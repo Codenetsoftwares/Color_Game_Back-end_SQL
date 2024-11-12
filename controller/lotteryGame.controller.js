@@ -8,6 +8,57 @@ import {
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
 
+export const getMarkets = async (req, res) => {
+  try {
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    const baseURL = process.env.LOTTERY_URL;
+    const response = await axios.get(`${baseURL}/api/getAll-markets`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get Draw Date"
+          )
+        );
+    }
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
+  } catch (error) {
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
+
 export const searchTicket = async (req, res) => {
   try {
     const { group, series, number, sem } = req.body
@@ -33,11 +84,14 @@ export const searchTicket = async (req, res) => {
 
 export const purchaseLottery = async (req, res) => {
   try {
-    const { generateId, drawDate, lotteryPrice } = req.body;
+    const { generateId, lotteryPrice } = req.body;
     const { userId, userName, roles, balance, marketListExposure } = req.user;
+    const { marketId } = req.params;
     const baseURL = process.env.LOTTERY_URL;
 
-    const token = jwt.sign({ roles }, process.env.JWT_SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign({ roles }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "1h",
+    });
 
     if (balance < lotteryPrice) {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Insufficient balance"));
@@ -50,10 +104,17 @@ export const purchaseLottery = async (req, res) => {
     await user.save({ fields: ["balance", "marketListExposure"] });
 
     const [lotteryResponse] = await Promise.all([
-      axios.post(`${baseURL}/api/purchase-lottery`, { generateId, drawDate, userId, userName, lotteryPrice }, {
-        headers: { Authorization: `Bearer ${token}` },
+      axios.post(
+        `${baseURL}/api/purchase-lottery/${marketId}`,
+        { generateId, drawDate, userId, userName, lotteryPrice },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, {
+        userId,
+        amount: balance - lotteryPrice,
       }),
-      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, { userId, amount: balance - lotteryPrice }),
     ]);
 
     if (!lotteryResponse.data.success) {
@@ -67,7 +128,6 @@ export const purchaseLottery = async (req, res) => {
   }
 };
 
-
 export const purchaseHistory = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -75,7 +135,7 @@ export const purchaseHistory = async (req, res) => {
     const params = {
       page,
       limit,
-      sem
+      sem,
     };
 
     const baseURL = process.env.LOTTERY_URL;
