@@ -262,38 +262,27 @@ export const updateBalance = async (req, res) => {
     const { userId, prizeAmount, marketId } = req.body;
     console.log("Received userId:", userId, "Received prizeAmount:", prizeAmount, "Received marketId:", marketId);
 
-    // Find the user based on userId
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.notFound, 'User not found.'));
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User not found.'));
     }
 
-    // Check if the user's balance is a valid number
-    if (isNaN(user.balance)) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User balance is not a valid number.'));
-    }
-
-    // Initialize the total balance update
     let totalBalanceUpdate = prizeAmount;
 
-    // If the marketId exists in the user's marketListExposure, add the exposure value to the balance
     if (user.marketListExposure) {
       const marketExposure = user.marketListExposure.find(exposure => exposure[marketId]);
 
       if (marketExposure) {
         const exposureValue = marketExposure[marketId];
-        totalBalanceUpdate += exposureValue; // Add exposure value to prizeAmount
+        totalBalanceUpdate += exposureValue;
         console.log(`Market exposure found for ${marketId}:`, exposureValue);
         
-        // Remove the market exposure entry from the marketListExposure
         user.marketListExposure = user.marketListExposure.filter(exposure => !exposure[marketId]);
       }
     }
 
-    // Update the user's balance
     user.balance += totalBalanceUpdate;
     
-    // Save the updated user data
     await user.save();
 
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
