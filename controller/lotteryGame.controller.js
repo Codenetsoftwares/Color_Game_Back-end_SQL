@@ -276,13 +276,13 @@ export const updateBalance = async (req, res) => {
         const exposureValue = marketExposure[marketId];
         totalBalanceUpdate += exposureValue;
         console.log(`Market exposure found for ${marketId}:`, exposureValue);
-        
+
         user.marketListExposure = user.marketListExposure.filter(exposure => !exposure[marketId]);
       }
     }
 
     user.balance += totalBalanceUpdate;
-    
+
     await user.save();
 
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
@@ -292,6 +292,30 @@ export const updateBalance = async (req, res) => {
   }
 };
 
+export const removeExposer = async (req, res) => {
+  try {
+    const { userId, marketId } = req.body;
+    console.log("Received userId:", userId, "Received marketId:", marketId);
 
+    const user = await userSchema.findOne({ where: { userId } });
+    if (!user) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User not found.'));
+    }
 
+    if (user.marketListExposure) {
+      const marketExposure = user.marketListExposure.find(exposure => exposure[marketId]);
+
+      if (marketExposure) {
+        user.marketListExposure = user.marketListExposure.filter(exposure => !exposure[marketId]);
+      }
+    }
+
+    await user.save();
+
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
+  } catch (error) {
+    console.log("Error:", error);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
 

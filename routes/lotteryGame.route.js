@@ -7,6 +7,7 @@ import {
   searchTicket, getDrawDateByDate,
   updateBalance,
   getMarkets,
+  removeExposer,
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
@@ -29,4 +30,7 @@ export const lotteryRoute = (app) => {
   app.get('/api/user-getAllMarket', authorize([string.User]), getMarkets)
 
   app.post("/api/users/update-balance", updateBalance)
+
+  app.post("/api/users/remove-exposer", removeExposer)
+
 };
