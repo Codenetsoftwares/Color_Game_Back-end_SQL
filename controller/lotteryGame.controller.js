@@ -48,7 +48,7 @@ export const purchaseLottery = async (req, res) => {
 
     const user = await userSchema.findOne({ where: { userId } });
     user.balance -= lotteryPrice;
-    const newExposure = { [generateId]: lotteryPrice };
+    const newExposure = { [marketId]: lotteryPrice };
     user.marketListExposure = [...(marketListExposure || []), newExposure];
     await user.save({ fields: ["balance", "marketListExposure"] });
 
