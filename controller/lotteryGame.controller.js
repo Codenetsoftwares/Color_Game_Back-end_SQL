@@ -283,9 +283,21 @@ export const updateBalance = async (req, res) => {
 
     user.balance += totalBalanceUpdate;
 
+    const dataToSend = {
+      amount: user.balance,
+      userId
+    };
+    const baseURL = process.env.WHITE_LABEL_URL;
+    const { data: response } = await axios.post(
+      `${baseURL}/api/admin/extrnal/balance-update`,
+      dataToSend
+    );
+
+    let message = response.success ? "Sync data successful" : "Sync not successful";
+
     await user.save();
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, "Balance Update" + " " + message));
   } catch (error) {
     console.log("Error:", error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
