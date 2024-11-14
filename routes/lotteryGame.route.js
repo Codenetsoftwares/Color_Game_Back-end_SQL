@@ -19,7 +19,7 @@ export const lotteryRoute = (app) => {
 
   app.post("/api/purchase-lottery/:marketId", authorize([string.User]), purchaseLottery);
 
-  app.post('/api/purchase-history', authorize([string.User]), purchaseHistory);
+  app.post('/api/purchase-history/:marketId', authorize([string.User]), purchaseHistory);
 
   app.get('/api/get-range', getTicketRange);
 
