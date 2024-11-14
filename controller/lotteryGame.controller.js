@@ -82,6 +82,8 @@ export const purchaseHistory = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { page, limit, sem } = req.query;
+    const { marketId } = req.params;
+
     const params = {
       page,
       limit,
@@ -90,7 +92,7 @@ export const purchaseHistory = async (req, res) => {
 
     const baseURL = process.env.LOTTERY_URL;
     const response = await axios.post(
-      `${baseURL}/api/purchase-history`,
+      `${baseURL}/api/purchase-history/${marketId}`,
       { userId },
       { params }
     );
