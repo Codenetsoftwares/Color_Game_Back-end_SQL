@@ -8,6 +8,7 @@ import {
   updateBalance,
   getMarkets,
   removeExposer,
+  getLotteryResults,
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
@@ -32,5 +33,7 @@ export const lotteryRoute = (app) => {
   app.post("/api/users/update-balance", updateBalance)
 
   app.post("/api/users/remove-exposer", removeExposer)
+
+  app.get('/api/user-lottery-results/:marketId', getLotteryResults);
 
 };

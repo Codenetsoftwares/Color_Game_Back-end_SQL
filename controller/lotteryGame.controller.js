@@ -7,6 +7,7 @@ import {
   apiResponseSuccess,
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
+import LotteryProfit_Loss from "../models/lotteryPofit_Loss.model.js";
 
 export const searchTicket = async (req, res) => {
   try {
@@ -330,6 +331,33 @@ export const removeExposer = async (req, res) => {
   } catch (error) {
     console.log("Error:", error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+export const getLotteryResults = async (req, res) => {
+  try {
+    const { marketId } = req.params;
+    const baseURL = process.env.LOTTERY_URL;
+
+    const response = await axios.get(
+      `${baseURL}/api/lottery-results/${marketId}`,
+    );
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+    }
+
+    const { data } = response.data;
+
+    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Lottery results fetched successfully.'));
+  } catch (error) {
+    console.log("Error fetching results:", error);
+    return res.status(statusCode.internalServerError).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
