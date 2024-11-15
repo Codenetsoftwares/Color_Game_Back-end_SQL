@@ -37,6 +37,7 @@ export const purchaseLottery = async (req, res) => {
     const { userId, userName, roles, balance, marketListExposure } = req.user;
     const { marketId } = req.params;
     const baseURL = process.env.LOTTERY_URL;
+    const whiteLabelUrl = process.env.WHITE_LABEL_URL;
 
     const token = jwt.sign({ roles }, process.env.JWT_SECRET_KEY, {
       expiresIn: "1h",
@@ -60,7 +61,7 @@ export const purchaseLottery = async (req, res) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       ),
-      axios.post(`http://localhost:8000/api/admin/extrnal/balance-update`, {
+      axios.post(`${whiteLabelUrl}/api/admin/extrnal/balance-update`, {
         userId,
         amount: balance - lotteryPrice,
       }),
