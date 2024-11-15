@@ -6,7 +6,7 @@
   "main": "server.js",
  "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "cross-env NODE_ENV=development node server.js",
+    "start": "cross-env NODE_ENV=development nodemon server.js",
     "start:prod": "cross-env NODE_ENV=production node server.js",
     "format": "npx prettier --write . --config .prettier",
     "prod": "cross-env NODE_ENV=production dotenv -e .env.production -- node server.js"
