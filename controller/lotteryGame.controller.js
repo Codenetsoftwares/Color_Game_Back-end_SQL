@@ -7,7 +7,6 @@ import {
   apiResponseSuccess,
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
-import LotteryProfit_Loss from "../models/lotteryPofit_Loss.model.js";
 
 export const searchTicket = async (req, res) => {
   try {
