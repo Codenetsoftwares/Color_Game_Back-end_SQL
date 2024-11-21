@@ -9,6 +9,7 @@ import {
   getMarkets,
   removeExposer,
   getLotteryResults,
+  dateWiseMarkets,
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
@@ -35,5 +36,7 @@ export const lotteryRoute = (app) => {
   app.post("/api/users/remove-exposer", removeExposer)
 
   app.get('/api/user-lottery-results/:marketId', getLotteryResults);
+
+  app.get("/api/user/markets-dateWise", authorize([string.User]), dateWiseMarkets);
 
 };

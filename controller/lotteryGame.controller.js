@@ -361,3 +361,30 @@ export const getLotteryResults = async (req, res) => {
   }
 };
 
+
+export const dateWiseMarkets = async (req, res) => {
+  try {
+    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const { date } = req.query;
+    const baseURL = process.env.LOTTERY_URL;
+
+    const response = await axios.get(`${baseURL}/api/user/dateWise-markets`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        date,
+      },
+    });
+
+    if (!response.data.success) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get market"));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
+
+  } catch (error) {
+
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
