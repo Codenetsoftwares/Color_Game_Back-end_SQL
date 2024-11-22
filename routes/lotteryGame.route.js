@@ -9,6 +9,8 @@ import {
   getMarkets,
   removeExposer,
   getLotteryResults,
+  createLotteryP_L,
+  getLotteryP_L,
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
@@ -36,4 +38,7 @@ export const lotteryRoute = (app) => {
 
   app.get('/api/user-lottery-results/:marketId', getLotteryResults);
 
+  app.post('/api/lottery-profit-loss', createLotteryP_L)
+
+  app.get('/api/lottery-profit-loss', getLotteryP_L);
 };

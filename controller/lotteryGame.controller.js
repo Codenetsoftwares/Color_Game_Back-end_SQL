@@ -1,12 +1,13 @@
 import axios from "axios";
-import jwt from "jsonwebtoken";
-
+import jwt from 'jsonwebtoken';
 import { statusCode } from "../helper/statusCodes.js";
 import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
+import LotteryProfit_Loss from "../models/lotteryProfit_loss.model.js";
+import { json } from "sequelize";
 
 export const searchTicket = async (req, res) => {
   try {
@@ -25,7 +26,7 @@ export const searchTicket = async (req, res) => {
     return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
 
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error:', error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 
@@ -354,10 +355,46 @@ export const getLotteryResults = async (req, res) => {
     return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Lottery results fetched successfully.'));
   } catch (error) {
     console.log("Error fetching results:", error);
-    return res.status(statusCode.internalServerError).json({
-      success: false,
-      message: error.message
-    });
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
 
+export const createLotteryP_L = async (req, res) => {
+  try {
+    const {
+      userId,
+      userName,
+      marketId,
+      marketName,
+      ticketNumber,
+      price,
+      sem,
+      profitLoss,
+    } = req.body;
+
+    const newEntry = await LotteryProfit_Loss.create({
+      userId,
+      userName,
+      marketId,
+      marketName,
+      ticketNumber,
+      price,
+      sem,
+      profitLoss,
+    });
+
+    return res.status(statusCode.create).send(apiResponseSuccess(newEntry, true, statusCode.create, 'Success'));
+  } catch (error) {
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
+
+export const getLotteryP_L = async (req, res) => {
+  try {
+    const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll();
+
+    return res.status(statusCode.success).send(apiResponseSuccess(lotteryProfitLossRecords, true, statusCode.success, 'Success'));
+  } catch (error) {
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
