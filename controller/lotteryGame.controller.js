@@ -65,6 +65,7 @@ export const purchaseLottery = async (req, res) => {
       axios.post(`${whiteLabelUrl}/api/admin/extrnal/balance-update`, {
         userId,
         amount: balance - lotteryPrice,
+        exposure: lotteryPrice
       }),
     ]);
 
@@ -74,7 +75,7 @@ export const purchaseLottery = async (req, res) => {
 
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchased successfully"));
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error("Error:", error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
@@ -289,12 +290,13 @@ export const updateBalance = async (req, res) => {
 
     const dataToSend = {
       amount: user.balance,
-      userId
+      userId,
+      exposure: exposureValue
     };
     const baseURL = process.env.WHITE_LABEL_URL;
     const { data: response } = await axios.post(
       `${baseURL}/api/admin/extrnal/balance-update`,
-      dataToSend
+      dataToSend,
     );
 
     let message = response.success ? "Sync data successful" : "Sync not successful";
@@ -310,30 +312,50 @@ export const updateBalance = async (req, res) => {
 
 export const removeExposer = async (req, res) => {
   try {
-    const { userId, marketId } = req.body;
-    console.log("Received userId:", userId, "Received marketId:", marketId);
+    const { userId, marketId, marketName } = req.body;
 
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User not found.'));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found.'));
     }
 
     if (user.marketListExposure) {
-      const marketExposure = user.marketListExposure.find(exposure => exposure[marketId]);
+      const exposures = Array.isArray(user.marketListExposure)
+        ? user.marketListExposure
+        : JSON.parse(user.marketListExposure);
+
+      const marketExposure = exposures.find(exposure => exposure[marketId] !== undefined);
 
       if (marketExposure) {
-        user.marketListExposure = user.marketListExposure.filter(exposure => !exposure[marketId]);
+        let marketListExposureValue = marketExposure[marketId];
+        user.marketListExposure = exposures.filter(exposure => !exposure[marketId]);
+
+        await LotteryProfit_Loss.create({
+          userId,
+          userName: user.userName,
+          marketId,
+          marketName,
+          profitLoss: -marketListExposureValue,
+        });
+
       }
     }
 
     await user.save();
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
   } catch (error) {
     console.log("Error:", error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
+
 
 export const getLotteryResults = async (req, res) => {
   try {

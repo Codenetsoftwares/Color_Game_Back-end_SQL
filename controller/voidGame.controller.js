@@ -68,16 +68,17 @@ export const voidMarket = async (req, res) => {
               isWin: order.isWin,
               profitLoss: order.profitLoss,
               placeDate: order.createdAt,
-              isVoid : true
+              isVoid: true
             });
           }
 
           const dataToSend = {
             amount: userDetails.balance,
             userId: userDetails.userId,
+            exposure: marketExposureValue
           };
           const baseURL = process.env.WHITE_LABEL_URL
-          
+
           const response = await axios.post(
             `${baseURL}/api/admin/extrnal/balance-update`,
             dataToSend

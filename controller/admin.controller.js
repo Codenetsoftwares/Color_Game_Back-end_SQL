@@ -596,6 +596,7 @@ export const afterWining = async (req, res) => {
                 const dataToSend = {
                   amount: userDetails.balance,
                   userId: user.userId,
+                  exposure: marketExposureValue
                 };
                 const baseURL = process.env.WHITE_LABEL_URL;
                 const { data: response } = await axios.post(
@@ -678,6 +679,7 @@ export const afterWining = async (req, res) => {
                 const dataToSend = {
                   amount: userDetails.balance,
                   userId: userDetails.userId,
+                  exposure: marketExposureValue
                 };
                 const baseURL = process.env.WHITE_LABEL_URL;
                 const { data: response } = await axios.post(
@@ -711,7 +713,7 @@ export const afterWining = async (req, res) => {
       for (const order of orders) {
         await BetHistory.create({
           userId: order.userId,
-          userName : order.userName,
+          userName: order.userName,
           gameId: order.gameId,
           gameName: order.gameName,
           marketId: order.marketId,
@@ -726,7 +728,7 @@ export const afterWining = async (req, res) => {
           bidAmount: order.bidAmount,
           isWin: order.isWin,
           profitLoss: order.profitLoss,
-          placeDate : order.createdAt
+          placeDate: order.createdAt
         });
       }
 
@@ -793,7 +795,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
           (item) => Object.keys(item)[0] === marketId
         );
         const marketExposureValue = Number(marketExposureEntry[marketId]);
-        console.log("market exposure value",marketExposureValue)
+        console.log("market exposure value", marketExposureValue)
         if (runnerBalance > 0) {
           user.balance -= Number(runnerBalance + marketExposureValue);
         }
@@ -846,7 +848,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
     );
 
     await Runner.update(
-      { hideRunnerUser: false, hideRunner: false, isWin: false , isBidding : true},
+      { hideRunnerUser: false, hideRunner: false, isWin: false, isBidding: true },
       { where: { runnerId }, transaction }
     );
 

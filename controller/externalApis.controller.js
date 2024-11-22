@@ -520,6 +520,7 @@ export const liveMarketBet = async (req, res) => {
             }
           }
         });
+        
 
         userMarketBalance.runnerBalance.push({
           runnerId: runner.runnerName.runnerId,

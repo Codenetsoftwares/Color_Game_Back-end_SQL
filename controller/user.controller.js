@@ -15,6 +15,7 @@ import ProfitLoss from '../models/profitLoss.js';
 import { PreviousState } from '../models/previousState.model.js';
 import axios from 'axios';
 import CustomError from '../helper/extendError.js';
+import LotteryProfit_Loss from '../models/lotteryProfit_loss.model.js';
 
 // done
 export const createUser = async (req, res) => {
@@ -784,7 +785,7 @@ export const createBid = async (req, res) => {
       user.balance = wallet;
       user.exposure = exposure;
       user.marketListExposure = marketListExposure;
-      const currentOrder = await CurrentOrder.create({
+       await CurrentOrder.create({
         userId: userId,
         userName: userName,
         gameId: gameId,
@@ -806,8 +807,9 @@ export const createBid = async (req, res) => {
     const dataToSend = {
       amount: user.balance,
       userId: userId,
+      exposure: exposure
     };
-      const baseURL = process.env.WHITE_LABEL_URL
+    const baseURL = process.env.WHITE_LABEL_URL
     const response = await axios.post(
       `${baseURL}/api/admin/extrnal/balance-update`,
       dataToSend
@@ -905,7 +907,7 @@ export const getUserBetHistory = async (req, res) => {
 
     const { count, rows } = await BetHistory.findAndCountAll({
       where: whereCondition,
-      attributes: ['userId','userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate','placeDate'],
+      attributes: ['userId', 'userName', 'gameName', 'marketName', 'runnerName', 'rate', 'value', 'type', 'date', 'matchDate', 'placeDate'],
       limit,
       offset: (page - 1) * limit,
     });
@@ -1069,10 +1071,27 @@ export const calculateProfitLoss = async (req, res) => {
       limit: limit,
     });
 
-    if (profitLossData.length === 0) {
+
+    const lotteryProfitLossData = await LotteryProfit_Loss.findAll({
+      attributes: [
+        [Sequelize.fn('SUM', Sequelize.col('profitLoss')), 'totalProfitLoss'],
+      ],
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (profitLossData.length === 0 && lotteryProfitLossData.length === 0) {
       return res
         .status(statusCode.success)
-        .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
+        .send(
+          apiResponseSuccess(
+            [],
+            true,
+            statusCode.success,
+            'No profit/loss data found for the given date range.'
+          )
+        );
     }
 
     const totalPages = Math.ceil(totalGames / limit);
@@ -1083,17 +1102,25 @@ export const calculateProfitLoss = async (req, res) => {
       totalItems: totalGames,
     };
 
-    const formattedProfitLossData = profitLossData.map((item) => ({
-      gameId: item.gameId,
-      gameName: item.Game.gameName,
-      totalProfitLoss: item.dataValues.totalProfitLoss,
-    }));
+    const combinedProfitLossData = [
+      ...profitLossData.map((item) => ({
+        gameId: item.gameId,
+        gameName: item.Game.gameName,
+        totalProfitLoss: item.dataValues.totalProfitLoss,
+      })),
+      ...lotteryProfitLossData.map((item) => ({
+        gameName: "Lottery",
+        totalProfitLoss: item.dataValues.totalProfitLoss,
+      }))
+    ];
+
 
     return res
       .status(statusCode.success)
       .send(
         apiResponseSuccess(
-          formattedProfitLossData,
+
+          combinedProfitLossData,
           true,
           statusCode.success,
           'Success',
@@ -1432,9 +1459,9 @@ export const accountStatement = async (req, res) => {
       dataType
     };
     const baseURL = process.env.WHITE_LABEL_URL;
-    console.log("baseURl...............",baseURL)
+    console.log("baseURl...............", baseURL)
     const response = await axios.get(`${baseURL}/api/user-colorGame-account-statement/${userName}`, { params });
-    console.log("response response",response)
+    console.log("response response", response)
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
@@ -1528,7 +1555,7 @@ export const getUserCurrentOrderGames = async (req, res) => {
           error.errMessage ?? error.message,
         ),
       );
-  }  
+  }
 };
 
 
@@ -1546,29 +1573,29 @@ export const activityLog = async (req, res) => {
     const data = await fetch(`http://ip-api.com/json/${clientIP}`);
     const collect = await data.json();
 
-      const logData = {
-        loginDateTime,
-        loginStatus,
-        ip: {
-          iP: clientIP,
-          country: collect.country,
-          region: collect.regionName,
-          timezone: collect.timezone,
-          isp: collect.isp
-        }
-      };
+    const logData = {
+      loginDateTime,
+      loginStatus,
+      ip: {
+        iP: clientIP,
+        country: collect.country,
+        region: collect.regionName,
+        timezone: collect.timezone,
+        isp: collect.isp
+      }
+    };
 
-      res.status(statusCode.success).send(apiResponseSuccess(logData, true, statusCode.success, 'Login activity logged successfully.'))
-   }   catch (error) {
-       res.status(statusCode.internalServerError).send(
-        apiResponseErr(
-         error.data ?? null,
-         false,
-         error.responseCode ?? statusCode.internalServerError,
-         error.errMessage ?? error.message
-       )
-     );
-   }
+    res.status(statusCode.success).send(apiResponseSuccess(logData, true, statusCode.success, 'Login activity logged successfully.'))
+  } catch (error) {
+    res.status(statusCode.internalServerError).send(
+      apiResponseErr(
+        error.data ?? null,
+        false,
+        error.responseCode ?? statusCode.internalServerError,
+        error.errMessage ?? error.message
+      )
+    );
+  }
 };
 
 

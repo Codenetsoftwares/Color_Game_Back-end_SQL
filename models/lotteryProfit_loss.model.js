@@ -15,7 +15,7 @@ LotteryProfit_Loss.init(
         },
         marketId: {
             type: DataTypes.CHAR(36),
-            allowNull: true,
+            allowNull: false,
         },
         marketName: {
             type: DataTypes.STRING(255),
@@ -23,15 +23,15 @@ LotteryProfit_Loss.init(
         },
         ticketNumber: {
             type: DataTypes.JSON,
-            allowNull: false,
+            allowNull: true,
         },
         price: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
         },
         sem: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
         },
         profitLoss: {
             type: DataTypes.DECIMAL(10, 2),
