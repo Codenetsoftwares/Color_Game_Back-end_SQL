@@ -10,11 +10,11 @@ import userSchema from "../models/user.model.js";
 
 export const searchTicket = async (req, res) => {
   try {
-    const { group, series, number, sem } = req.body
+    const { group, series, number, sem , marketId} = req.body
     const baseURL = process.env.LOTTERY_URL
     console.log("baseURl...............", baseURL)
 
-    const response = await axios.post(`${baseURL}/api/search-ticket`, { group, series, number, sem });
+    const response = await axios.post(`${baseURL}/api/search-ticket`, { group, series, number, sem ,marketId});
 
     console.log('Full API Response:', JSON.stringify(response.data, null, 2));
 
