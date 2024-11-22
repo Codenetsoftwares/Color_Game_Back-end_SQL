@@ -443,7 +443,7 @@ export const runnerExternalProfitLoss = async (req, res) => {
 
 export const liveMarketBet = async (req, res) => {
   try {
-    const { marketId, userName } = req.params;
+    const { marketId } = req.params;
 
     const marketDataRows = await Market.findAll({
       where: { marketId, hideMarketUser: false },
@@ -470,14 +470,21 @@ export const liveMarketBet = async (req, res) => {
       runners: [],
     };
 
-    marketDataRows[0].Runners.forEach((runner) => {
+    for (let runner of marketDataRows[0].Runners) {
+      const totalBalance = await MarketBalance.sum('bal', {
+        where: {
+          marketId: marketDataRows[0].marketId,
+          runnerId: runner.runnerId,
+        },
+      });
+
       marketDataObj.runners.push({
         id: runner.id,
         runnerName: {
           runnerId: runner.runnerId,
           name: runner.runnerName,
           isWin: runner.isWin,
-          bal: Math.round(parseFloat(runner.bal)),
+          bal: totalBalance ? Math.round(parseFloat(totalBalance)) : 0, 
         },
         rate: [
           {
@@ -485,49 +492,6 @@ export const liveMarketBet = async (req, res) => {
             lay: runner.lay,
           },
         ],
-      });
-    });
-    if (userName) {
-      // Fetch current orders
-      const currentOrdersRows = await CurrentOrder.findAll({
-        where: {
-          userName,
-          marketId,
-        },
-      });
-
-      // Calculate user market balance
-      const userMarketBalance = {
-        userName,
-        marketId,
-        runnerBalance: [],
-      };
-
-      marketDataObj.runners.forEach((runner) => {
-        let runnerBalance = 0;
-        currentOrdersRows.forEach((order) => {
-          if (order.type === 'back') {
-            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runnerBalance += Number(order.bidAmount);
-            } else {
-              runnerBalance -= Number(order.value);
-            }
-          } else if (order.type === 'lay') {
-            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
-              runnerBalance -= Number(order.bidAmount);
-            } else {
-              runnerBalance += Number(order.value);
-            }
-          }
-        });
-
-        userMarketBalance.runnerBalance.push({
-          runnerId: runner.runnerName.runnerId,
-          bal: runnerBalance,
-        });
-
-        // Update the runner balance in marketDataObj
-        runner.runnerName.bal = runnerBalance;
       });
     }
 
