@@ -413,10 +413,42 @@ export const createLotteryP_L = async (req, res) => {
 
 export const getLotteryP_L = async (req, res) => {
   try {
-    const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll();
+    const user = req.user
+    const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll({
+      where: { userId: user.userId },
+      attributes: ['gameName', 'marketName', 'marketId', 'profitLoss']
+    });
 
     return res.status(statusCode.success).send(apiResponseSuccess(lotteryProfitLossRecords, true, statusCode.success, 'Success'));
   } catch (error) {
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
+
+export const getLotteryBetHistory = async (req, res) => {
+  try {
+    const userId = req.user.userId
+    const baseURL = process.env.LOTTERY_URL;
+    const response = await axios.post(`${baseURL}/api/lottery-external-bet-history`, { userId });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.error('Error:', error);
+
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
+

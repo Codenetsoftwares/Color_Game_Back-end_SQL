@@ -11,6 +11,7 @@ import {
   getLotteryResults,
   createLotteryP_L,
   getLotteryP_L,
+  getLotteryBetHistory,
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
@@ -40,5 +41,8 @@ export const lotteryRoute = (app) => {
 
   app.post('/api/lottery-profit-loss', createLotteryP_L)
 
-  app.get('/api/lottery-profit-loss', getLotteryP_L);
+  app.get('/api/lottery-profit-loss', authorize([string.User]), getLotteryP_L);
+
+  app.post('/api/lottery-bet-history', authorize([string.User]), getLotteryBetHistory);
+
 };

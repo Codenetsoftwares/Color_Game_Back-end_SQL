@@ -1119,7 +1119,6 @@ export const calculateProfitLoss = async (req, res) => {
       .status(statusCode.success)
       .send(
         apiResponseSuccess(
-
           combinedProfitLossData,
           true,
           statusCode.success,

@@ -38,6 +38,11 @@ LotteryProfit_Loss.init(
             allowNull: false,
             defaultValue: 0.0,
         },
+        gameName: {
+            type: DataTypes.STRING(50),
+            allowNull: false,
+            defaultValue: 'Lottery',
+        },
 
     },
     {
