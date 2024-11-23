@@ -12,6 +12,7 @@ import {
   createLotteryP_L,
   getLotteryP_L,
   getLotteryBetHistory,
+  dateWiseMarkets,
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
@@ -44,5 +45,7 @@ export const lotteryRoute = (app) => {
   app.get('/api/lottery-profit-loss', authorize([string.User]), getLotteryP_L);
 
   app.post('/api/lottery-bet-history', authorize([string.User]), getLotteryBetHistory);
+
+  app.get("/api/user/markets-dateWise", authorize([string.User]), dateWiseMarkets);
 
 };
