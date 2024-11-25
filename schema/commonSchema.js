@@ -251,9 +251,8 @@ export const validateUserResetPassword = [
     .withMessage("Confirm Password does not match with Password"),
 ];
 
-export const validateMarketId = [
-  param("marketId").notEmpty().withMessage("Market ID is required"),
-];
+
+
 
 export const exUpdateBalanceSchema = [
   body("userId").notEmpty().withMessage("user ID is required"),
@@ -379,18 +378,171 @@ export const validateVoidGame = [
   body('marketId').notEmpty().withMessage("Market Id is required.").isUUID().withMessage('Market ID must be a valid UUID'),
 ];
 
-export const searchTicketValidation = [
-  body('group')
-    .notEmpty().withMessage('Group is required'),
-  body('series')
-    .notEmpty().withMessage('Series is required')
-    .isString()
-    .withMessage('Series must be a string'),
-  body('number')
-    .notEmpty().withMessage('Number is required')
-    .isString()
-    .withMessage('Series must be a string'),
+export const validateSearchTickets = [
+  body('group').notEmpty().withMessage('Group is required').isInt({ min: 0 }).withMessage('Group must be a positive integer'),
+  body('series').notEmpty().withMessage('Series is required').isLength({ min: 1, max: 1 }).withMessage('Series must be a single character'),
+  body('number').notEmpty().withMessage('Number is required').isString().isLength({ min: 1 }).withMessage('Number must be a non-empty string'),
   body('sem')
-    .notEmpty().withMessage('Sem is required')
+  .notEmpty()
+  .withMessage('Sem is required')
+  .bail() 
+  .isNumeric()
+  .withMessage('Sem must be a numeric value')
+  .bail() 
+  .isIn([5, 10, 25, 50, 100, 200])
+  .withMessage('Sem must be one of the following values: 5, 10, 25, 50, 100, 200'),
+  body('marketId').notEmpty().withMessage('marketId is required').isUUID().withMessage('MarketId must be a valid UUID'),
 
+];
+
+export const validatePurchaseLottery = [
+  param('marketId')
+    .exists()
+    .withMessage('Market ID is required')
+    .isUUID()
+    .withMessage('Market ID must be a valid UUID'),
+  body('generateId')
+    .exists()
+    .withMessage('Generate ID is required')
+    .isUUID()
+    .withMessage('Generate ID must be a valid UUID'),
+  body('lotteryPrice')
+    .exists()
+    .withMessage('Lottery price is required')
+    .isNumeric()
+    .withMessage('Lottery price must be a numeric value')
+    .custom((value) => value > 0)
+    .withMessage('Lottery price must be greater than zero'),
+];
+
+export const validatePurchaseHistory = [
+  param('marketId')
+    .exists()
+    .withMessage('Market ID is required')
+    .isUUID()
+    .withMessage('Market ID must be a valid UUID'),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Limit must be a positive integer'),
+  query('sem')
+    .optional()
+    .isInt()
+    .withMessage('Sem must be an integer')
+    .isIn([5, 10, 25, 50, 100, 200])
+    .withMessage('Sem must be one of 5, 10, 25, 50, 100, 200'),
+];
+
+export const validateUpdateBalance = [
+  body('userId')
+    .exists()
+    .withMessage('User ID is required')
+    .isUUID()
+    .withMessage('User ID must be a valid UUID'),
+  body('prizeAmount')
+    .exists()
+    .withMessage('Prize amount is required')
+    .isInt()
+    .withMessage('Prize amount must be a positive number'),
+  body('marketId')
+    .exists()
+    .withMessage('Market ID is required')
+    .isUUID()
+    .withMessage('Market ID must be a valid UUID'),
+];
+
+export const validateRemoveExposer = [
+  body('userId')
+    .exists()
+    .withMessage('User ID is required')
+    .isUUID()
+    .withMessage('User ID must be a valid UUID'),
+  body('marketId')
+    .exists()
+    .withMessage('Market ID is required')
+    .isUUID()
+    .withMessage('Market ID must be a valid UUID'),
+  body('marketName')
+    .exists()
+    .withMessage('Market name is required')
+    .isString()
+    .withMessage('Market name must be a string')
+    .notEmpty()
+    .withMessage('Market name cannot be empty'),
+];
+
+export const validateMarketId = [
+  param("marketId").notEmpty().withMessage('marketId is required')
+    .isUUID()
+    .withMessage("Invalid marketId. It should be a valid UUID."),
+];
+
+
+export const validateCreateLotteryP_L = [
+  body('userId')
+    .exists()
+    .withMessage('User ID is required')
+    .isUUID()
+    .withMessage('User ID must be a valid UUID'),
+  body('userName')
+    .exists()
+    .withMessage('User name is required')
+    .isString()
+    .withMessage('User name must be a string')
+    .isLength({ max: 255 })
+    .withMessage('User name must not exceed 255 characters'),
+  body('marketId')
+    .exists()
+    .withMessage('Market ID is required')
+    .isUUID()
+    .withMessage('Market ID must be a valid UUID'),
+  body('marketName')
+    .exists()
+    .withMessage('Market name is required')
+    .isString()
+    .withMessage('Market name must be a string')
+    .isLength({ max: 255 })
+    .withMessage('Market name must not exceed 255 characters'),
+  body('ticketNumber')
+    .optional()
+    .isArray()
+    .withMessage('Ticket number must be an array')
+    .custom((value) => value.every((item) => typeof item === 'string'))
+    .withMessage('Each ticket number must be a string'),
+  body('price')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Price must be a positive integer'),
+  body('sem')
+    .optional()
+    .isInt({ values: [5, 10, 25, 50, 100, 200] })
+    .withMessage('Sem must be one of the values: 5, 10, 25, 50, 100, 200'),
+  body('profitLoss')
+    .exists()
+    .withMessage('Profit or loss is required')
+    .isDecimal({ decimal_digits: '0,2' })
+    .withMessage('Profit or loss must be a decimal with up to 2 digits after the decimal point'),
+];
+
+
+
+export const validateGetLotteryBetHistory = [
+  body('userId')
+    .exists()
+    .withMessage('User ID is required')
+    .bail()
+    .isUUID()
+    .withMessage("Invalid userId. It should be a valid UUID."),
+];
+
+export const validateDateWiseMarkets = [
+  query('date')
+    .exists()
+    .withMessage('Date is required')
+    .isISO8601()
+    .withMessage('Date must be in a valid ISO 8601 format (e.g., YYYY-MM-DD)'),
 ];

@@ -166,28 +166,7 @@ export const getTicketRange = async (req, res) => {
 
 }
 
-export const getDrawDateByDate = async (req, res) => {
-  try {
-    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-    const baseURL = process.env.LOTTERY_URL;
-    const response = await axios.get(`${baseURL}/api/draw-dates`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
 
-    if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get Draw Date"));
-    }
-
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
-  } catch (error) {
-    console.error('Error:', error.message);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
-  }
-
-}
 
 
 export const getResult = async (req, res) => {
@@ -481,3 +460,54 @@ export const dateWiseMarkets = async (req, res) => {
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
+
+export const getAllMarket = async (req, res) => {
+  try {
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    const baseURL = process.env.LOTTERY_URL;
+    const response = await axios.get(`${baseURL}/api/user/get-markets`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get markets"
+          )
+        );
+    }
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
+  } catch (error) {
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
+  }
+};
