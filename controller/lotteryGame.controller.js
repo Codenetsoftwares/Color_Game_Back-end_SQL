@@ -132,6 +132,8 @@ export const purchaseHistory = async (req, res) => {
         )
       );
   } catch (error) {
+    console.error('Error:', error);
+
     return res
       .status(statusCode.internalServerError)
       .send(
