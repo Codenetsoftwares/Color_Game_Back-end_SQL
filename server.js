@@ -146,7 +146,7 @@ app.get('/events', (req, res) => {
 
 
 sequelize
-  .sync({ alter: true })
+  .sync({ alter: false })
   .then(() => {
     console.log('Database & tables created!');
     // startMarketCountdown()
@@ -178,7 +178,7 @@ sequelize
         clients.forEach((client) => {
           client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
         })
-       console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
+      //  console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
 
       } catch (error) {
         console.error('Error checking market statuses:', error);

@@ -10,6 +10,7 @@ import ProfitLoss from '../models/profitLoss.js';
 import CurrentOrder from '../models/currentOrder.model.js';
 import MarketBalance from '../models/marketBalance.js';
 import { PreviousState } from '../models/previousState.model.js';
+import userSchema from '../models/user.model.js';
 
 export const getExternalUserBetHistory = async (req, res) => {
   try {
@@ -497,7 +498,6 @@ export const liveMarketBet = async (req, res) => {
 
     return res.status(statusCode.success).send(apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success'));
   } catch (error) {
-    console.error('Error fetching market data:', error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 };
@@ -576,3 +576,139 @@ export const getExternalUserBetList = async (req, res) => {
       );
   }
 }
+
+export const liveUserBet = async (req, res) => {
+  try {
+    const { marketId } = req.params;
+
+    // Fetch market data
+    const marketDataRows = await Market.findAll({
+      where: { marketId, hideMarketUser: false },
+      include: [
+        {
+          model: Runner,
+          required: false,
+        },
+      ],
+    });
+
+    if (marketDataRows.length === 0) {
+      return res.status(statusCode.success).send(
+        apiResponseSuccess(
+          { runners: [] },
+          true,
+          statusCode.success,
+          'Market not found with MarketId'
+        )
+      );
+    }
+
+    // Prepare market data object
+    let marketDataObj = {
+      marketId: marketDataRows[0].marketId,
+      marketName: marketDataRows[0].marketName,
+      participants: marketDataRows[0].participants,
+      startTime: marketDataRows[0].startTime,
+      endTime: marketDataRows[0].endTime,
+      announcementResult: marketDataRows[0].announcementResult,
+      isActive: marketDataRows[0].isActive,
+      runners: [],
+      usersDetails: [], // To hold balance for all users
+    };
+
+    // Populate runners data
+    marketDataRows[0].Runners.forEach((runner) => {
+      marketDataObj.runners.push({
+        id: runner.id,
+        runnerName: {
+          runnerId: runner.runnerId,
+          name: runner.runnerName,
+          isWin: runner.isWin,
+          bal: Math.round(parseFloat(runner.bal)),
+        },
+        rate: [
+          {
+            back: runner.back,
+            lay: runner.lay,
+          },
+        ],
+      });
+    });
+
+    // Fetch all current orders for the given market
+    const currentOrdersRows = await CurrentOrder.findAll({
+      where: { marketId },
+    });
+
+    // Organize orders by userName
+    const userOrders = currentOrdersRows.reduce((acc, order) => {
+      if (!acc[order.userName]) {
+        acc[order.userName] = [];
+      }
+      acc[order.userName].push(order);
+      return acc;
+    }, {});
+
+    // Fetch userId for each userName
+    const userIds = await userSchema.findAll({
+      where: { userName: Object.keys(userOrders) },
+      attributes: ['userName', 'userId'],
+      raw: true,
+    });
+
+    // Create a map of userName -> userId
+    const userNameToIdMap = userIds.reduce((map, user) => {
+      map[user.userName] = user.userId;
+      return map;
+    }, {});
+
+    // Calculate balances for all users
+    for (const [userName, orders] of Object.entries(userOrders)) {
+      const userMarketBalance = {
+        userName,
+        userId: userNameToIdMap[userName], // Fetch userId from the map
+        marketId,
+        runnerBalance: [],
+      };
+
+      marketDataObj.runners.forEach((runner) => {
+        let runnerBalance = 0;
+        orders.forEach((order) => {
+          if (order.type === 'back') {
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance += Number(order.bidAmount);
+            } else {
+              runnerBalance -= Number(order.value);
+            }
+          } else if (order.type === 'lay') {
+            if (String(runner.runnerName.runnerId) === String(order.runnerId)) {
+              runnerBalance -= Number(order.bidAmount);
+            } else {
+              runnerBalance += Number(order.value);
+            }
+          }
+        });
+
+        // Add runner balance with runner name
+        userMarketBalance.runnerBalance.push({
+          runnerId: runner.runnerName.runnerId,
+          runnerName: runner.runnerName.name,
+          bal: runnerBalance,
+        });
+      });
+
+      // Push each user's balance to usersDetails array
+      marketDataObj.usersDetails.push(userMarketBalance);
+    }
+
+    return res.status(statusCode.success).send(
+      apiResponseSuccess(marketDataObj, true, statusCode.success, 'Success')
+    );
+  } catch (error) {
+    console.error('Error fetching market data:', error);
+    return res
+      .status(statusCode.internalServerError)
+      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
