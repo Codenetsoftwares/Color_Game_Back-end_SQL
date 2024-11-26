@@ -1,4 +1,4 @@
-import { calculateExternalProfitLoss, liveMarketBet, getExternalUserBetHistory, marketExternalProfitLoss, runnerExternalProfitLoss, getLiveBetGames, getExternalUserBetList } from "../controller/externalApis.controller.js";
+import { calculateExternalProfitLoss, liveMarketBet, getExternalUserBetHistory, marketExternalProfitLoss, runnerExternalProfitLoss, getLiveBetGames, getExternalUserBetList, liveUserBet } from "../controller/externalApis.controller.js";
 import { currentOrderHistory } from "../controller/user.controller.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
 import { authenticateSuperAdmin } from "../middleware/whiteLabelAuth.js";
@@ -18,5 +18,7 @@ export const externalApisRoute = (app) => {
     app.get('/api/user-external-liveGamesBet', authenticateSuperAdmin, getLiveBetGames);
 
     app.get('/api/user-external-betList/:userName/:runnerId', getExternalUserBetList);
+
+    app.get('/api/users-liveBet/:marketId', liveUserBet);
 
 }
