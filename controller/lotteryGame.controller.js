@@ -22,7 +22,6 @@ export const searchTicket = async (req, res) => {
 
     const headers = {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
     };
     const payload = { group, series, number, sem, marketId };
 
