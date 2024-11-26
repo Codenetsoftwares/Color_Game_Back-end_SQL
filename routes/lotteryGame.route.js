@@ -17,7 +17,7 @@ import {
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
-import { validateCreateLotteryP_L, validateDateWiseMarkets, validateGetLotteryBetHistory, validateMarketId, validatePurchaseHistory, validatePurchaseLottery, validateRemoveExposer, validateSearchTickets, validateUpdateBalance } from "../schema/commonSchema.js";
+import { validateCreateLotteryP_L, validateDateWiseMarkets, validateMarketId, validatePurchaseHistory, validatePurchaseLottery, validateRemoveExposer, validateSearchTickets, validateUpdateBalance } from "../schema/commonSchema.js";
 
 export const lotteryRoute = (app) => {
 
@@ -43,7 +43,7 @@ export const lotteryRoute = (app) => {
 
   app.get('/api/lottery-profit-loss', authorize([string.User]), getLotteryP_L);
 
-  app.post('/api/lottery-bet-history', validateGetLotteryBetHistory, customErrorHandler, authorize([string.User]), getLotteryBetHistory);
+  app.post('/api/lottery-bet-history', authorize([string.User]), getLotteryBetHistory);
 
   app.get("/api/user/markets-dateWise", validateDateWiseMarkets, customErrorHandler, authorize([string.User]), dateWiseMarkets);
 

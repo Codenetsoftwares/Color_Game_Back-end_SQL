@@ -528,17 +528,6 @@ export const validateCreateLotteryP_L = [
     .withMessage('Profit or loss must be a decimal with up to 2 digits after the decimal point'),
 ];
 
-
-
-export const validateGetLotteryBetHistory = [
-  body('userId')
-    .exists()
-    .withMessage('User ID is required')
-    .bail()
-    .isUUID()
-    .withMessage("Invalid userId. It should be a valid UUID."),
-];
-
 export const validateDateWiseMarkets = [
   query('date')
     .exists()
