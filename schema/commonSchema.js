@@ -535,3 +535,12 @@ export const validateDateWiseMarkets = [
     .isISO8601()
     .withMessage('Date must be in a valid ISO 8601 format (e.g., YYYY-MM-DD)'),
 ];
+
+export const validateGetLiveUserBet = [
+  param("marketId")
+    .trim()
+    .notEmpty()
+    .withMessage("Market ID is required.")
+    .isUUID()
+    .withMessage("Market ID must be a valid UUID."),
+];
