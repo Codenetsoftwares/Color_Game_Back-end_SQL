@@ -7,30 +7,41 @@ import {
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
 import LotteryProfit_Loss from "../models/lotteryProfit_loss.model.js";
-import { json } from "sequelize";
 
 export const searchTicket = async (req, res) => {
   try {
-    const { group, series, number, sem , marketId} = req.body
-    const baseURL = process.env.LOTTERY_URL
-    console.log("baseURl...............", baseURL)
+    const { group, series, number, sem, marketId } = req.body;
 
-    const response = await axios.post(`${baseURL}/api/search-ticket`, { group, series, number, sem ,marketId});
+    const baseURL = process.env.LOTTERY_URL;
 
-    console.log('Full API Response:', JSON.stringify(response.data, null, 2));
+    const token = jwt.sign(
+      { roles: req.user.roles }, 
+      process.env.JWT_SECRET_KEY, 
+      { expiresIn: '1h' }
+    );
+
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+    const payload = { group, series, number, sem, marketId };
+
+    const response = await axios.post(`${baseURL}/api/search-ticket`, payload, { headers });
 
     if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to search ticket"));
+      return res
+        .status(statusCode.badRequest)
+        .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to search ticket"));
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
+    return res
+      .status(statusCode.success)
+      .send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
 
   } catch (error) {
-    console.error('Error:', error);
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
-
-}
+};
 
 export const purchaseLottery = async (req, res) => {
   try {
