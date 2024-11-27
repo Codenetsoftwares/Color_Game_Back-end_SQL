@@ -192,7 +192,7 @@ export const  calculateExternalProfitLoss = async (req, res) => {
         [Sequelize.fn('SUM', Sequelize.col('profitLoss')), 'totalProfitLoss'],
       ],
       where: {
-        userId: userId,
+        userName: userName,
       },
     });
 
