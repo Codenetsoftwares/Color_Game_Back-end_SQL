@@ -21,6 +21,6 @@ export const externalApisRoute = (app) => {
 
     app.get('/api/users-liveBet/:marketId', validateGetLiveUserBet, customErrorHandler, liveUserBet);
 
-    app.get('/api/external-lottery-profit-loss/userName', getExternalLotteryP_L);
+    app.get('/api/external-lottery-profit-loss/:userName', getExternalLotteryP_L);
 
 }
