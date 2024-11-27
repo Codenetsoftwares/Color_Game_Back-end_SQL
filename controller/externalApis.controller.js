@@ -11,6 +11,7 @@ import CurrentOrder from '../models/currentOrder.model.js';
 import MarketBalance from '../models/marketBalance.js';
 import { PreviousState } from '../models/previousState.model.js';
 import userSchema from '../models/user.model.js';
+import LotteryProfit_Loss from '../models/lotteryProfit_loss.model.js';
 
 export const getExternalUserBetHistory = async (req, res) => {
   try {
@@ -712,3 +713,16 @@ export const liveUserBet = async (req, res) => {
   }
 };
 
+export const getExternalLotteryP_L = async (req, res) => {
+  try {
+    const userName = req.params.userName
+    const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll({
+      where: { userName },
+      attributes: ['gameName', 'marketName', 'marketId', 'profitLoss']
+    });
+
+    return res.status(statusCode.success).send(apiResponseSuccess(lotteryProfitLossRecords, true, statusCode.success, 'Success'));
+  } catch (error) {
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
