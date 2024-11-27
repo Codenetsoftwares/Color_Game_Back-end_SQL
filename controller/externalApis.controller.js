@@ -187,35 +187,62 @@ export const  calculateExternalProfitLoss = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
+    const lotteryProfitLossData = await LotteryProfit_Loss.findAll({
+      attributes: [
+        [Sequelize.fn('SUM', Sequelize.col('profitLoss')), 'totalProfitLoss'],
+      ],
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (profitLossData.length === 0 && lotteryProfitLossData.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            [],
+            true,
+            statusCode.success,
+            'No profit/loss data found for the given date range.'
+          )
+        );
+    }
+
     const totalPages = Math.ceil(totalGames / limit);
-    console.log("totalPages..................",totalPages)
 
     const paginationData = {
       page: page,
       limit: limit,
       totalPages: totalPages,
       totalItems: totalGames,
-      
     };
 
-    const formattedProfitLossData = profitLossData.map((item) => ({
-      gameId: item.gameId,
-      gameName: item.Game.gameName,
-      profitLoss: item.dataValues.totalProfitLoss,
-      totalProfitLoss: item.dataValues.totalProfitLoss,
-    }));
+    const combinedProfitLossData = [
+      ...profitLossData.map((item) => ({
+        gameId: item.gameId,
+        gameName: item.Game.gameName,
+        totalProfitLoss: item.dataValues.totalProfitLoss,
+      })),
+      ...lotteryProfitLossData.map((item) => ({
+        gameName: "Lottery",
+        totalProfitLoss: item.dataValues.totalProfitLoss,
+      }))
+    ];
+
 
     return res
       .status(statusCode.success)
       .send(
         apiResponseSuccess(
-          formattedProfitLossData,
+          combinedProfitLossData,
           true,
           statusCode.success,
           'Success',
           paginationData,
         ),
       );
+      
   } catch (error) {
     res
       .status(statusCode.internalServerError)
