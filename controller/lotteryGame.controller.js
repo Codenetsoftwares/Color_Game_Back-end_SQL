@@ -420,7 +420,19 @@ export const getLotteryBetHistory = async (req, res) => {
   try {
     const userId = req.user.userId
     const baseURL = process.env.LOTTERY_URL;
-    const response = await axios.post(`${baseURL}/api/lottery-external-bet-history`, { userId });
+    const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
+
+    const params = {
+      dataType,
+      startDate,
+      endDate,
+      page,
+      limit,
+    };
+    const response = await axios.post(`${baseURL}/api/lottery-external-bet-history`, 
+      {userId },
+      {params},
+    );
 
     if (!response.data.success) {
       return res
@@ -434,11 +446,9 @@ export const getLotteryBetHistory = async (req, res) => {
           )
         );
     }
-
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, 'Success'));
+    const { data, pagination } = response.data;
+    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success',pagination));
   } catch (error) {
-    console.error('Error:', error);
-
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
