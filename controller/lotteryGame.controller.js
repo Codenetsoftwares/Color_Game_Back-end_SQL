@@ -1,5 +1,5 @@
 import axios from "axios";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 import { statusCode } from "../helper/statusCodes.js";
 import {
   apiResponseErr,
@@ -7,6 +7,7 @@ import {
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
 import LotteryProfit_Loss from "../models/lotteryProfit_loss.model.js";
+import { Op } from "sequelize";
 
 export const searchTicket = async (req, res) => {
   try {
@@ -15,9 +16,9 @@ export const searchTicket = async (req, res) => {
     const baseURL = process.env.LOTTERY_URL;
 
     const token = jwt.sign(
-      { roles: req.user.roles }, 
-      process.env.JWT_SECRET_KEY, 
-      { expiresIn: '1h' }
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
     );
 
     const headers = {
@@ -25,20 +26,44 @@ export const searchTicket = async (req, res) => {
     };
     const payload = { group, series, number, sem, marketId };
 
-    const response = await axios.post(`${baseURL}/api/search-ticket`, payload, { headers });
+    const response = await axios.post(`${baseURL}/api/search-ticket`, payload, {
+      headers,
+    });
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to search ticket"));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to search ticket"
+          )
+        );
     }
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -55,7 +80,16 @@ export const purchaseLottery = async (req, res) => {
     });
 
     if (balance < lotteryPrice) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Insufficient balance"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Insufficient balance"
+          )
+        );
     }
 
     const user = await userSchema.findOne({ where: { userId } });
@@ -75,21 +109,47 @@ export const purchaseLottery = async (req, res) => {
       axios.post(`${whiteLabelUrl}/api/admin/extrnal/balance-update`, {
         userId,
         amount: balance - lotteryPrice,
-        exposure: lotteryPrice
+        exposure: lotteryPrice,
       }),
     ]);
 
     if (!lotteryResponse.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to purchase lottery"
+          )
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchased successfully"));
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.create,
+          "Lottery purchased successfully"
+        )
+      );
   } catch (error) {
     console.error("Error:", error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
-
 
 export const purchaseHistory = async (req, res) => {
   try {
@@ -100,7 +160,7 @@ export const purchaseHistory = async (req, res) => {
     const params = {
       page,
       limit,
-      sem
+      sem,
     };
 
     const baseURL = process.env.LOTTERY_URL;
@@ -142,7 +202,7 @@ export const purchaseHistory = async (req, res) => {
         )
       );
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
 
     return res
       .status(statusCode.internalServerError)
@@ -155,8 +215,7 @@ export const purchaseHistory = async (req, res) => {
         )
       );
   }
-
-}
+};
 
 export const getTicketRange = async (req, res) => {
   try {
@@ -164,24 +223,50 @@ export const getTicketRange = async (req, res) => {
     const response = await axios.get(`${baseURL}/api/get-range`);
 
     if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get purchase history"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get purchase history"
+          )
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-    console.error('Error:', error.message);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    console.error("Error:", error.message);
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
-
-}
-
-
-
+};
 
 export const getResult = async (req, res) => {
   try {
-    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
     const baseURL = process.env.LOTTERY_URL;
 
     const response = await axios.get(`${baseURL}/api/prize-results`, {
@@ -191,16 +276,41 @@ export const getResult = async (req, res) => {
     });
 
     if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get result"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get result"
+          )
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
-}
+};
 
 export const getMarkets = async (req, res) => {
   try {
@@ -256,24 +366,39 @@ export const getMarkets = async (req, res) => {
 export const updateBalance = async (req, res) => {
   try {
     const { userId, prizeAmount, marketId } = req.body;
-    console.log("Received userId:", userId, "Received prizeAmount:", prizeAmount, "Received marketId:", marketId);
+    console.log(
+      "Received userId:",
+      userId,
+      "Received prizeAmount:",
+      prizeAmount,
+      "Received marketId:",
+      marketId
+    );
 
     const user = await userSchema.findOne({ where: { userId } });
     if (!user) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'User not found.'));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(null, false, statusCode.badRequest, "User not found.")
+        );
     }
 
     let totalBalanceUpdate = prizeAmount;
 
     if (user.marketListExposure) {
-      const marketExposure = user.marketListExposure.find(exposure => exposure[marketId]);
+      const marketExposure = user.marketListExposure.find(
+        (exposure) => exposure[marketId]
+      );
 
       if (marketExposure) {
         const exposureValue = marketExposure[marketId];
         totalBalanceUpdate += exposureValue;
         console.log(`Market exposure found for ${marketId}:`, exposureValue);
 
-        user.marketListExposure = user.marketListExposure.filter(exposure => !exposure[marketId]);
+        user.marketListExposure = user.marketListExposure.filter(
+          (exposure) => !exposure[marketId]
+        );
       }
     }
 
@@ -282,22 +407,42 @@ export const updateBalance = async (req, res) => {
     const dataToSend = {
       amount: user.balance,
       userId,
-      exposure: exposureValue
+      exposure: exposureValue,
     };
     const baseURL = process.env.WHITE_LABEL_URL;
     const { data: response } = await axios.post(
       `${baseURL}/api/admin/extrnal/balance-update`,
-      dataToSend,
+      dataToSend
     );
 
-    let message = response.success ? "Sync data successful" : "Sync not successful";
+    let message = response.success
+      ? "Sync data successful"
+      : "Sync not successful";
 
     await user.save();
 
-    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, "Balance Update" + " " + message));
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Balance Update" + " " + message
+        )
+      );
   } catch (error) {
     console.log("Error:", error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -309,7 +454,9 @@ export const removeExposer = async (req, res) => {
     if (!user) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'User not found.'));
+        .send(
+          apiResponseErr(null, false, statusCode.badRequest, "User not found.")
+        );
     }
 
     if (user.marketListExposure) {
@@ -317,11 +464,15 @@ export const removeExposer = async (req, res) => {
         ? user.marketListExposure
         : JSON.parse(user.marketListExposure);
 
-      const marketExposure = exposures.find(exposure => exposure[marketId] !== undefined);
+      const marketExposure = exposures.find(
+        (exposure) => exposure[marketId] !== undefined
+      );
 
       if (marketExposure) {
         let marketListExposureValue = marketExposure[marketId];
-        user.marketListExposure = exposures.filter(exposure => !exposure[marketId]);
+        user.marketListExposure = exposures.filter(
+          (exposure) => !exposure[marketId]
+        );
 
         await LotteryProfit_Loss.create({
           userId,
@@ -330,7 +481,6 @@ export const removeExposer = async (req, res) => {
           marketName,
           profitLoss: -marketListExposureValue,
         });
-
       }
     }
 
@@ -338,15 +488,28 @@ export const removeExposer = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .send(apiResponseSuccess(null, true, statusCode.success, 'Balance updated successfully.'));
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Balance updated successfully."
+        )
+      );
   } catch (error) {
     console.log("Error:", error);
     return res
       .status(statusCode.internalServerError)
-      .send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
-
 
 export const getLotteryResults = async (req, res) => {
   try {
@@ -354,21 +517,46 @@ export const getLotteryResults = async (req, res) => {
     const baseURL = process.env.LOTTERY_URL;
 
     const response = await axios.get(
-      `${baseURL}/api/lottery-results/${marketId}`,
+      `${baseURL}/api/lottery-results/${marketId}`
     );
 
     if (!response.data.success) {
       return res
         .status(statusCode.badRequest)
-        .send(apiResponseErr(null, false, statusCode.badRequest, 'Failed to fetch data'));
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
     }
 
     const { data } = response.data;
 
-    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Lottery results fetched successfully.'));
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          "Lottery results fetched successfully."
+        )
+      );
   } catch (error) {
     console.log("Error fetching results:", error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
 };
 
@@ -396,29 +584,125 @@ export const createLotteryP_L = async (req, res) => {
       profitLoss,
     });
 
-    return res.status(statusCode.create).send(apiResponseSuccess(newEntry, true, statusCode.create, 'Success'));
+    return res
+      .status(statusCode.create)
+      .send(apiResponseSuccess(newEntry, true, statusCode.create, "Success"));
   } catch (error) {
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
-}
+};
 
 export const getLotteryP_L = async (req, res) => {
   try {
-    const user = req.user
+    const user = req.user;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const page = parseInt(req.query.page) || 1;
+    //const offset = (page - 1) * pageSize;
+    const { dataType } = req.query;
+
+    let startDate, endDate;
+
+    // Determine the date range based on dataType
+    if (dataType === "live") {
+      const today = new Date();
+      startDate = new Date(today).setHours(0, 0, 0, 0);
+      endDate = new Date(today).setHours(23, 59, 59, 999);
+    } else if (dataType === "olddata") {
+      if (queryStartDate && queryEndDate) {
+        startDate = new Date(queryStartDate).setHours(0, 0, 0, 0);
+        endDate = new Date(queryEndDate).setHours(23, 59, 59, 999);
+      } else {
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
+        endDate = new Date().setHours(23, 59, 59, 999);
+      }
+    } else if (dataType === "backup") {
+      if (queryStartDate && queryEndDate) {
+        startDate = new Date(queryStartDate).setHours(0, 0, 0, 0);
+        endDate = new Date(queryEndDate).setHours(23, 59, 59, 999);
+
+        // Validate the backup date range (max 3 months)
+        const maxAllowedDate = new Date(startDate);
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
+        if (endDate > maxAllowedDate) {
+          return res
+            .status(statusCode.badRequest)
+            .send(
+              apiResponseErr(
+                null,
+                false,
+                statusCode.badRequest,
+                "The date range for backup data should not exceed 3 months."
+              )
+            );
+        }
+      } else {
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(today.getMonth() - 2);
+        startDate = new Date(threeMonthsAgo).setHours(0, 0, 0, 0);
+        endDate = new Date(today).setHours(23, 59, 59, 999);
+      }
+    } else {
+      return res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess([], true, statusCode.success, "Data not found.")
+        );
+    }
+
+    // Fetch records based on date range
     const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll({
-      where: { userId: user.userId },
-      attributes: ['gameName', 'marketName', 'marketId', 'profitLoss']
+      where: {
+        userId: user.userId,
+        createdAt: {
+          [Op.between]: [new Date(startDate), new Date(endDate)],
+        },
+      },
+      attributes: ["gameName", "marketName", "marketId", "profitLoss"],
     });
 
-    return res.status(statusCode.success).send(apiResponseSuccess(lotteryProfitLossRecords, true, statusCode.success, 'Success'));
+    console.log("Testing...",lotteryProfitLossRecords)
+
+    // Send the response
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          lotteryProfitLossRecords,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    console.log("err", error);
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
-}
+};
 
 export const getLotteryBetHistory = async (req, res) => {
   try {
-    const userId = req.user.userId
+    const userId = req.user.userId;
     const baseURL = process.env.LOTTERY_URL;
     const { startDate, endDate, page = 1, limit = 10, dataType } = req.query;
 
@@ -429,9 +713,10 @@ export const getLotteryBetHistory = async (req, res) => {
       page,
       limit,
     };
-    const response = await axios.post(`${baseURL}/api/lottery-external-bet-history`, 
-      {userId },
-      {params},
+    const response = await axios.post(
+      `${baseURL}/api/lottery-external-bet-history`,
+      { userId },
+      { params }
     );
 
     if (!response.data.success) {
@@ -447,16 +732,38 @@ export const getLotteryBetHistory = async (req, res) => {
         );
     }
     const { data, pagination } = response.data;
-    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success',pagination));
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          data,
+          true,
+          statusCode.success,
+          "Success",
+          pagination
+        )
+      );
   } catch (error) {
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
-}
-
+};
 
 export const dateWiseMarkets = async (req, res) => {
   try {
-    const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign(
+      { roles: req.user.roles },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
     const { date } = req.query;
     const baseURL = process.env.LOTTERY_URL;
 
@@ -470,16 +777,41 @@ export const dateWiseMarkets = async (req, res) => {
     });
 
     if (!response.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to get market"));
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to get market"
+          )
+        );
     }
 
-    return res.status(statusCode.success).send(apiResponseSuccess(response.data.data, true, statusCode.success, "Success"));
-
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          response.data.data,
+          true,
+          statusCode.success,
+          "Success"
+        )
+      );
   } catch (error) {
-
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          error.message
+        )
+      );
   }
-}
+};
 
 export const getAllMarket = async (req, res) => {
   try {

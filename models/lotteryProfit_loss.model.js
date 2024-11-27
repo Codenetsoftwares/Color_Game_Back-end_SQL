@@ -49,7 +49,7 @@ LotteryProfit_Loss.init(
         sequelize,
         modelName: 'LotteryProfit_Loss',
         tableName: 'LotteryProfit_Loss',
-        timestamps: false,
+        timestamps: true,
     },
 );
 
