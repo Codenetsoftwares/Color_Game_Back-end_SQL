@@ -671,7 +671,6 @@ export const getLotteryP_L = async (req, res) => {
         limit: pageSize,
         offset: offset,
       });
-
     const totalPages = Math.ceil(count / pageSize);
    const pagination = {
        page,
