@@ -17,7 +17,7 @@ import {
 } from "../controller/lotteryGame.controller.js";
 import { authorize } from "../middleware/auth.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
-import { validateCreateLotteryP_L, validateDateWiseMarkets, validateMarketId, validatePurchaseHistory, validatePurchaseLottery, validateRemoveExposer, validateSearchTickets, validateUpdateBalance } from "../schema/commonSchema.js";
+import { validateCreateLotteryP_L, validateDateWiseMarkets, validateGetExternalLotteryP_L, validateMarketId, validatePurchaseHistory, validatePurchaseLottery, validateRemoveExposer, validateSearchTickets, validateUpdateBalance } from "../schema/commonSchema.js";
 
 export const lotteryRoute = (app) => {
 
@@ -41,7 +41,7 @@ export const lotteryRoute = (app) => {
 
   app.post('/api/lottery-profit-loss', validateCreateLotteryP_L, customErrorHandler, createLotteryP_L)
 
-  app.get('/api/lottery-profit-loss', authorize([string.User]), getLotteryP_L);
+  app.get('/api/lottery-profit-loss',validateGetExternalLotteryP_L ,customErrorHandler, authorize([string.User]), getLotteryP_L);
 
   app.post('/api/lottery-bet-history', authorize([string.User]), getLotteryBetHistory);
 

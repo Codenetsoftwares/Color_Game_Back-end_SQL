@@ -544,3 +544,16 @@ export const validateGetLiveUserBet = [
     .isUUID()
     .withMessage("Market ID must be a valid UUID."),
 ];
+
+export const validateGetExternalLotteryP_L = [
+  query("limit")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("pageSize must be a positive integer."),
+  
+    query("page")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("page must be a positive integer."),
+  
+];

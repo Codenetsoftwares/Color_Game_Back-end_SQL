@@ -605,67 +605,14 @@ export const createLotteryP_L = async (req, res) => {
 export const getLotteryP_L = async (req, res) => {
   try {
     const user = req.user;
-    const pageSize = parseInt(req.query.pageSize) || 10; // Number of records per page
-    const page = parseInt(req.query.page) || 1; // Current page
-    const offset = (page - 1) * pageSize; // Offset calculation
-    const { dataType } = req.query;
-
-    let startDate, endDate;
-
-    if (dataType === "live") {
-      const today = new Date();
-      startDate = new Date(today).setHours(0, 0, 0, 0);
-      endDate = new Date(today).setHours(23, 59, 59, 999);
-    } else if (dataType === "olddata") {
-      if (startDate && endDate) {
-        startDate = new Date(startDate).setHours(0, 0, 0, 0);
-        endDate = new Date(endDate).setHours(23, 59, 59, 999);
-      } else {
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        startDate = new Date(oneYearAgo).setHours(0, 0, 0, 0);
-        endDate = new Date().setHours(23, 59, 59, 999);
-      }
-    } else if (dataType === "backup") {
-      if (startDate && endDate) {
-        startDate = new Date(startDate).setHours(0, 0, 0, 0);
-        endDate = new Date(endDate).setHours(23, 59, 59, 999);
-        const maxAllowedDate = new Date(startDate);
-        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
-        if (endDate > maxAllowedDate) {
-          return res
-            .status(statusCode.badRequest)
-            .send(
-              apiResponseErr(
-                null,
-                false,
-                statusCode.badRequest,
-                "The date range for backup data should not exceed 3 months."
-              )
-            );
-        }
-      } else {
-        const today = new Date();
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(today.getMonth() - 2);
-        startDate = new Date(threeMonthsAgo).setHours(0, 0, 0, 0);
-        endDate = new Date(today).setHours(23, 59, 59, 999);
-      }
-    } else {
-      return res
-        .status(statusCode.success)
-        .send(
-          apiResponseSuccess([], true, statusCode.success, "Data not found.")
-        );
-    }
-
+    const pageSize = parseInt(req.query.pageSize) || 10; 
+    const page = parseInt(req.query.page) || 1; 
+    const offset = (page - 1) * pageSize; 
+   
     const { count, rows: lotteryProfitLossRecords } =
       await LotteryProfit_Loss.findAndCountAll({
         where: {
           userId: user.userId,
-          createdAt: {
-            [Op.between]: [new Date(startDate), new Date(endDate)],
-          },
         },
         attributes: ["gameName", "marketName", "marketId", "profitLoss"],
         limit: pageSize,
