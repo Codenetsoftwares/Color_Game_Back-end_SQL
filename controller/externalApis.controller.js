@@ -743,9 +743,9 @@ export const liveUserBet = async (req, res) => {
 export const getExternalLotteryP_L = async (req, res) => {
   try {
     const userName = req.params.userName
-    const pageSize = parseInt(req.query.pageSize) || 10; // Number of records per page
-    const page = parseInt(req.query.page) || 1; // Current page
-    const offset = (page - 1) * pageSize; // Offset calculation
+    const pageSize = parseInt(req.query.pageSize) || 10; 
+    const page = parseInt(req.query.page) || 1; 
+    const offset = (page - 1) * pageSize; 
     const { dataType } = req.query;
 
     let startDate, endDate;
@@ -796,11 +796,6 @@ export const getExternalLotteryP_L = async (req, res) => {
           apiResponseSuccess([], true, statusCode.success, "Data not found.")
         );
     }
-
-    // const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll({
-    //   where: { userName },
-    //   attributes: ['gameName', 'marketName', 'marketId', 'profitLoss']
-    // });
 
     const { count, rows: lotteryProfitLossRecords } =
     await LotteryProfit_Loss.findAndCountAll({
