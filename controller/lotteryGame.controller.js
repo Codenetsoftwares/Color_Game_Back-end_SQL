@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { statusCode } from "../helper/statusCodes.js";
 import {
   apiResponseErr,
+  apiResponsePagination,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
@@ -604,22 +605,21 @@ export const createLotteryP_L = async (req, res) => {
 export const getLotteryP_L = async (req, res) => {
   try {
     const user = req.user;
-    const pageSize = parseInt(req.query.pageSize) || 10;
-    const page = parseInt(req.query.page) || 1;
-    //const offset = (page - 1) * pageSize;
+    const pageSize = parseInt(req.query.pageSize) || 10; // Number of records per page
+    const page = parseInt(req.query.page) || 1; // Current page
+    const offset = (page - 1) * pageSize; // Offset calculation
     const { dataType } = req.query;
 
     let startDate, endDate;
 
-    // Determine the date range based on dataType
     if (dataType === "live") {
       const today = new Date();
       startDate = new Date(today).setHours(0, 0, 0, 0);
       endDate = new Date(today).setHours(23, 59, 59, 999);
     } else if (dataType === "olddata") {
-      if (queryStartDate && queryEndDate) {
-        startDate = new Date(queryStartDate).setHours(0, 0, 0, 0);
-        endDate = new Date(queryEndDate).setHours(23, 59, 59, 999);
+      if (startDate && endDate) {
+        startDate = new Date(startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(endDate).setHours(23, 59, 59, 999);
       } else {
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
@@ -627,11 +627,9 @@ export const getLotteryP_L = async (req, res) => {
         endDate = new Date().setHours(23, 59, 59, 999);
       }
     } else if (dataType === "backup") {
-      if (queryStartDate && queryEndDate) {
-        startDate = new Date(queryStartDate).setHours(0, 0, 0, 0);
-        endDate = new Date(queryEndDate).setHours(23, 59, 59, 999);
-
-        // Validate the backup date range (max 3 months)
+      if (startDate && endDate) {
+        startDate = new Date(startDate).setHours(0, 0, 0, 0);
+        endDate = new Date(endDate).setHours(23, 59, 59, 999);
         const maxAllowedDate = new Date(startDate);
         maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 3);
         if (endDate > maxAllowedDate) {
@@ -661,44 +659,33 @@ export const getLotteryP_L = async (req, res) => {
         );
     }
 
-    // Fetch records based on date range
-    const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll({
-      where: {
-        userId: user.userId,
-        createdAt: {
-          [Op.between]: [new Date(startDate), new Date(endDate)],
+    const { count, rows: lotteryProfitLossRecords } =
+      await LotteryProfit_Loss.findAndCountAll({
+        where: {
+          userId: user.userId,
+          createdAt: {
+            [Op.between]: [new Date(startDate), new Date(endDate)],
+          },
         },
-      },
-      attributes: ["gameName", "marketName", "marketId", "profitLoss"],
-    });
+        attributes: ["gameName", "marketName", "marketId", "profitLoss"],
+        limit: pageSize,
+        offset: offset,
+      });
 
-    console.log("Testing...",lotteryProfitLossRecords)
-
-    // Send the response
-    return res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          lotteryProfitLossRecords,
-          true,
-          statusCode.success,
-          "Success"
-        )
-      );
+    const totalPages = Math.ceil(count / pageSize);
+   const pagination = {
+       page,
+      limit: pageSize,
+      totalPages: totalPages,
+      totalItems: count,
+    }
+    return res.status(statusCode.success).send(apiResponseSuccess(lotteryProfitLossRecords, true, statusCode.success, "Success", pagination  ));
   } catch (error) {
     console.log("err", error);
-    return res
-      .status(statusCode.internalServerError)
-      .send(
-        apiResponseErr(
-          null,
-          false,
-          statusCode.internalServerError,
-          error.message
-        )
-      );
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message  ));
   }
 };
+
 
 export const getLotteryBetHistory = async (req, res) => {
   try {
