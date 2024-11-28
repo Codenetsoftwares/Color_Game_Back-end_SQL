@@ -803,10 +803,11 @@ export const dateWiseMarkets = async (req, res) => {
 export const getAllMarket = async (req, res) => {
   try {
     const token = jwt.sign(
-      { roles: req.user.roles },
+      { roles: req.user.roles, userId: req.user.userId }, 
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
+
     const baseURL = process.env.LOTTERY_URL;
     const response = await axios.get(`${baseURL}/api/user/get-markets`, {
       headers: {

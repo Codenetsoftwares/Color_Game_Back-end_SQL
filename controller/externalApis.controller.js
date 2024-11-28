@@ -11,6 +11,7 @@ import CurrentOrder from '../models/currentOrder.model.js';
 import MarketBalance from '../models/marketBalance.js';
 import { PreviousState } from '../models/previousState.model.js';
 import userSchema from '../models/user.model.js';
+import LotteryProfit_Loss from '../models/lotteryProfit_loss.model.js';
 
 export const getExternalUserBetHistory = async (req, res) => {
   try {
@@ -186,35 +187,62 @@ export const  calculateExternalProfitLoss = async (req, res) => {
         .send(apiResponseSuccess([], true, statusCode.success, 'No profit/loss data found for the given date range.'));
     }
 
+    const lotteryProfitLossData = await LotteryProfit_Loss.findAll({
+      attributes: [
+        [Sequelize.fn('SUM', Sequelize.col('profitLoss')), 'totalProfitLoss'],
+      ],
+      where: {
+        userName: userName,
+      },
+    });
+
+    if (profitLossData.length === 0 && lotteryProfitLossData.length === 0) {
+      return res
+        .status(statusCode.success)
+        .send(
+          apiResponseSuccess(
+            [],
+            true,
+            statusCode.success,
+            'No profit/loss data found for the given date range.'
+          )
+        );
+    }
+
     const totalPages = Math.ceil(totalGames / limit);
-    console.log("totalPages..................",totalPages)
 
     const paginationData = {
       page: page,
       limit: limit,
       totalPages: totalPages,
       totalItems: totalGames,
-      
     };
 
-    const formattedProfitLossData = profitLossData.map((item) => ({
-      gameId: item.gameId,
-      gameName: item.Game.gameName,
-      profitLoss: item.dataValues.totalProfitLoss,
-      totalProfitLoss: item.dataValues.totalProfitLoss,
-    }));
+    const combinedProfitLossData = [
+      ...profitLossData.map((item) => ({
+        gameId: item.gameId,
+        gameName: item.Game.gameName,
+        totalProfitLoss: item.dataValues.totalProfitLoss,
+      })),
+      ...lotteryProfitLossData.map((item) => ({
+        gameName: "Lottery",
+        totalProfitLoss: item.dataValues.totalProfitLoss,
+      }))
+    ];
+
 
     return res
       .status(statusCode.success)
       .send(
         apiResponseSuccess(
-          formattedProfitLossData,
+          combinedProfitLossData,
           true,
           statusCode.success,
           'Success',
           paginationData,
         ),
       );
+      
   } catch (error) {
     res
       .status(statusCode.internalServerError)
@@ -712,3 +740,16 @@ export const liveUserBet = async (req, res) => {
   }
 };
 
+export const getExternalLotteryP_L = async (req, res) => {
+  try {
+    const userName = req.params.userName
+    const lotteryProfitLossRecords = await LotteryProfit_Loss.findAll({
+      where: { userName },
+      attributes: ['gameName', 'marketName', 'marketId', 'profitLoss']
+    });
+
+    return res.status(statusCode.success).send(apiResponseSuccess(lotteryProfitLossRecords, true, statusCode.success, 'Success'));
+  } catch (error) {
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
