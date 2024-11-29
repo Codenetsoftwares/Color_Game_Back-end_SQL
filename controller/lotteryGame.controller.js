@@ -176,9 +176,6 @@ export const getTicketRange = async (req, res) => {
 
 }
 
-
-
-
 export const getResult = async (req, res) => {
   try {
     const token = jwt.sign({ roles: req.user.roles }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
@@ -447,12 +444,11 @@ export const getLotteryBetHistory = async (req, res) => {
         );
     }
     const { data, pagination } = response.data;
-    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success',pagination));
+    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success', pagination));
   } catch (error) {
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
-
 
 export const dateWiseMarkets = async (req, res) => {
   try {
@@ -532,3 +528,32 @@ export const getAllMarket = async (req, res) => {
       );
   }
 };
+
+export const getBetHistoryP_L = async (req, res) => {
+  try {
+    const userId = req.user.userId
+    const baseURL = process.env.LOTTERY_URL;
+
+    const response = await axios.post(`${baseURL}/api/lottery-external-betHistory-profitLoss`, { userId });
+
+    if (!response.data.success) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "Failed to fetch data"
+          )
+        );
+    }
+
+    const { data } = response.data;
+    return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success'));
+  } catch (error) {
+    console.log("error.........", error)
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+}
+
