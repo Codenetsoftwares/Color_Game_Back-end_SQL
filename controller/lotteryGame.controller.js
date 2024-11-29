@@ -261,12 +261,12 @@ export const updateBalance = async (req, res) => {
     }
 
     let totalBalanceUpdate = prizeAmount;
+    let exposureValue = 0; 
 
     if (user.marketListExposure) {
       const marketExposure = user.marketListExposure.find(exposure => exposure[marketId]);
-
       if (marketExposure) {
-        const exposureValue = marketExposure[marketId];
+        exposureValue = marketExposure[marketId];
         totalBalanceUpdate += exposureValue;
         console.log(`Market exposure found for ${marketId}:`, exposureValue);
 

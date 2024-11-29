@@ -507,12 +507,6 @@ export const validateCreateLotteryP_L = [
     .withMessage('Market name must be a string')
     .isLength({ max: 255 })
     .withMessage('Market name must not exceed 255 characters'),
-  body('ticketNumber')
-    .optional()
-    .isArray()
-    .withMessage('Ticket number must be an array')
-    .custom((value) => value.every((item) => typeof item === 'string'))
-    .withMessage('Each ticket number must be a string'),
   body('price')
     .optional()
     .isInt({ min: 1 })
