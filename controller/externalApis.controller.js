@@ -12,6 +12,7 @@ import MarketBalance from '../models/marketBalance.js';
 import { PreviousState } from '../models/previousState.model.js';
 import userSchema from '../models/user.model.js';
 import LotteryProfit_Loss from '../models/lotteryProfit_loss.model.js';
+import axios from 'axios'
 
 export const getExternalUserBetHistory = async (req, res) => {
   try {
@@ -753,3 +754,95 @@ export const getExternalLotteryP_L = async (req, res) => {
     return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
   }
 }
+
+export const getVoidMarket = async (req, res) => {
+  try {
+    const { marketId } = req.body;
+
+    if (!marketId) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, 'MarketId is required'));
+    }
+
+    const baseURL = process.env.LOTTERY_URL;
+
+    const response = await axios.post(`${baseURL}/api/void-market-lottery`, { marketId });
+    
+    let {data} = response.data
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data); 
+      } catch (err) {
+        return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, 'Failed to parse response data'));
+      }
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'No users found for the given marketId'));
+    }
+
+    const userIds = data.map(user => user.userId);
+
+    const users = await userSchema.findAll({
+      where: { userId: userIds },
+    });
+
+    if (!users || users.length === 0) {
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'No matching users found in the database'));
+    }
+
+    const updatedUsers = [];
+    for (const user of users) {
+      const { marketListExposure } = user.toJSON();
+
+      let exposure = [];
+      try {
+        exposure = Array.isArray(marketListExposure)
+          ? marketListExposure
+          : typeof marketListExposure === 'string'
+          ? JSON.parse(marketListExposure)
+          : [];
+      } catch (err) {
+        console.error(`Error parsing marketListExposure for user ${user.userId}:`, err.message);
+        continue; 
+      }
+
+      const matchedMarket = exposure.find(market => Object.keys(market)[0] === marketId); 
+
+      if (matchedMarket) {
+        const exposureValue = matchedMarket[marketId]; 
+
+        user.balance += exposureValue;
+
+        exposure = exposure.filter(market => Object.keys(market)[0] !== marketId);
+
+        await user.update({
+          balance: user.balance,
+          marketListExposure: exposure, 
+        });
+
+        updatedUsers.push({
+          userId: user.userId,
+          userName: user.userName,
+          updatedBalance: user.balance,
+          removedMarketId: marketId,
+          refundedAmount: exposureValue,
+        });
+      } else {
+        console.log(`No matching market found for user ${user.userId} in marketListExposure.`);
+      }
+    }
+
+    if (updatedUsers.length === 0) {
+      return res.status(statusCode.notFound).send(apiResponseErr(null, false, statusCode.notFound, 'No matching markets found in user data'));
+    }
+
+    return res.status(statusCode.success).send(apiResponseSuccess(updatedUsers, true, statusCode.success, 'Balances updated successfully and market voided'));
+  } catch (error) {
+    console.error('Error in getVoidMarket:', error.message);
+    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
+
+
+
+
