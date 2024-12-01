@@ -1055,6 +1055,24 @@ export const getVoidMarket = async (req, res) => {
         );
 
         await user.save();
+
+        //below code not checked till now
+        const dataToSend = {
+          amount: userDetails.balance,
+          userId: userDetails.userId,
+          exposure: marketExposureValue
+        };
+        const baseURL = process.env.WHITE_LABEL_URL
+        const response = await axios.post(
+          `${baseURL}/api/admin/extrnal/balance-update`,
+          dataToSend
+        );
+
+        if (!response.data.success) {
+          return res
+            .status(statusCode.badRequest)
+            .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to update balance"));
+        }
       }
     }
 
