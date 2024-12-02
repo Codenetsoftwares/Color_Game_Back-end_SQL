@@ -2,7 +2,7 @@ import { calculateExternalProfitLoss, liveMarketBet, getExternalUserBetHistory, 
 import { currentOrderHistory } from "../controller/user.controller.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
 import { authenticateSuperAdmin } from "../middleware/whiteLabelAuth.js";
-import { betHistorySchema, calculateProfitLossSchema, marketProfitLossSchema, runnerProfitLossSchema, validateGetLiveUserBet, validateMarketId } from "../schema/commonSchema.js";
+import { betHistorySchema, calculateProfitLossSchema, marketProfitLossSchema, runnerProfitLossSchema, validateGetLiveUserBet, validateMarketId, validateVoidMarket } from "../schema/commonSchema.js";
 
 export const externalApisRoute = (app) => {
     app.get('/api/external-user-betHistory/:userName/:gameId', betHistorySchema, customErrorHandler, authenticateSuperAdmin, getExternalUserBetHistory);
@@ -23,6 +23,6 @@ export const externalApisRoute = (app) => {
 
     app.get('/api/external-lottery-profit-loss/:userName', getExternalLotteryP_L);
 
-    app.get('/api/external/void-market-lottery',getVoidMarket)
+    app.post('/api/external/void-market-lottery',validateVoidMarket,customErrorHandler,getVoidMarket)
 
 }

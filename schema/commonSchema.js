@@ -538,3 +538,9 @@ export const validateGetLiveUserBet = [
     .isUUID()
     .withMessage("Market ID must be a valid UUID."),
 ];
+
+export const validateVoidMarket = [
+  body('marketId')
+    .notEmpty().withMessage('Market ID is required')
+    .isUUID().withMessage('Market ID must be a valid UUID'),
+];

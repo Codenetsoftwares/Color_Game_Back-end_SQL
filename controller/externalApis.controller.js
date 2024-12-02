@@ -963,7 +963,7 @@ export const getExternalLotteryP_L = async (req, res) => {
 
 export const getVoidMarket = async (req, res) => {
   try {
-    const { marketId } = req.body;
+    const { marketId, userId } = req.body;
 
     if (!marketId) {
       return res
@@ -978,47 +978,8 @@ export const getVoidMarket = async (req, res) => {
         );
     }
 
-    const baseURL = process.env.LOTTERY_URL;
-
-    const response = await axios.post(`${baseURL}/api/void-market-lottery`, {
-      marketId,
-    });
-
-    let { data } = response.data;
-    if (typeof data === "string") {
-      try {
-        data = JSON.parse(data);
-      } catch (err) {
-        return res
-          .status(statusCode.internalServerError)
-          .send(
-            apiResponseErr(
-              null,
-              false,
-              statusCode.internalServerError,
-              "Failed to parse response data"
-            )
-          );
-      }
-    }
-
-    if (!data || data.length === 0) {
-      return res
-        .status(statusCode.notFound)
-        .send(
-          apiResponseErr(
-            null,
-            false,
-            statusCode.notFound,
-            "No users found for the given marketId"
-          )
-        );
-    }
-
-    const userIds = data.map((user) => user.userId);
-
     const users = await userSchema.findAll({
-      where: { userId: userIds },
+      where: { userId },
     });
 
     if (!users || users.length === 0) {
