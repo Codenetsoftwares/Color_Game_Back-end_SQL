@@ -1053,14 +1053,13 @@ export const getVoidMarket = async (req, res) => {
         user.marketListExposure = user.marketListExposure.filter(
           (item) => Object.keys(item)[0] !== marketId
         );
-
-        await user.save();
+        
 
         //below code not checked till now
         const dataToSend = {
-          amount: userDetails.balance,
-          userId: userDetails.userId,
-          exposure: marketExposureValue
+          amount: user.balance,
+          userId: user.userId,
+          exposure: totalExposureValue
         };
         const baseURL = process.env.WHITE_LABEL_URL
         const response = await axios.post(
@@ -1073,6 +1072,7 @@ export const getVoidMarket = async (req, res) => {
             .status(statusCode.badRequest)
             .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to update balance"));
         }
+        await user.save();
       }
     }
 
