@@ -543,4 +543,7 @@ export const validateVoidMarket = [
   body('marketId')
     .notEmpty().withMessage('Market ID is required')
     .isUUID().withMessage('Market ID must be a valid UUID'),
+    body('userId')
+    .notEmpty().withMessage('userId is required')
+    .isUUID().withMessage('userId must be a valid UUID')
 ];

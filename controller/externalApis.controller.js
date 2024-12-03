@@ -964,7 +964,6 @@ export const getExternalLotteryP_L = async (req, res) => {
 export const getVoidMarket = async (req, res) => {
   try {
     const { marketId, userId } = req.body;
-
     if (!marketId) {
       return res
         .status(statusCode.badRequest)
@@ -995,7 +994,6 @@ export const getVoidMarket = async (req, res) => {
         );
     }
 
-    // Update user balances and filter `marketListExposure`
     for (const user of users) {
       const matchedExposures = user.marketListExposure.filter(
         (item) => Object.keys(item)[0] === marketId
@@ -1003,26 +1001,22 @@ export const getVoidMarket = async (req, res) => {
 
       let totalExposureValue = 0;
 
-      // Calculate the total exposure value for all matching entries
       for (const exposure of matchedExposures) {
         totalExposureValue += Number(exposure[marketId]);
       }
 
-      // Update user's balance and filter out matching exposures
       if (totalExposureValue > 0) {
         user.balance += totalExposureValue;
         user.marketListExposure = user.marketListExposure.filter(
           (item) => Object.keys(item)[0] !== marketId
         );
-        
 
-        //below code not checked till now
         const dataToSend = {
           amount: user.balance,
           userId: user.userId,
-          exposure: totalExposureValue
+          exposure: totalExposureValue,
         };
-        const baseURL = process.env.WHITE_LABEL_URL
+        const baseURL = process.env.WHITE_LABEL_URL;
         const response = await axios.post(
           `${baseURL}/api/admin/extrnal/balance-update`,
           dataToSend
@@ -1031,7 +1025,14 @@ export const getVoidMarket = async (req, res) => {
         if (!response.data.success) {
           return res
             .status(statusCode.badRequest)
-            .send(apiResponseErr(null, false, statusCode.badRequest, "Failed to update balance"));
+            .send(
+              apiResponseErr(
+                null,
+                false,
+                statusCode.badRequest,
+                "Failed to update balance"
+              )
+            );
         }
         await user.save();
       }
@@ -1048,7 +1049,6 @@ export const getVoidMarket = async (req, res) => {
         )
       );
   } catch (error) {
-    console.error("Error in getVoidMarket:", error.message);
     return res
       .status(statusCode.internalServerError)
       .send(
