@@ -34,6 +34,7 @@ import {
   currentOrderSchema,
   marketProfitLossValidate,
   runnerProfitLossValidate,
+  validateProfitLossInput,
   validateUserResetPassword,
 } from '../schema/commonSchema.js';
 import customErrorHandler from '../middleware/customErrorHandler.js';
@@ -95,6 +96,8 @@ export const UserRoute = (app) => {
   // done
   app.get(
     '/api/profit_loss',
+    validateProfitLossInput,
+    customErrorHandler,
     authorize([string.User]),
     calculateProfitLoss,
   );

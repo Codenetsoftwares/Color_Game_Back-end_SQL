@@ -538,3 +538,28 @@ export const validateGetLiveUserBet = [
     .isUUID()
     .withMessage("Market ID must be a valid UUID."),
 ];
+
+export const validateProfitLossInput = [
+  query("dataType")
+    .exists()
+    .withMessage("dataType is required.")
+    .isIn(["live", "olddata", "backup"])
+    .withMessage("Valid values are 'live', 'olddata', or 'backup'."),
+    query("startDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid startDate format."),
+    query("endDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid endDate format."),
+    query("page")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Page must be a positive integer."),
+    query("limit")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Limit must be a positive integer."),
+    
+];
