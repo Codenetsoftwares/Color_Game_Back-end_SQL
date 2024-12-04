@@ -2,7 +2,6 @@ import {
   apiResponseErr,
   apiResponseSuccess,
 } from "../middleware/serverError.js";
-import moment from "moment";
 import { statusCode } from "../helper/statusCodes.js";
 import BetHistory from "../models/betHistory.model.js";
 import Market from "../models/market.model.js";
@@ -12,7 +11,6 @@ import Game from "../models/game.model.js";
 import ProfitLoss from "../models/profitLoss.js";
 import CurrentOrder from "../models/currentOrder.model.js";
 import MarketBalance from "../models/marketBalance.js";
-import { PreviousState } from "../models/previousState.model.js";
 import userSchema from "../models/user.model.js";
 import LotteryProfit_Loss from "../models/lotteryProfit_loss.model.js";
 import axios from "axios";
@@ -1057,6 +1055,136 @@ export const getVoidMarket = async (req, res) => {
           false,
           statusCode.internalServerError,
           error.message
+        )
+      );
+  }
+};
+
+export const getRevokeMarket = async (req, res) => {
+  try {
+    const { marketId } = req.body;
+
+    if (!marketId) {
+      return res
+        .status(statusCode.badRequest)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.badRequest,
+            "MarketId is required"
+          )
+        );
+    }
+
+    const usersFromProfitLoss = await LotteryProfit_Loss.findAll({
+      where: { marketId },
+      attributes: ["marketId", "userId", "price", "profitLoss"],
+    });
+
+    if(!usersFromProfitLoss){
+      return res
+      .status(statusCode.notFound)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.notFound,
+          "Market is not available"
+        )
+      );
+    }
+
+    if (!usersFromProfitLoss || usersFromProfitLoss.length === 0) {
+      return res
+        .status(statusCode.notFound)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.notFound,
+            "No profit/loss data found for the given marketId"
+          )
+        );
+    }
+
+    const userIds = usersFromProfitLoss.map((entry) => entry.userId);
+
+    const users = await userSchema.findAll({
+      where: { userId: userIds },
+    });
+
+    if (!users || users.length === 0) {
+      return res
+        .status(statusCode.notFound)
+        .send(
+          apiResponseErr(
+            null,
+            false,
+            statusCode.notFound,
+            "No matching users found in the database"
+          )
+        );
+    }
+
+    for (const user of users) {
+      const userProfitLoss = usersFromProfitLoss.find(
+        (entry) => entry.userId === user.userId
+      );
+
+      if (!userProfitLoss) continue;
+
+      const newExposure = { [marketId]: userProfitLoss.price };
+      const updatedExposure = [...(user.marketListExposure || []), newExposure];
+      user.marketListExposure = updatedExposure;          
+  //below code have to check
+      let totalExposureValue = 0;
+
+      for (const exposure of userProfitLoss ) {
+        totalExposureValue = exposure.price + exposure.profitLoss 
+      }
+      if (totalExposureValue > 0) {
+        user.balance -= totalExposureValue;
+      }      
+      const dataToSend = {
+        amount: user.balance,
+        userId: user.userId,
+        exposure: totalExposureValue,
+      };
+      const baseURL = process.env.WHITE_LABEL_URL;
+      const response = await axios.post(
+        `${baseURL}/api/admin/extrnal/balance-update`,
+        dataToSend
+      );
+      await user.save({ fields: ["marketListExposure"]});
+      await user.save()
+
+
+    }
+    await LotteryProfit_Loss.destroy({
+      where: { marketId},
+    });
+
+    return res
+      .status(statusCode.success)
+      .send(
+        apiResponseSuccess(
+          null,
+          true,
+          statusCode.success,
+          "Market exposure updated successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error in getRevokeMarket:", error);
+    return res
+      .status(statusCode.internalServerError)
+      .send(
+        apiResponseErr(
+          null,
+          false,
+          statusCode.internalServerError,
+          "An error occurred while revoking the market"
         )
       );
   }

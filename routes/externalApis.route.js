@@ -1,4 +1,4 @@
-import { calculateExternalProfitLoss, liveMarketBet, getExternalUserBetHistory, marketExternalProfitLoss, runnerExternalProfitLoss, getLiveBetGames, getExternalUserBetList, liveUserBet, getExternalLotteryP_L, getVoidMarket } from "../controller/externalApis.controller.js";
+import { calculateExternalProfitLoss, liveMarketBet, getExternalUserBetHistory, marketExternalProfitLoss, runnerExternalProfitLoss, getLiveBetGames, getExternalUserBetList, liveUserBet, getExternalLotteryP_L, getVoidMarket, getRevokeMarket } from "../controller/externalApis.controller.js";
 import { currentOrderHistory } from "../controller/user.controller.js";
 import customErrorHandler from "../middleware/customErrorHandler.js";
 import { authenticateAdmin } from "../middleware/lottery.auth.js";
@@ -26,4 +26,5 @@ export const externalApisRoute = (app) => {
 
     app.post('/api/external/void-market-lottery',validateVoidMarket, customErrorHandler, authenticateAdmin, getVoidMarket)
 
+    app.post('/api/external/revoke-market-lottery', getRevokeMarket)
 }
