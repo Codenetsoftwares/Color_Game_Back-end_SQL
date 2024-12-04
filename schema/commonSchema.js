@@ -56,8 +56,22 @@ export const loginSchema = [
 ];
 
 export const resetPasswordSchema = [
-  body("oldPassword").notEmpty().withMessage("Old Password is required"),
-  body("newPassword").notEmpty().withMessage("New Password is required"),
+  body("userName")
+    .trim()
+    .notEmpty()
+    .withMessage("Username is required"),
+  body("oldPassword")
+    .trim()
+    .notEmpty()
+    .withMessage("Old Password is required"),
+  body("newPassword")
+    .trim()
+    .notEmpty()
+    .withMessage("New Password is required")
+    .isLength({ min: 8 })
+    .withMessage("New Password must be at least 8 characters long")
+    .isAlphanumeric()
+    .withMessage("New Password must be alphanumeric"),
 ];
 
 export const trashUserSchema = [
@@ -118,6 +132,15 @@ export const createdRateSchema = [
     .optional()
     .isNumeric()
     .withMessage("Lay rate must be a numeric value"),
+];
+
+export const adminCreateValidate = [
+  body('userName')
+  .notEmpty().withMessage('Username is required')
+  .isString().withMessage('Username must be a string'),
+body('password')
+  .notEmpty().withMessage('Password is required')
+  .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
 ];
 
 export const suspendedMarketSchema = [
@@ -195,6 +218,22 @@ export const depositSchema = [
     .withMessage("Deposit amount must be greater than 0"),
 ];
 
+export const validateSendBalance = [
+  body('balance')
+    .notEmpty().withMessage('Balance is required')
+    .isNumeric().withMessage('Balance must be a numeric value')
+    .custom((value) => parseFloat(value) > 0)
+    .withMessage("Balance must be greater than 0"),
+  body('adminId')
+    .notEmpty().withMessage('Admin ID is required')
+    .isUUID(4)
+    .withMessage("Admin ID is not a valid."),
+  body('userId')
+    .notEmpty().withMessage('User ID is required')
+    .isUUID(4)
+    .withMessage("userId is not a valid."),
+];
+
 export const sendBalanceSchema = [
   body("balance")
     .notEmpty()
@@ -262,6 +301,19 @@ export const exUpdateBalanceSchema = [
     .withMessage("type is required")
     .isIn(["credit", "debit"])
     .withMessage('type must be either "credit" or "debit".'),
+];
+
+export const validateRevokeWinningAnnouncement = [
+  body("marketId")
+    .notEmpty()
+    .withMessage("marketId is required")
+    .isUUID(4)
+    .withMessage("marketId is not a valid."),
+  body("runnerId")
+    .notEmpty()
+    .withMessage("runnerId is required")
+    .isUUID(4)
+    .withMessage("runnerId is not a valid."),
 ];
 
 export const userUpdateSchema = [
