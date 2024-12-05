@@ -1134,31 +1134,15 @@ export const getRevokeMarket = async (req, res) => {
 
       if (!userProfitLoss) continue;
 
-      const newExposure = { [marketId]: userProfitLoss.price };
-      const updatedExposure = [...(user.marketListExposure || []), newExposure];
-      user.marketListExposure = updatedExposure;          
-  //below code have to check
-      let totalExposureValue = 0;
-
-      for (const exposure of userProfitLoss ) {
-        totalExposureValue = exposure.price + exposure.profitLoss 
+      if (userProfitLoss.profitLoss > 0) {
+        user.balance -= (Number(userProfitLoss.profitLoss) + Number(userProfitLoss.price)); 
       }
-      if (totalExposureValue > 0) {
-        user.balance -= totalExposureValue;
-      }      
-      const dataToSend = {
-        amount: user.balance,
-        userId: user.userId,
-        exposure: totalExposureValue,
-      };
-      const baseURL = process.env.WHITE_LABEL_URL;
-      const response = await axios.post(
-        `${baseURL}/api/admin/extrnal/balance-update`,
-        dataToSend
-      );
-      await user.save({ fields: ["marketListExposure"]});
-      await user.save()
 
+      const newExposure = { [marketId]: Number(userProfitLoss.price) };
+      user.marketListExposure = [...(user.marketListExposure || []), newExposure];
+
+      await user.save({ fields: ["marketListExposure", "balance"] });        
+  
 
     }
     await LotteryProfit_Loss.destroy({

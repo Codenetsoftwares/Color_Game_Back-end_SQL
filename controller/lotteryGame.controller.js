@@ -325,6 +325,7 @@ export const removeExposer = async (req, res) => {
           userName: user.userName,
           marketId,
           marketName,
+          price: marketListExposureValue,
           profitLoss: -marketListExposureValue,
         });
 
