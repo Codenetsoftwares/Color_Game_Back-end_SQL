@@ -1141,6 +1141,32 @@ export const getRevokeMarket = async (req, res) => {
       const newExposure = { [marketId]: Number(userProfitLoss.price) };
       user.marketListExposure = [...(user.marketListExposure || []), newExposure];
 
+      const dataToSend = {
+        amount: user.balance,
+        userId: user.userId,
+        exposure:userProfitLoss.price,
+      };
+
+      console.log("testing.....",dataToSend)
+      const baseURL = process.env.WHITE_LABEL_URL;
+      const response = await axios.post(
+        `${baseURL}/api/admin/extrnal/balance-update`,
+        dataToSend
+      );
+
+      if (!response.data.success) {
+        return res
+          .status(statusCode.badRequest)
+          .send(
+            apiResponseErr(
+              null,
+              false,
+              statusCode.badRequest,
+              "Failed to update balance"
+            )
+          );
+      }
+
       await user.save({ fields: ["marketListExposure", "balance"] });        
   
 
@@ -1149,6 +1175,7 @@ export const getRevokeMarket = async (req, res) => {
       where: { marketId},
     });
 
+    
     return res
       .status(statusCode.success)
       .send(
