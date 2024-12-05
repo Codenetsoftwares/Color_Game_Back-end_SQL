@@ -37,7 +37,7 @@ export const createAdmin = async (req, res) => {
     if (existingAdmin) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(
             null,
             false,
@@ -59,7 +59,7 @@ export const createAdmin = async (req, res) => {
 
     return res
       .status(statusCode.create)
-      .json(
+      .send(
         apiResponseSuccess(
           null,
           true,
@@ -70,7 +70,7 @@ export const createAdmin = async (req, res) => {
   } catch (error) {
     return res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           error.data ?? null,
           false,
@@ -90,7 +90,7 @@ export const getAllUsers = async (req, res) => {
     pageSize = parseInt(pageSize);
 
     if (page < 1 || pageSize < 1) {
-      return res.status(statusCode.badRequest).json(
+      return res.status(statusCode.badRequest).send(
         apiResponseErr(null, false, statusCode.badRequest, "Invalid pagination parameters")
       );
     }
@@ -104,7 +104,7 @@ export const getAllUsers = async (req, res) => {
     });
 
     if (totalItems === 0) {
-      return res.status(statusCode.badRequest).json(
+      return res.status(statusCode.badRequest).send(
         apiResponseErr(null, false, statusCode.badRequest, "data not found")
       );
     }
@@ -128,7 +128,7 @@ export const getAllUsers = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(
+      .send(
         apiResponseSuccess(
           users,
           true,
@@ -140,7 +140,7 @@ export const getAllUsers = async (req, res) => {
   } catch (error) {
     res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           null,
           false,
@@ -160,7 +160,7 @@ export const deposit = async (req, res) => {
     if (!existingAdmin) {
       return res
         .status(statusCode.notFound)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.notFound, "Admin Not Found")
         );
     }
@@ -183,7 +183,7 @@ export const deposit = async (req, res) => {
 
     return res
       .status(statusCode.create)
-      .json(
+      .send(
         apiResponseSuccess(
           newAdmin,
           true,
@@ -195,7 +195,7 @@ export const deposit = async (req, res) => {
     console.error("Error depositing balance:", error);
     res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           null,
           false,
@@ -214,7 +214,7 @@ export const sendBalance = async (req, res) => {
     if (!admin) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.badRequest, "Admin Not Found")
         );
     }
@@ -223,7 +223,7 @@ export const sendBalance = async (req, res) => {
     if (!user) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.badRequest, "User Not Found")
         );
     }
@@ -232,7 +232,7 @@ export const sendBalance = async (req, res) => {
     if (isNaN(parsedDepositAmount)) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.badRequest, "Invalid Balance")
         );
     }
@@ -240,7 +240,7 @@ export const sendBalance = async (req, res) => {
     if (admin.balance < parsedDepositAmount) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(
             null,
             false,
@@ -282,7 +282,7 @@ export const sendBalance = async (req, res) => {
     };
     return res
       .status(statusCode.create)
-      .json(
+      .send(
         apiResponseSuccess(
           null,
           true,
@@ -294,7 +294,7 @@ export const sendBalance = async (req, res) => {
     console.error("Error sending balance:", error);
     res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           null,
           false,
@@ -325,7 +325,7 @@ export const updateByAdmin = async (req, res) => {
     if (!user) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.badRequest, "User Not Found")
         );
     }
@@ -363,7 +363,7 @@ export const updateByAdmin = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(
+      .send(
         apiResponseSuccess(
           null,
           true,
@@ -375,7 +375,7 @@ export const updateByAdmin = async (req, res) => {
     console.error("Error sending balance:", error);
     res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           null,
           false,
@@ -398,7 +398,7 @@ export const buildRootPath = async (req, res) => {
       await Runner.findOne({ where: { runnerId: id } });
 
     if (!data) {
-      return res.status(statusCode.badRequest).json(
+      return res.status(statusCode.badRequest).send(
         apiResponseErr(null, false, statusCode.badRequest, "Data not found for the specified criteria")
       );
     }
@@ -423,7 +423,7 @@ export const buildRootPath = async (req, res) => {
       // Update user's path
       await data.update({ path: JSON.stringify(globalName) });
 
-      return res.status(statusCode.success).json(
+      return res.status(statusCode.success).send(
         apiResponseSuccess(globalName, true, statusCode.success, "Path stored successfully")
       );
     } else if (action === "clear") {
@@ -439,7 +439,7 @@ export const buildRootPath = async (req, res) => {
     } else if (action === "clearAll") {
       globalName.length = 0; // Clear the entire array
     } else {
-      return res.status(statusCode.badRequest).json(
+      return res.status(statusCode.badRequest).send(
         apiResponseErr(null, false, statusCode.badRequest, "Invalid action provided")
       );
     }
@@ -448,12 +448,12 @@ export const buildRootPath = async (req, res) => {
     await data.update({ path: JSON.stringify(globalName) });
 
     const successMessage = action === "store" ? "Path stored successfully" : "Path cleared successfully";
-    return res.status(statusCode.success).json(
+    return res.status(statusCode.success).send(
       apiResponseSuccess(globalName, true, statusCode.success, successMessage)
     );
   } catch (error) {
     console.error('Error occurred:', error); // Log error for debugging
-    return res.status(statusCode.internalServerError).json(
+    return res.status(statusCode.internalServerError).send(
       apiResponseErr(null, false, statusCode.internalServerError, error.message)
     );
   }
@@ -508,7 +508,7 @@ export const afterWining = async (req, res) => {
     if (!market) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.badRequest, "Market not found")
         );
     }
@@ -748,7 +748,7 @@ export const afterWining = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(
+      .send(
         apiResponseSuccess(
           null,
           true,
@@ -760,7 +760,7 @@ export const afterWining = async (req, res) => {
     console.error("Error sending balance:", error);
     return res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           null,
           false,
@@ -857,7 +857,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
 
     return res
       .status(statusCode.success)
-      .json(
+      .send(
         apiResponseSuccess(
           null,
           true,
@@ -870,7 +870,7 @@ export const revokeWinningAnnouncement = async (req, res) => {
     console.error("Error revoking winning announcement:", error);
     return res
       .status(statusCode.internalServerError)
-      .json(
+      .send(
         apiResponseErr(
           null,
           false,
@@ -891,7 +891,7 @@ export const checkMarketStatus = async (req, res) => {
     if (!market) {
       return res
         .status(statusCode.badRequest)
-        .json(
+        .send(
           apiResponseErr(null, false, statusCode.badRequest, "Market not found")
         );
     }
