@@ -1368,10 +1368,12 @@ export const calculateProfitLoss = async (req, res) => {
         gameName: item.Game.gameName,
         totalProfitLoss: item.dataValues.totalProfitLoss,
       })),
-      ...lotteryProfitLossData.map((item) => ({
-        gameName: "Lottery",
-        totalProfitLoss: item.dataValues.totalProfitLoss,
-      })),
+      ...lotteryProfitLossData
+        .filter((item) => item.dataValues.totalProfitLoss !== null && item.dataValues.totalProfitLoss !== undefined && item.dataValues.totalProfitLoss !== "")
+        .map((item) => ({
+          gameName: "Lottery",
+          totalProfitLoss: item.dataValues.totalProfitLoss,
+        })),
     ];
 
     const totalItems = combinedProfitLossData.length;

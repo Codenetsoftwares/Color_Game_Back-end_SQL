@@ -597,14 +597,6 @@ export const validateProfitLossInput = [
     .withMessage("dataType is required.")
     .isIn(["live", "olddata", "backup"])
     .withMessage("Valid values are 'live', 'olddata', or 'backup'."),
-    query("startDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid startDate format."),
-    query("endDate")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid endDate format."),
     query("page")
     .optional()
     .isInt({ min: 1 })

@@ -209,40 +209,44 @@ export const  calculateExternalProfitLoss = async (req, res) => {
         );
     }
 
-    const totalPages = Math.ceil(totalGames / limit);
-
-    const paginationData = {
-      page: page,
-      limit: limit,
-      totalPages: totalPages,
-      totalItems: totalGames,
-    };
-
     const combinedProfitLossData = [
       ...profitLossData.map((item) => ({
         gameId: item.gameId,
         gameName: item.Game.gameName,
         totalProfitLoss: item.dataValues.totalProfitLoss,
       })),
-      ...lotteryProfitLossData.map((item) => ({
-        gameName: "Lottery",
-        totalProfitLoss: item.dataValues.totalProfitLoss,
-      }))
+      ...lotteryProfitLossData
+        .filter((item) => item.dataValues.totalProfitLoss !== null && item.dataValues.totalProfitLoss !== undefined && item.dataValues.totalProfitLoss !== "")
+        .map((item) => ({
+          gameName: "Lottery",
+          totalProfitLoss: item.dataValues.totalProfitLoss,
+        })),
     ];
+    
+    const totalItems = combinedProfitLossData.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const paginatedCombinedData = combinedProfitLossData.slice(
+      (page - 1) * limit,
+      page * limit
+    );
 
+    const paginationData = {
+      page: page,
+      limit,
+      totalPages: totalPages,
+      totalItems,
+    };
 
-    return res
-      .status(statusCode.success)
-      .send(
-        apiResponseSuccess(
-          combinedProfitLossData,
-          true,
-          statusCode.success,
-          'Success',
-          paginationData,
-        ),
-      );
-      
+    return res.status(statusCode.success).send(
+      apiResponseSuccess(
+        paginatedCombinedData, 
+        true,
+        statusCode.success,
+        "Success",
+
+        paginationData 
+      )
+    );
   } catch (error) {
     res
       .status(statusCode.internalServerError)
