@@ -155,13 +155,13 @@ sequelize
     });
     cron.schedule('*/2 * * * * *', async () => {
       try {
-        // const markets = await Market.findAll({
-        //   where: {
-        //     isActive: true,
-        //     endTime: { [Op.lte]: moment().utc().format() }
-        //   }
-        // });
-        let markets = []
+        const markets = await Market.findAll({
+          where: {
+            isActive: true,
+            endTime: { [Op.lte]: moment().utc().format() }
+          }
+        });
+        // let markets = []
         let updateMarket = []
         for (const market of markets) {
 
