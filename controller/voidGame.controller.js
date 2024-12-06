@@ -25,7 +25,7 @@ export const voidMarket = async (req, res) => {
     }
 
     market.isVoid = true;
-    await market.save();
+    await market.save();  
 
     const users = await MarketBalance.findAll({ where: { marketId } });
 

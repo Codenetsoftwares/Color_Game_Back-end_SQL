@@ -325,6 +325,7 @@ export const removeExposer = async (req, res) => {
           userName: user.userName,
           marketId,
           marketName,
+          price: marketListExposureValue,
           profitLoss: -marketListExposureValue,
         });
 
@@ -550,6 +551,7 @@ export const getBetHistoryP_L = async (req, res) => {
     }
 
     const { data } = response.data;
+
     return res.status(statusCode.success).send(apiResponseSuccess(data, true, statusCode.success, 'Success'));
   } catch (error) {
     console.log("error.........", error)
