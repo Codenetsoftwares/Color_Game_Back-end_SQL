@@ -32,7 +32,7 @@ export const lotteryRoute = (app) => {
 
   app.get("/api/prize-results", authorize([string.User]), getResult);
 
-  app.get('/api/user-getAllMarket', getMarkets)
+  app.get('/api/user-getAllMarket', authorize([string.User]), getMarkets)
 
   app.post("/api/users/update-balance", validateUpdateBalance, customErrorHandler, updateBalance)
 
