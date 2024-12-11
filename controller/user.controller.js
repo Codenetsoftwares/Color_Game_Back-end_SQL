@@ -256,9 +256,9 @@ export const userGame = async (req, res) => {
 
     if (!rows || rows.length === 0) {
       return res
-        .status(statusCode.badRequest)
+        .status(statusCode.success)
         .json(
-          apiResponseErr(null, false, statusCode.badRequest, "Data Not Found")
+          apiResponseSuccess(null, false, statusCode.success, "Data Not Found")
         );
     }
 
