@@ -18,7 +18,7 @@ export const externalApisRoute = (app) => {
 
     app.get('/api/user-external-liveGamesBet', getLiveBetGames);
 
-    app.get('/api/user-external-betList/:userName/:runnerId', getExternalUserBetList);
+    app.get('/api/user-external-betList/:userName/:runnerId',authenticateSuperAdmin, getExternalUserBetList);
 
     app.get('/api/users-liveBet/:marketId', validateGetLiveUserBet, customErrorHandler, liveUserBet);
 
