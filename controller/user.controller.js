@@ -262,6 +262,7 @@ export const userGame = async (req, res) => {
         );
     }
 
+
     const gameData = rows.map((game) => ({
       gameId: game.gameId,
       gameName: game.gameName,
