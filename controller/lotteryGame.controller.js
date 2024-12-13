@@ -64,7 +64,7 @@ export const purchaseLottery = async (req, res) => {
     user.marketListExposure = [...(marketListExposure || []), newExposure];
     await user.save({ fields: ["balance", "marketListExposure"] });
 
-    const [lotteryResponse] = await Promise.all([
+    const [rs1, rs2] = await Promise.all([
       axios.post(
         `${baseURL}/api/purchase-lottery/${marketId}`,
         { generateId, userId, userName, lotteryPrice },
@@ -79,8 +79,12 @@ export const purchaseLottery = async (req, res) => {
       }),
     ]);
 
-    if (!lotteryResponse.data.success) {
-      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Failed to purchase lottery"));
+    if (!rs1.data.success) {
+      return res.status(statusCode.success).send(rs1.data);
+    }
+
+    if (!rs2.data.success) {
+      return res.status(statusCode.success).send(rs2.data);
     }
 
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchased successfully"));
