@@ -75,16 +75,6 @@ export const loginUser = async (req, res) => {
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (!existingUser) {
-      const loginTime = new Date();
-      const loginStatus = 'login failed';
-      await existingUser.update({ lastLoginTime: loginTime, loginStatus });
-      const baseURL = process.env.WHITE_LABEL_URL;
-      await axios.post(`${baseURL}/api/colorGame-user-lastLoginTime`, {
-        userName,
-        loginTime: loginTime,
-        loginStatus
-      });
-
       return res
         .status(statusCode.badRequest)
         .send(apiResponseErr(null, false, statusCode.badRequest, 'User does not exist'));
