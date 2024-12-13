@@ -72,6 +72,25 @@ export const adminLogin = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { userName, password } = req.body;
   try {
+    const baseURL = process.env.WHITE_LABEL_URL;
+
+const response = await axios.get(`${baseURL}/api/admin-user/Active-Locked`);
+const activeLockedUsers = response.data?.data || [];
+
+const user = activeLockedUsers.find((user) => user.userName === userName);
+
+if (user && (!user.isActive || user.locked)) {
+  return res.status(statusCode.badRequest).send(
+    apiResponseErr(
+      null,
+      false,
+      statusCode.badRequest,
+      'Your account is Deactivated. Please contact your applying support.'
+    )
+  );
+}
+
+
     const existingUser = await userSchema.findOne({ where: { userName } });
 
     if (!existingUser) {
