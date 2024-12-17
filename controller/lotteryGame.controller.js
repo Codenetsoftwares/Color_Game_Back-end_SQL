@@ -7,6 +7,7 @@ import {
 } from "../middleware/serverError.js";
 import userSchema from "../models/user.model.js";
 import LotteryProfit_Loss from "../models/lotteryProfit_loss.model.js";
+import sequelize from "../db.js";
 
 export const searchTicket = async (req, res) => {
   try {
@@ -43,6 +44,7 @@ export const searchTicket = async (req, res) => {
 };
 
 export const purchaseLottery = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { generateId, lotteryPrice } = req.body;
     const { userId, userName, roles, balance, marketListExposure } = req.user;
@@ -58,11 +60,11 @@ export const purchaseLottery = async (req, res) => {
       return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Insufficient balance"));
     }
 
-    const user = await userSchema.findOne({ where: { userId } });
+    const user = await userSchema.findOne({ where: { userId }, transaction: t });
     user.balance -= lotteryPrice;
     const newExposure = { [marketId]: lotteryPrice };
     user.marketListExposure = [...(marketListExposure || []), newExposure];
-    await user.save({ fields: ["balance", "marketListExposure"] });
+    await user.save({ fields: ["balance", "marketListExposure"], transaction: t });
 
     const [rs1, rs2] = await Promise.all([
       axios.post(
@@ -87,10 +89,17 @@ export const purchaseLottery = async (req, res) => {
       return res.status(statusCode.success).send(rs2.data);
     }
 
+    await t.commit();
     return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.create, "Lottery purchased successfully"));
   } catch (error) {
-    console.error("Error:", error);
-    return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    await t.rollback();
+
+    console.error("Error:", error.response);
+    if (error.response) {
+      return res.status(error.response.status).send(apiResponseErr(null, false, error.response.status, error.response.data.message || error.response.data.errMessage));
+    } else {
+      return res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+    }
   }
 };
 
