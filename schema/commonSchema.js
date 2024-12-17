@@ -623,3 +623,14 @@ export const validateRevokeMarket = [
     .isUUID().withMessage('Market ID must be a valid UUID'),
    
 ];
+
+export const externalResetPasswordSchema = [
+  body("userName")
+    .trim()
+    .notEmpty()
+    .withMessage("Username is required"),
+  body("password")
+    .trim()
+    .notEmpty()
+    .withMessage("New Password is required")
+];

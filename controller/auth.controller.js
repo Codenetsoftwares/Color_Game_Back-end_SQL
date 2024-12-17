@@ -340,4 +340,24 @@ export const logout = async (req, res) => {
   }
 };
 
+export const externalResetPassword = async (req, res) => {
+  try {
+    const { userName, password } = req.body;
 
+    const existingUser = await userSchema.findOne({ where: { userName } });
+
+    if (!existingUser) {
+      return res.status(statusCode.badRequest).send(apiResponseErr(null, false, statusCode.badRequest, "Admin does not exist"));
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await existingUser.update({ password: hashedPassword, isReset: true });
+
+    return res.status(statusCode.success).send(apiResponseSuccess(null, true, statusCode.success, 'Password reset successfully.'));
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(statusCode.internalServerError).send(apiResponseErr(null, false, statusCode.internalServerError, error.message));
+  }
+};
