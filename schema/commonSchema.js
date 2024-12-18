@@ -576,8 +576,7 @@ export const validateCreateLotteryP_L = [
 
 export const validateDateWiseMarkets = [
   query('date')
-    .exists()
-    .withMessage('Date is required')
+    .optional()
     .isISO8601()
     .withMessage('Date must be in a valid ISO 8601 format (e.g., YYYY-MM-DD)'),
 ];
