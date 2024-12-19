@@ -219,20 +219,6 @@ export const calculateExternalProfitLoss = async (req, res) => {
       limit: limit,
     });
 
-    console.log("profitLossData.............", profitLossData);
-    if (profitLossData.length === 0) {
-      return res
-        .status(statusCode.success)
-        .send(
-          apiResponseSuccess(
-            [],
-            true,
-            statusCode.success,
-            "No profit/loss data found for the given date range."
-          )
-        );
-    }
-
     const lotteryProfitLossData = await LotteryProfit_Loss.findAll({
       attributes: [
         [Sequelize.fn("SUM", Sequelize.col("profitLoss")), "totalProfitLoss"],
@@ -266,7 +252,7 @@ export const calculateExternalProfitLoss = async (req, res) => {
         .map((item) => ({
           gameName: "Lottery",
           totalProfitLoss: item.dataValues.totalProfitLoss,
-        })),,
+        })),
     ];
     
     const totalItems = combinedProfitLossData.length;
