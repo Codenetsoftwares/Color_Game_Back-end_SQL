@@ -115,76 +115,73 @@ checkAndManageIndexes('game');
 checkAndManageIndexes('runner'); 
 checkAndManageIndexes('market');
 
-// SSE endpoint
-const clients = [];
+const clients = new Set();
+
 app.get('/events', (req, res) => {
-  console.log("Client connected to events");
+  console.log("[SSE] Client connected to events");
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-  res.flushHeaders(); // Ensure headers are sent immediately
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.flushHeaders();
 
-  // Add the connected client to the list
-  clients.push(res);
+  clients.add(res);
+  console.log(`[SSE] Connected clients: ${clients.size}`);
 
-  // Send an initial message
   const initialMessage = { message: "SSE service is connected successfully!" };
   res.write(`data: ${JSON.stringify(initialMessage)}\n\n`);
 
-  // Handle client disconnection
+  const heartbeatInterval = setInterval(() => {
+    res.write(':\n\n'); // Keep the connection alive
+  }, 2000);
+
   req.on('close', () => {
-    console.log('Client disconnected');
-    const index = clients.indexOf(res);
-    if (index !== -1) {
-      clients.splice(index, 1); // Remove the client from the list
-    }
-    res.end(); // End the response
+    console.log('[SSE] Client disconnected');
+    clearInterval(heartbeatInterval);
+    clients.delete(res);
   });
 });
-
 
 sequelize
   .sync({ alter: true })
   .then(() => {
     console.log('Database & tables created!');
-    // startMarketCountdown()
     app.listen(process.env.PORT, () => {
-      console.log(`App is running on  - http://localhost:${process.env.PORT || 7000}`);
+      console.log(`App is running on - http://localhost:${process.env.PORT || 7000}`);
     });
+
     cron.schedule('*/2 * * * * *', async () => {
       try {
         const markets = await Market.findAll({
           where: {
             isActive: true,
-            endTime: { [Op.lte]: moment().utc().format() }
-          }
+            endTime: { [Op.lte]: moment().utc().toISOString() },
+          },
         });
-        // let markets = []
-        let updateMarket = []
-        for (const market of markets) {
 
+        const updateMarket = [];
+        for (const market of markets) {
           market.isActive = false;
           const response = await market.save();
-
-          console.log("Markets Inactivated:", JSON.stringify(response, null, 2));
-
-          console.log(`Market ${response.marketName} has been deactivated.`);
-          updateMarket.push(JSON.parse(JSON.stringify(response)))
-
+          updateMarket.push(JSON.parse(JSON.stringify(response)));
         }
 
         clients.forEach((client) => {
-          client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
-        })
-        console.log(`Message sent: ${JSON.stringify(updateMarket)}\n`);
+          try {
+            client.write(`data: ${JSON.stringify(updateMarket)}\n\n`);
+          } catch (err) {
+            console.error('[SSE] Error sending data to client:', err);
+          }
+        });
 
+        console.log(`[SSE] Updates broadcasted: ${JSON.stringify(updateMarket)}`);
       } catch (error) {
         console.error('Error checking market statuses:', error);
       }
     });
-
   })
   .catch((err) => {
     console.error('Unable to create tables:', err);
