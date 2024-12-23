@@ -546,9 +546,10 @@ export const getAllMarket = async (req, res) => {
 export const getBetHistoryP_L = async (req, res) => {
   try {
     const userId = req.user.userId
+    const { marketId } = req.params
     const baseURL = process.env.LOTTERY_URL;
 
-    const response = await axios.post(`${baseURL}/api/lottery-external-betHistory-profitLoss`, { userId });
+    const response = await axios.post(`${baseURL}/api/lottery-external-betHistory-profitLoss`, { userId, marketId });
 
     if (!response.data.success) {
       return res
