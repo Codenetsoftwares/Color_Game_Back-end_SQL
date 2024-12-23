@@ -50,6 +50,6 @@ export const lotteryRoute = (app) => {
 
   app.get('/api/user/getMarkets', authorize([string.User]), getAllMarket)
 
-  app.get('/api/lottery-betHistory-profitLoss', authorize([string.User]), getBetHistoryP_L);
+  app.get('/api/lottery-betHistory-profitLoss/:marketId', authorize([string.User]), getBetHistoryP_L);
 
 };
